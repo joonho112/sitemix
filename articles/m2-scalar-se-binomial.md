@@ -1,0 +1,338 @@
+# M2 · Scalar SE — binomial pipeline
+
+Abstract
+
+For methodologists checking the binomial closed-form SE pipeline. This
+vignette derives the arcsine, logit, and identity transforms; the Wilson
+floor and Agresti-Coull boundary corrections; and the **T2.5
+sufficient-counts identity** that ties
+[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
+on student rows to
+[`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
+on aggregated counts.
+
+## Overview
+
+This article is written for **methodologists** who need the formulas
+behind every binomial standard error `sitemix` reports and *why* each
+reporting transform, correction, and boundary policy takes this form. We
+cover, in order:
+
+1.  the row-level binomial closed form and what `sitemix` encodes;
+2.  the local notation this derivation adds;
+3.  the three reporting transforms and their delta-method SEs;
+4.  the boundary policies for $`\hat\pi_{jt} \in \{0, 1\}`$;
+5.  the `var_method` provenance lexicon;
+6.  the implementation invariants, including the T2.5 sufficient-counts
+    identity;
+7.  the limitations that carry forward.
+
+**Established vs. novel.** *Established:* the arcsine
+variance-stabilizing transform (Anscombe, 1948), the Wilson score
+interval and its boundary floor (Wilson, 1927), and the Agresti–Coull
+adjustment (Agresti & Coull, 1998). *This package:* the `var_method`
+provenance lexicon and the T2.5 sufficient-counts identity linking
+student-row and count inputs.
+
+| Result                               | Attribution            |
+|:-------------------------------------|:-----------------------|
+| arcsine VST                          | Anscombe (1948)        |
+| Wilson score / boundary floor        | Wilson (1927)          |
+| Agresti–Coull adjustment             | Agresti & Coull (1998) |
+| `var_method` lexicon & T2.5 identity | this package (sitemix) |
+
+> **About the example data.** All results here are computed live from
+> `alprek_subset`, an anonymized, illustrative 50-site sample of Alabama
+> First Class Pre-K records shipped in the package (see
+> [`?alprek_subset`](https://joonho112.github.io/sitemix/reference/alprek_subset.md)).
+> It is not a real accountability dataset and must not be cited as
+> empirical Pre-K results. Every code block runs offline with a fixed
+> random seed.
+
+## 1. What an analyst sees, what `sitemix` encodes
+
+Inside Scenario A, the row-level closed form is
+
+``` math
+C_{jt} \mid n_{jt}, \pi_{jt} \;\sim\; \mathrm{Binomial}(n_{jt}, \pi_{jt}),
+\qquad \hat\pi_{jt} = C_{jt}/n_{jt}.
+```
+
+[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
+returns $`\hat\pi_{jt}`$ in `theta_raw` and the reported-scale estimate
+in `theta_hat`. This vignette derives the SE column $`s_{jt}`$ for each
+reporting transform, correction, finite-population branch, and boundary
+policy.
+
+## 2. Notation map (extends M1)
+
+| Symbol           | Meaning               | Code           | Range                 |
+|:-----------------|:----------------------|:---------------|:----------------------|
+| $`C_{jt}`$       | Numerator             | `c_jt`         | $`0 \le C \le n`$     |
+| $`\pi_{jt}`$     | True proportion       | (latent)       | $`[0, 1]`$            |
+| $`\hat\pi_{jt}`$ | Raw estimate          | `theta_raw`    | $`[0, 1]`$            |
+| $`g(p)`$         | Reporting transform   | (one of three) | —                     |
+| $`g'(p)`$        | Delta-method Jacobian | —              | $`> 0`$ on $`(0, 1)`$ |
+
+## 3. The three reporting transforms
+
+**Proposition 1 (first-order arcsine VST).** *For the arcsine transform*
+$`g(p) = \arcsin\sqrt{p}`$, *the delta-method SE is*
+
+``` math
+s_{jt} \;=\; \frac{1}{2\sqrt{n_{jt}}}.
+\tag{M2.1}
+```
+
+**Proof sketch.** Compute $`g'(p) = 1/(2\sqrt{p(1-p)})`$ and apply
+$`s = g'(\hat\pi) \cdot \sqrt{\hat\pi(1-\hat\pi)/n}`$. The product
+simplifies; the $`\hat\pi(1-\hat\pi)`$ cancels. $`\square`$
+
+**Attribution.** Classical variance-stabilizing transform; see Anscombe
+(1948) for the Anscombe correction.
+
+**Proposition 2 (logit reporting transform).** *For*
+$`g(p) = \log(p/(1-p))`$, *the delta-method SE is*
+
+``` math
+s_{jt} \;=\; \sqrt{\frac{1}{n_{jt} \hat\pi_{jt} (1 - \hat\pi_{jt})}}.
+\tag{M2.2}
+```
+
+**Attribution.** Standard delta-method application.
+
+The logit is not variance-stabilizing: its working SE still depends on
+$`\hat\pi_{jt}`$.
+
+**Identity reporting scale.** $`g(p) = p`$ returns
+$`s_{jt} = \sqrt{\hat\pi_{jt}(1-\hat\pi_{jt})/n_{jt}}`$. The identity is
+also not variance-stabilizing.
+
+### Scope of the displayed baselines
+
+Equations (M2.1) and (M2.2), and the identity-scale expression above,
+are first-order, no-FPC, no-bias-correction working formulas for legal
+interior cells. The cancellation leading to (M2.1) is exact algebra for
+the package’s implemented delta-method variance; it is not an exact
+finite-sample variance identity for the transformed binomial random
+variable.
+
+When a fixed population size $`N`$ is supplied, the plug-in and boundary
+branches use
+
+``` math
+q_{jt}=\begin{cases}
+0, & N_{jt}=n_{jt},\\
+(N_{jt}-n_{jt})/(N_{jt}-1), & N_{jt}>n_{jt},
+\end{cases}
+```
+
+including the exact one-unit census $`N=n=1`$, and multiply the
+applicable baseline SE by $`\sqrt{q_{jt}}`$(Cochran, 1977). For an
+interior row with `bias_correction = "binomial_bc"`, the uncorrected
+denominators $`n`$ become $`n-1`$:
+
+``` math
+s_{\mathrm{raw,bc}}=\sqrt{\frac{\hat\pi(1-\hat\pi)}{n-1}},\qquad
+s_{\mathrm{asin,bc}}=\frac{1}{2\sqrt{n-1}},\qquad
+s_{\mathrm{logit,bc}}=\frac{1}{\sqrt{(n-1)\hat\pi(1-\hat\pi)}}.
+```
+
+With a supplied $`N`$, those corrected interior SEs use the applied
+design multiplier $`\sqrt{(N-n)/N}`$ rather than $`\sqrt q`$. Boundary
+rules take precedence over `binomial_bc` and retain their named
+surrogate plus the conventional $`\sqrt q`$ multiplier. The package
+records canonical and actually applied multipliers separately, and
+finite-population correction never changes `n_eff`.
+
+## 4. Boundary policies
+
+When $`\hat\pi_{jt} \in \{0, 1\}`$, $`g'`$ diverges or the variance
+collapses. `sitemix` exposes three policies:
+
+- **`"wilson_floor"`** (default) — return $`s_{jt}`$ at the boundary
+  using the Wilson score standard error
+  ``` math
+  s^{W}(p,n) =
+  \frac{\sqrt{p(1-p)/n + z^2/(4n^2)}}{1 + z^2/n},
+  ```
+  evaluated at $`p \in \{0,1\}`$ for boundary rows (Wilson, 1927). This
+  preserves `theta_raw`; under the default arcsine VST, the row-level
+  `se` remains the arcsine $`1/(2\sqrt{n})`$ while `se_raw` records the
+  boundary-safe raw fallback.
+- **`"agresti_coull"`** — use the z-general adjusted-Wald construction
+  $`\tilde n=n+z^2`$, $`\tilde\pi=(C+z^2/2)/\tilde n`$, and
+  $`\sqrt{\tilde\pi(1-\tilde\pi)/\tilde n}`$ as a named boundary
+  uncertainty surrogate (Agresti & Coull, 1998). It does not replace
+  observed `theta_raw = C/n` or its raw-scale `theta_hat`.
+- **`"none"`** — diagnostic only; SEs collapse to zero at boundaries.
+
+## 5. The `var_method` lexicon
+
+The row-level provenance is scale-specific:
+
+| `var_method` | Triggered when |
+|:---|:---|
+| `arcsine_vst` | `vst = "arcsine"`, without n-1 correction |
+| `arcsine_delta_binomial_bc` | `vst = "arcsine"`, interior `binomial_bc` row |
+| `arcsine_anscombe` | `vst = "arcsine"`, `anscombe = TRUE` |
+| `logit_delta` | `vst = "logit"`, interior row |
+| `logit_delta_binomial_bc` | `vst = "logit"`, interior `binomial_bc` row |
+| `binomial` | `vst = "none"`, interior row |
+| `binomial_bc` | `bias_correction = "binomial_bc"` |
+| `wilson_boundary_surrogate` | boundary row on raw output, `boundary_method = "wilson_floor"` |
+| `agresti_coull_boundary_surrogate` | boundary row on raw output, `boundary_method = "agresti_coull"` |
+| `suppressed_drop` | aggregate suppression retained as unavailable |
+| `suppression_sensitivity` | acknowledged non-identified variance sensitivity; canonical estimate/SE columns remain missing |
+
+For transformed output, the row-level `var_method` remains the transform
+label (for example, `arcsine_vst`); when `vjt = TRUE`, the associated
+`sm_vcov` records the boundary rule in `scalar_correction_rule`.
+
+The lexicon is locked at sm_vcov’s `@section var_method convention`;
+this vignette is the derivation home.
+
+## 6. Implementation invariants
+
+| ID | Layer | Claim |
+|:---|:---|:---|
+| T1 | engine-binomial | `theta_hat = asin(sqrt(C/n))` for `vst = "arcsine"`. |
+| T2 | engine-binomial | `se = 1/(2*sqrt(n))` for `vst = "arcsine"`, interior row. |
+| T2.5 | cross-pipeline | `sm_estimate(rows)$theta_hat == sm_estimate_from_counts(counts)$theta_hat` to `1e-10`. |
+| T3 | engine-binomial | `theta_hat = log(C/(n-C))` for `vst = "logit"`, interior row. |
+| T4 | wilson floor | At boundary on raw output, `se` equals the Wilson score SE under `wilson_floor`. |
+| T5 | finite population | An uncorrected interior arcsine SE is multiplied by `sqrt((N-n)/(N-1))`. |
+| T6 | corrected FPC | An interior `binomial_bc` arcsine SE uses denominator `n-1` and multiplier `sqrt((N-n)/N)`. |
+
+Verify on `alprek_subset`:
+
+``` r
+
+data(alprek_subset, package = "sitemix")
+est <- sm_estimate(
+  subset(alprek_subset, year == 2024),
+  family = "binomial", indicator = "frpm", vst = "arcsine"
+)
+interior <- which(est$theta_raw > 0 & est$theta_raw < 1)
+
+# T1: closed-form theta_hat
+manual_theta <- asin(sqrt(est$theta_raw[interior]))
+stopifnot(all.equal(est$theta_hat[interior], manual_theta, tolerance = 1e-10))
+
+# T2: closed-form SE at interior rows
+manual_se <- 1 / (2 * sqrt(est$n[interior]))
+stopifnot(all.equal(est$se[interior], manual_se, tolerance = 1e-10))
+
+# T2.5: sufficient-counts identity
+counts <- readRDS(system.file("extdata", "alprek_subset_counts.rds",
+                              package = "sitemix"))
+est_counts <- sm_estimate_from_counts(
+  counts[counts$year == 2024,
+         c("site_id", "year", "n_jt", "c_jt_frpm")],
+  family = "binomial", indicator = "frpm"
+)
+stopifnot(all.equal(est$theta_hat, est_counts$theta_hat, tolerance = 1e-10))
+stopifnot(all.equal(est$se, est_counts$se, tolerance = 1e-10))
+
+# T3/T4: use a tiny fixture so boundary and logit behavior are explicit
+toy <- data.frame(
+  site_id = c(rep("A", 10), rep("B", 10)),
+  year = 2024,
+  y = c(rep(1, 10), rep(c(1, 0), each = 5))
+)
+toy_raw <- sm_estimate(
+  toy, family = "binomial", indicator = "y",
+  vst = "none", boundary_method = "wilson_floor"
+)
+z <- qnorm(0.975)
+manual_wilson <- z / (2 * 10 * (1 + z^2 / 10))
+stopifnot(all.equal(toy_raw$se[toy_raw$site_id == "A"],
+                    manual_wilson, tolerance = 1e-10))
+stopifnot(toy_raw$var_method[toy_raw$site_id == "A"] ==
+            "wilson_boundary_surrogate")
+
+toy_logit <- sm_estimate(
+  subset(toy, site_id == "B"),
+  family = "binomial", indicator = "y", vst = "logit"
+)
+stopifnot(all.equal(toy_logit$theta_hat, log(0.5 / 0.5), tolerance = 1e-10))
+
+logit_boundary <- tryCatch(
+  sm_estimate(toy, family = "binomial", indicator = "y", vst = "logit"),
+  error = identity
+)
+stopifnot(inherits(logit_boundary, "sitemix_error_estimate_var_method"))
+
+# T5/T6: plug-in and design-corrected finite-population branches
+fpc_counts <- data.frame(
+  site_id = "F", year = 2024L, n_jt = 8L, c_jt_rate = 3L
+)
+fpc_plugin <- sm_estimate_from_counts(
+  fpc_counts, family = "binomial", indicator = "rate",
+  vst = "arcsine", fpc = 20, min_n = 1L
+)
+stopifnot(all.equal(
+  fpc_plugin$se,
+  (1 / (2 * sqrt(8))) * sqrt(12 / 19),
+  tolerance = 1e-12
+))
+stopifnot(all.equal(fpc_plugin$variance_multiplier_applied, 12 / 19,
+                    tolerance = 1e-12))
+
+fpc_corrected <- sm_estimate_from_counts(
+  fpc_counts, family = "binomial", indicator = "rate",
+  vst = "arcsine", bias_correction = "binomial_bc",
+  fpc = 20, min_n = 1L
+)
+stopifnot(all.equal(
+  fpc_corrected$se,
+  (1 / (2 * sqrt(7))) * sqrt(12 / 20),
+  tolerance = 1e-12
+))
+stopifnot(all.equal(fpc_corrected$variance_multiplier_applied, 12 / 20,
+                    tolerance = 1e-12))
+stopifnot(identical(fpc_corrected$n_eff, 8))
+```
+
+All seven invariants hold to their documented tolerances.
+
+## 7. Limitations
+
+- The Anscombe correction uses $`(C+3/8)/(n+3/4)`$—equivalently, it adds
+  $`3/8`$ to both success and failure counts. The unshifted
+  `theta_raw = C/n` is preserved for audit traceability.
+- Logit delta-method requires interior $`\hat\pi`$; boundary rows under
+  `vst = "logit"` raise `sitemix_error_estimate_var_method`. Use
+  `vst = "arcsine"` or `vst = "none"` when boundary cells are present.
+
+## 8. Where to go next
+
+- [M3 · Multivariate SUR
+  covariance](https://joonho112.github.io/sitemix/articles/m3-multivariate-sur-covariance.md)
+  extends Scenario A to overlapping binary indicators.
+- [M5 · Aggregate engines D0 /
+  D1](https://joonho112.github.io/sitemix/articles/m5-aggregate-engines.md)
+  extends Scenario A to published aggregate inputs (D0 reuses this
+  binomial engine).
+- [A3 · Scenario A —
+  binomial](https://joonho112.github.io/sitemix/articles/a3-scenario-binomial.md)
+  for the applied face of this derivation.
+
+## References
+
+Agresti, A., & Coull, B. A. (1998). Approximate is better than “exact”
+for interval estimation of binomial proportions. *The American
+Statistician*, *52*(2), 119–126.
+<https://doi.org/10.1080/00031305.1998.10480550>
+
+Anscombe, F. J. (1948). The transformation of Poisson, binomial and
+negative-binomial data. *Biometrika*, *35*(3/4), 246–254.
+<https://doi.org/10.1093/biomet/35.3-4.246>
+
+Cochran, W. G. (1977). *Sampling techniques* (3rd ed.). John Wiley &
+Sons.
+
+Wilson, E. B. (1927). Probable inference, the law of succession, and
+statistical inference. *Journal of the American Statistical
+Association*, *22*(158), 209–212.
+<https://doi.org/10.1080/01621459.1927.10502953>

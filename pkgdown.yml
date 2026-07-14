@@ -1,0 +1,25 @@
+pandoc: '3.8'
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  a1-getting-started: a1-getting-started.html
+  a2-input-formats: a2-input-formats.html
+  a3-scenario-binomial: a3-scenario-binomial.html
+  a4-multivariate-multinomial: a4-multivariate-multinomial.html
+  a5-published-aggregates: a5-published-aggregates.html
+  a6-diagnostics-and-suppression: a6-diagnostics-and-suppression.html
+  a7-variance-smoothing-and-frechet: a7-variance-smoothing-and-frechet.html
+  a8-downstream-workflows: a8-downstream-workflows.html
+  a9-case-study-alabama-prek: a9-case-study-alabama-prek.html
+  m1-statistical-foundations: m1-statistical-foundations.html
+  m2-scalar-se-binomial: m2-scalar-se-binomial.html
+  m3-multivariate-sur-covariance: m3-multivariate-sur-covariance.html
+  m4-multinomial-simplex: m4-multinomial-simplex.html
+  m5-aggregate-engines: m5-aggregate-engines.html
+  m6-variance-smoothing-theory: m6-variance-smoothing-theory.html
+  m7-frechet-envelope-theory: m7-frechet-envelope-theory.html
+  m8-output-contract: m8-output-contract.html
+last_built: 2026-07-14T14:39Z
+urls:
+  reference: https://joonho112.github.io/sitemix/reference
+  article: https://joonho112.github.io/sitemix/articles
