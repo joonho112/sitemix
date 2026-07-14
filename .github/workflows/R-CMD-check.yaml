@@ -171,6 +171,10 @@ jobs:
           --profile=minimum-r-hard-only
           --out-dir=ci-artifacts/test-budget/minimum-r-hard-only
 
+      - name: Restore ci-artifacts ownership after sudo
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" ci-artifacts || true
+
       - name: Installed-package and Matrix smoke
         run: |
           stopifnot(
@@ -332,6 +336,10 @@ jobs:
           --profile=optional-no-gam
           --out-dir=ci-artifacts/test-budget/optional-no-gam
 
+      - name: Restore ci-artifacts ownership after sudo
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" ci-artifacts || true
+
       - name: Session snapshot
         if: always()
         run: |
@@ -443,8 +451,10 @@ jobs:
         with:
           dependencies: '"hard"'
           extra-packages: |
+            any::DT
             any::covr
             any::dplyr
+            any::htmltools
             any::mgcv
             any::pkgload
             any::testthat
