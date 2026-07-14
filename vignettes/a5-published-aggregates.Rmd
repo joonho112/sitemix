@@ -1,0 +1,326 @@
+---
+title: "A5 · Published aggregates D0 / D1"
+author: "JoonHo Lee"
+date: "2026-07-12"
+abstract: >
+  For external researchers working from publisher CSVs (state
+  accountability files, district reports) rather than student
+  rows. This vignette walks through the D0 (single
+  numerator/denominator per site-year) and D1 (multiple
+  marginals per site-year) paths, the Framing X / Framing Y
+  subgroup pivots, and the three-tier publisher-side suppression
+  audit.
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    fig_caption: true
+    df_print: tibble
+vignette: >
+  %\VignetteIndexEntry{A5 · Published aggregates D0 / D1}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, include = FALSE, error = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, results = "markup", comment = "#>", collapse = TRUE,
+  message = FALSE, warning = FALSE, error = FALSE,
+  fig.width = 7, fig.height = 4.5, fig.retina = 2, dpi = 144,
+  fig.align = "center", out.width = "100%"
+)
+options(warn = 2)
+set.seed(
+  1L, kind = "Mersenne-Twister", normal.kind = "Inversion",
+  sample.kind = "Rejection"
+)
+capture_expected_sitemix_warning <- function(expr, expected_class) {
+  captured <- list()
+  value <- withCallingHandlers(
+    force(expr),
+    sitemix_warning = function(condition) {
+      captured[[length(captured) + 1L]] <<- condition
+      invokeRestart("muffleWarning")
+    }
+  )
+  stopifnot(
+    length(captured) <= 1L,
+    all(vapply(captured, inherits, logical(1), expected_class))
+  )
+  observations <- getOption("sitemix.vignette.warning_observations", list())
+  observations[[length(observations) + 1L]] <- list(
+    expected_class = expected_class,
+    count = length(captured)
+  )
+  options(sitemix.vignette.warning_observations = observations)
+  value
+}
+library(sitemix)
+```
+
+# Overview
+
+## 1. Why you are here
+
+Dana is an external researcher with no microdata access. She
+works exclusively from state-published accountability files:
+numerator counts plus subgroup splits with cells masked at
+`< 10`. She needs site-level rates and standard errors from
+these files, plus raw pairwise intervals and projected stress scenarios for what the publisher
+masked.
+
+## 2. What you will leave with
+
+By the end you will have:
+
+-   A D0 (single-indicator) and a D1 (multi-marginal) call
+    each producing a `sitemix_estimates` tibble.
+-   The Framing X and Framing Y pivots for subgroup files.
+-   A three-tier suppression audit confirming how many rows
+    survive publisher-side masking.
+
+**Prerequisites.** [A2 · Input formats](a2-input-formats.html).
+
+> **About the example data.** All results here are computed live from
+> `alprek_subset`, an anonymized, illustrative 50-site sample of Alabama
+> First Class Pre-K records shipped in the package (see `?alprek_subset`).
+> The D0 and D1 rows are aggregate counts built from that sample (its
+> companion `alprek_subset_counts` file), and the subgroup section adds a
+> small synthetic fixture. It is not a real accountability dataset and
+> must not be cited as empirical Pre-K results. Every code block runs
+> offline with a fixed random seed.
+
+# 3. Scenario D0 — one numerator and denominator per site-year
+
+D0 is the simplest publisher case: each row is one site-year
+with explicit numerator (`c_jt`) and denominator (`n_jt`).
+Build a D0 slice from the bundled counts file:
+
+```{r d0-data}
+counts_path <- system.file(
+  "extdata", "alprek_subset_counts.rds",
+  package = "sitemix", mustWork = TRUE
+)
+counts <- readRDS(counts_path)
+
+d0_frpm <- counts[counts$year == 2024,
+                  c("site_id", "year", "n_jt", "c_jt_frpm")]
+d0_frpm$indicator <- "frpm"
+d0_frpm$c_jt <- d0_frpm$c_jt_frpm
+d0_frpm <- d0_frpm[c("site_id", "year", "indicator", "c_jt", "n_jt")]
+head(d0_frpm, 3)
+```
+
+Estimate:
+
+```{r d0-est}
+est_d0 <- sm_estimate_from_aggregates(
+  d0_frpm,
+  family    = "binomial",
+  indicator = "frpm"
+)
+head(est_d0, 3)
+unique(est_d0$estimate_scale)
+```
+
+The output is identical in shape to `sm_estimate()` Scenario A
+output; the only difference is `input_mode = "aggregate"`.
+
+# 4. Scenario D1 — multiple aggregate marginals per site-year
+
+D1 is the case where the publisher reports several marginal
+indicators per site-year (e.g., FRPM rate + SNAP rate + WIC
+rate). Each marginal becomes a row; cross-marginal correlation
+is unidentified from marginals alone, so the engine emits a
+diagonal working-independence `V` (when `vjt = TRUE`).
+
+Tell the engine whether those marginals describe the same observed units with
+`sampling_relation`. Use `"same_units"` only with source documentation that
+establishes a common sample, `"different_units"` when the marginal samples are
+known to differ, and the default `"unknown"` otherwise. Equal denominators are
+recorded as a denominator pattern; they do not prove common units.
+
+```{r d1-build}
+# Build a long-form D1 slice with two marginals (FRPM, SNAP):
+d1 <- counts[counts$year == 2024, ]
+d1_long <- rbind(
+  data.frame(
+    site_id   = d1$site_id, year = d1$year,
+    indicator = "frpm",
+    c_jt      = d1$c_jt_frpm, n_jt = d1$n_jt
+  ),
+  data.frame(
+    site_id   = d1$site_id, year = d1$year,
+    indicator = "snap",
+    c_jt      = d1$c_jt_snap, n_jt = d1$n_jt
+  )
+)
+head(d1_long, 4)
+```
+
+Estimate:
+
+```{r d1-est}
+est_d1 <- capture_expected_sitemix_warning(
+  sm_estimate_from_aggregates(
+    d1_long,
+    family = "multivariate",
+    indicator_col = "indicator",
+    sampling_relation = "same_units",
+    vjt = TRUE
+  ),
+  "sitemix_warning_working_independence_default"
+)
+head(est_d1, 4)
+```
+
+The working-independence `V` matrix for site `S001`:
+
+```{r d1-vcov}
+V_d1 <- as.matrix(est_d1$V[[1L]])
+round(V_d1, 4)
+est_d1$V[[1L]]$vcov_method
+attr(est_d1, "sampling_relation")
+attr(est_d1, "denominator_pattern")
+attr(est_d1, "d1_regime")
+```
+
+`vcov_method = "working_independence"` — the off-diagonals are
+exactly zero because cross-marginal covariance is not identified
+from publisher marginals alone. For formal raw pairwise intervals and
+explicitly non-bound projected stress scenarios, see
+[A7 · Variance smoothing and Fréchet](a7-variance-smoothing-and-frechet.html)
+and the formal derivation in
+[M7 · Fréchet envelope theory](m7-frechet-envelope-theory.html).
+
+# 5. Subgroup files — Framing X vs Framing Y
+
+When the publisher file carries one row per `(site, year,
+subgroup)` triple, you must pivot before estimation. The choice
+between Framing X and Framing Y depends on your question.
+
+Both helpers map the fixed publisher total vocabulary `ALL`,
+`ALL STUDENT(S)`, `TOTAL`, and `OVERALL` to canonical `ALL`; matching ignores
+case, surrounding whitespace, and punctuation between words. Framing X keeps
+the publisher spelling in `source_subgroup` for audit while using canonical
+`ALL` in its composite key, and Framing Y uses canonical `ALL` as the indicator.
+Alias collisions fail as duplicates. Mixed school/district/state rows are not
+routed automatically: split them into homogeneous reporting-level tables
+before pivoting.
+
+```{r subgroup-fixture}
+# Synthetic subgroup file (5 sites × 2 subgroups × 1 year)
+subgroups <- expand.grid(
+  site_id  = paste0("S", sprintf("%03d", 1:5)),
+  year     = 2024L,
+  subgroup = c("ell", "non_ell"),
+  stringsAsFactors = FALSE
+)
+subgroups$c_jt <- c(8, 4, 7, 5, 9, 3, 10, 6, 5, 8)
+subgroups$n_jt <- c(12, 6, 11, 9, 13, 7, 15, 10, 8, 12)
+head(subgroups, 4)
+```
+
+**Framing X** — each subgroup becomes its own site (composite
+`site_id`):
+
+```{r framing-x}
+fx <- sm_pivot_subgroups_to_sites(
+  subgroups,
+  subgroup_col    = "subgroup",
+  numerator_col   = "c_jt",
+  denominator_col = "n_jt",
+  indicator       = "frpm_take_up"
+)
+head(fx, 4)
+```
+
+The Framing-X default keeps `partition_target = "none"` and returns conditional
+rates. The only composition options are `"denominator_composition"` and
+`"case_composition"`; both require the same complete category grid and one
+canonical `ALL` total in every site-year. A missing category row is an error,
+not an implicit zero. Suppressed numerators rule out case composition, whereas
+denominator composition is available only when every required denominator is
+observed.
+
+**Framing Y** — each subgroup becomes a marginal indicator of
+the original site. Subgroups commonly describe different observational units,
+so use `sampling_relation = "different_units"` unless the source establishes
+otherwise:
+
+```{r framing-y}
+fy <- sm_pivot_subgroups_to_indicators(
+  subgroups,
+  subgroup_col    = "subgroup",
+  numerator_col   = "c_jt",
+  denominator_col = "n_jt"
+)
+head(fy, 4)
+
+est_fy <- sm_estimate_from_aggregates(
+  fy,
+  family = "multivariate",
+  indicators = attr(fy, "indicator_set"),
+  framing = "subgroup_as_indicator",
+  sampling_relation = "different_units"
+)
+```
+
+Pass either pivoted tibble to
+`sm_estimate_from_aggregates()` with the appropriate family.
+
+# 6. Publisher-side suppression audit
+
+Before estimation, count how many rows are Tier 1
+(publisher-suppressed), Tier 2 (observed below
+`accountability_n`), or Tier 3 (publishable). Use
+[`sm_suppression_report()`](../reference/sm_suppression_report.html).
+
+```{r suppression}
+d0_with_subgroup <- d0_frpm
+d0_with_subgroup$subgroup <- "all"
+report <- sm_suppression_report(
+  d0_with_subgroup,
+  by              = c("subgroup", "year"),
+  numerator_col   = "c_jt",
+  denominator_col = "n_jt",
+  indicator_col   = "indicator",
+  subgroup_col    = "subgroup"
+)
+print(as.data.frame(report), row.names = FALSE)
+```
+
+If `pct_suppressed` is high, the default `suppression = "drop"`
+retains unavailable audit rows with canonical estimates and SEs
+missing. The legacy `suppression = "upper_bound"` option is not
+imputation: with `suppression_sensitivity_acknowledge = TRUE`, it
+stores a worst-case Bernoulli variance scenario only in separated
+`sensitivity_*` fields. It never populates canonical estimates or
+ordinary covariance. When the denominator is hidden, even those
+numeric sensitivity variances remain missing.
+
+# 7. Audit
+
+```{r audit}
+stopifnot(nrow(est_d0) == 50L)
+stopifnot(identical(unique(est_d0$estimate_scale), "arcsine"))
+stopifnot(nrow(est_d1) == 100L)  # 50 sites × 2 marginals
+stopifnot(est_d1$V[[1]]$vcov_method == "working_independence")
+stopifnot(all(diag(as.matrix(est_d1$V[[1]])) > 0))
+stopifnot(max(abs(as.matrix(est_d1$V[[1]])[lower.tri(as.matrix(est_d1$V[[1]]))])) < 1e-12)
+stopifnot(nrow(fx) == 10L)  # 5 sites × 2 subgroups
+stopifnot(nrow(fy) == 10L)
+```
+
+# 8. What's next?
+
+-   [A6 · Diagnostics and suppression](a6-diagnostics-and-suppression.html)
+    for the full three-tier audit workflow.
+-   [A7 · Variance smoothing and Fréchet](a7-variance-smoothing-and-frechet.html)
+    for D1 raw pairwise Fréchet intervals and projected stress scenarios.
+-   [M5 · Aggregate engines D0 / D1](m5-aggregate-engines.html)
+    for the formal derivations.
+
+# References

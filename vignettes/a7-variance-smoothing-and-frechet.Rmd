@@ -1,0 +1,267 @@
+---
+title: "A7 · Variance smoothing and Fréchet stress scenarios"
+author: "JoonHo Lee"
+date: "2026-07-12"
+abstract: >
+  For applied researchers conducting an opt-in experimental GVF
+  sensitivity analysis (`sm_smooth_variance()`) or evaluating D1
+  aggregate dependence with formal pairwise intervals and projected
+  stress scenarios (`sm_frechet_envelope()`). Canonical SEs remain
+  primary; neither small sample size nor an unusual-looking SE is by
+  itself a trigger to smooth.
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    fig_caption: true
+    df_print: tibble
+vignette: >
+  %\VignetteIndexEntry{A7 · Variance smoothing and Fréchet stress scenarios}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, include = FALSE, error = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, results = "markup", comment = "#>", collapse = TRUE,
+  message = FALSE, warning = FALSE, error = FALSE,
+  fig.width = 7, fig.height = 4.5, fig.retina = 2, dpi = 144,
+  fig.align = "center", out.width = "100%"
+)
+options(warn = 2)
+set.seed(
+  1L, kind = "Mersenne-Twister", normal.kind = "Inversion",
+  sample.kind = "Rejection"
+)
+capture_expected_sitemix_warning <- function(expr, expected_class) {
+  captured <- list()
+  value <- withCallingHandlers(
+    force(expr),
+    sitemix_warning = function(condition) {
+      captured[[length(captured) + 1L]] <<- condition
+      invokeRestart("muffleWarning")
+    }
+  )
+  stopifnot(
+    length(captured) <= 1L,
+    all(vapply(captured, inherits, logical(1), expected_class))
+  )
+  observations <- getOption("sitemix.vignette.warning_observations", list())
+  observations[[length(observations) + 1L]] <- list(
+    expected_class = expected_class,
+    count = length(captured)
+  )
+  options(sitemix.vignette.warning_observations = observations)
+  value
+}
+library(sitemix)
+data(alprek_subset, package = "sitemix")
+```
+
+# Overview
+
+## 1. Why you are here
+
+Tariq's tibble passed `sm_diagnose()` but a methods reviewer
+pointed at the smallest sites and said "I don't believe these
+SEs." Dana's D1 aggregate analysis (from A5) lacks publisher
+correlation info; her reviewer wants a sensitivity analysis of
+the unidentified cross-marginal covariance.
+
+Both readers are in this vignette because it presents two sensitivity tools:
+an experimental GVF alternative (available across scenarios) and Fréchet
+pairwise intervals with projected stress scenarios (D1-specific). The first
+half demonstrates the GVF alternative without recommending it; the second
+half covers Fréchet analysis.
+
+## 2. What you will leave with
+
+By the end you will have:
+
+-   A scale-specific experimental sensitivity column (`se_smoothed` or
+    `se_raw_smoothed`) that leaves the canonical SE primary.
+-   Formal raw pairwise intervals plus explicitly non-bound projected
+    stress scenarios for the D1 sensitivity case.
+-   Interpretation rules that keep non-identified or experimental alternatives
+    separate from canonical sampling uncertainty.
+
+**Prerequisites.** [A1 · Getting started](a1-getting-started.html).
+
+> **About the example data.** All results here are computed live from
+> `alprek_subset`, an anonymized, illustrative 50-site sample of Alabama
+> First Class Pre-K records shipped in the package (see `?alprek_subset`).
+> The smoothing section runs on a `sitemix_estimates` tibble produced from
+> that sample, and the Fréchet section uses its companion
+> `alprek_subset_counts` count file. It is not a real accountability
+> dataset and must not be cited as empirical Pre-K results. Every code
+> block runs offline with a fixed random seed.
+
+# 3. Variance smoothing (`sm_smooth_variance()`)
+
+The following call demonstrates the experimental generalized
+variance-function (GVF) / log-variance sensitivity alternative. It is not a
+recommended response to small cells, and an unusual-looking SE is not evidence
+that the fitted alternative is better:
+
+```{r smoothing}
+est <- sm_estimate(
+  subset(alprek_subset, year == 2024),
+  family    = "binomial",
+  indicator = "frpm"
+)
+est_s <- sm_smooth_variance(est, method = "loglinear")
+head(est_s[, c("site_id", "n", "se", "se_smoothed")], 6)
+```
+
+`se_smoothed` is the cross-row trend-fitted SE on the same
+scale as `se`. By default, `est$se` is preserved untouched;
+pass `overwrite = TRUE` to replace it (with the original
+preserved as `se_pre_smoothing`). The alternative's provenance
+is stored in `var_method_smoothed`, while canonical `var_method`
+also remains untouched under the default append-only path.
+The appended column is a sensitivity candidate only; canonical `se` remains
+the primary uncertainty input unless a separate, prespecified validation
+supports a different choice.
+
+This helper is not a Fay--Herriot area-level estimator: it does
+not smooth point estimates or fit a between-area outcome model.
+When a matching-scale `V` exists, overwrite is rejected because
+retaining that matrix would leave a stale diagonal. Append-only
+smoothing remains available, and an incompatible-scale `V` is
+retained with its relationship recorded in `attr(x, "smoothing")`.
+
+**How to interpret the optional sensitivity.** The smoother is a model on the
+log-variance scale; it assumes the bulk of rows lies on a
+common log-variance trend. If your data have a few sites that
+genuinely have a different variance regime (e.g., a heavily
+oversampled flagship site), the smoother will pull their SEs
+toward the bulk. Inspect `se_smoothed - se` for outliers
+before considering the alternative. A fixed-seed package audit over
+small/large denominators and near-boundary/interior rates did not find a
+candidate that met all predeclared variance-MSE, coverage, and inverse-weight
+criteria. Consequently smoothing remains experimental, append-only, and
+opt-in; the audit does not support replacing canonical SEs or treating the
+smoothed alternative as a generally improved default.
+
+# 4. GAM smoothing (optional)
+
+For non-linear log-variance trends, the GAM backend uses
+`mgcv::gam` under a runtime guard:
+
+```{r gam}
+if (requireNamespace("mgcv", quietly = TRUE)) {
+  # Use a raw-output fixture: the default arcsine SE is an exact function of n
+  # and can make a spline fit numerically degenerate on this example data.
+  est_gam_input <- sm_estimate(
+    subset(alprek_subset, year == 2024),
+    family = "binomial", indicator = "frpm", vst = "none"
+  )
+  est_gam <- sm_smooth_variance(est_gam_input, method = "gam")
+  head(est_gam[, c("site_id", "n", "se", "se_smoothed")], 6)
+} else {
+  message("mgcv is not installed; use method = \"loglinear\".")
+}
+```
+
+`mgcv` is a Suggests-only dependency. If it is not installed,
+fall back to `method = "loglinear"`. The raw-output fixture is deliberate:
+unexpected fitting warnings fail the reproducibility audit instead of being
+silently accepted as tutorial output.
+
+# 5. Fréchet pairwise intervals and stress scenarios (D1 only)
+
+For same-unit D1a inputs, Fréchet intervals formally constrain each raw
+pairwise covariance that is unidentified from publisher marginals alone.
+Build a
+D1 input and call `sm_frechet_envelope()`:
+
+```{r frechet}
+counts_path <- system.file(
+  "extdata", "alprek_subset_counts.rds",
+  package = "sitemix", mustWork = TRUE
+)
+counts <- readRDS(counts_path)
+d1 <- counts[counts$year == 2024, ]
+d1_long <- rbind(
+  data.frame(
+    site_id = d1$site_id, year = d1$year,
+    indicator = "frpm",
+    c_jt = d1$c_jt_frpm, n_jt = d1$n_jt
+  ),
+  data.frame(
+    site_id = d1$site_id, year = d1$year,
+    indicator = "snap",
+    c_jt = d1$c_jt_snap, n_jt = d1$n_jt
+  )
+)
+est_d1 <- capture_expected_sitemix_warning(
+  sm_estimate_from_aggregates(
+    d1_long, family = "multivariate",
+    indicator_col = "indicator",
+    sampling_relation = "same_units",
+    vjt = TRUE
+  ),
+  "sitemix_warning_working_independence_default"
+)
+
+env <- sm_frechet_envelope(est_d1, population_regime = "d1a")
+class(env)
+env$psd_method
+```
+
+The formal result is `raw_pairwise_intervals`, which records the marginal
+probabilities, common denominator, joint-probability endpoints, correlation
+endpoints, and raw covariance endpoints. The two PSD matrices are projected
+stress scenarios sourced from the negative- and positive-dependence corners;
+they are not multivariate lower or upper bounds. Inspect site `S001`:
+
+```{r frechet-inspect}
+head(env$raw_pairwise_intervals, 3)
+V_negative_stress <- as.matrix(env$projected_negative_dependence_stress[[1L]])
+V_positive_stress <- as.matrix(env$projected_positive_dependence_stress[[1L]])
+round(V_negative_stress, 4)
+round(V_positive_stress, 4)
+summary(env)[, c("site_key", "scenario", "projection_status",
+                 "sign_changes", "projected_order_reversals",
+                 "raw_interval_violations",
+                 "projection_distance_relative")]
+```
+
+Before projection, each off-diagonal is a raw pairwise interval endpoint.
+For `K > 2`, PSD projection may change signs, reverse the elementwise order
+of the two source corners, or leave a raw pairwise interval. The diagnostics
+report those events directly. Treat the projected matrices only as stress
+scenarios, never as bounds or as one identified sampling covariance matrix.
+
+**D1a vs D1b.** Pass `population_regime = "d1a"` when the
+marginals refer to the same sampled units, have one common finite denominator,
+and use the IID plug-in rule without FPC or bias correction (formal raw
+pairwise intervals). Pass `"d1b"` when the marginals are subgroup-
+conditional (heuristic stress test). D1b requires explicit
+acknowledgement via `subgroup_conditional_action = "allow"`.
+
+# 6. Audit
+
+```{r audit}
+stopifnot("se_smoothed" %in% names(est_s))
+stopifnot(all(est_s$se_smoothed > 0))
+stopifnot(all(est_s$se == est$se))  # default doesn't overwrite
+stopifnot(inherits(env, "sm_frechet_envelope"))
+stopifnot(length(env$projected_negative_dependence_stress) == nrow(d1))
+stopifnot(all(env$raw_pairwise_intervals$interval_scope ==
+              "formal_raw_pairwise_interval"))
+```
+
+# 7. What's next?
+
+-   [A6 · Diagnostics and suppression](a6-diagnostics-and-suppression.html)
+    if you have not yet audited the tibble.
+-   [A8 · Downstream workflows](a8-downstream-workflows.html) once smoothing /
+    Fréchet are settled.
+-   [M6 · Variance smoothing theory](m6-variance-smoothing-theory.html)
+    and [M7 · Fréchet envelope theory](m7-frechet-envelope-theory.html)
+    for the formal derivations and the D1a / D1b distinction.
+
+# References

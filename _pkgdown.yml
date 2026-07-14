@@ -1,0 +1,191 @@
+url: https://joonho112.github.io/sitemix/
+
+development:
+  mode: unreleased
+
+template:
+  bootstrap: 5
+  bootswatch: cosmo
+  bslib:
+    primary: '#1B4965'
+  opengraph:
+    image:
+      src: man/figures/logo.png
+      alt: "sitemix hex sticker — site- and group-level sampling uncertainty"
+    twitter:
+      creator: "@joonho112"
+      card: summary_large_image
+
+authors:
+  JoonHo Lee:
+    href: https://github.com/joonho112
+
+home:
+  title: "sitemix — Proportions, rates, and sampling uncertainty"
+  description: |
+    Site- and group-level point estimates, standard errors, and optional
+    covariance matrices. Covers student-row, sufficient-count, and
+    published-aggregate inputs across five
+    scenarios (A binomial, B multivariate, C multinomial, D0 / D1
+    aggregate). Ships diagnostics, publisher-side suppression
+    auditing, optional variance smoothing, and Fréchet-envelope
+    sensitivity for unidentified D1 covariance.
+  links:
+  - text: "Get started in 5 minutes"
+    href: articles/a1-getting-started.html
+  - text: "Choose an input format"
+    href: articles/a2-input-formats.html
+  - text: "Theory: sampling uncertainty"
+    href: articles/m1-statistical-foundations.html
+  sidebar:
+    structure: [links, license, community, citation, authors, dev]
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    intro:
+      text: Get started
+      href: articles/a1-getting-started.html
+    articles:
+      text: Vignettes
+      menu:
+      - text: '--- Applied Track ---'
+      - text: A1 · Getting started
+        href: articles/a1-getting-started.html
+      - text: A2 · Input formats
+        href: articles/a2-input-formats.html
+      - text: A3 · Scenario A — binomial
+        href: articles/a3-scenario-binomial.html
+      - text: A4 · Scenarios B / C — multivariate / multinomial
+        href: articles/a4-multivariate-multinomial.html
+      - text: A5 · Published aggregates D0 / D1
+        href: articles/a5-published-aggregates.html
+      - text: A6 · Diagnostics and suppression
+        href: articles/a6-diagnostics-and-suppression.html
+      - text: A7 · Variance smoothing and Fréchet
+        href: articles/a7-variance-smoothing-and-frechet.html
+      - text: A8 · Downstream workflows
+        href: articles/a8-downstream-workflows.html
+      - text: A9 · Case study — Alabama Pre-K
+        href: articles/a9-case-study-alabama-prek.html
+      - text: '--- Methodological Track ---'
+      - text: M1 · Statistical foundations
+        href: articles/m1-statistical-foundations.html
+      - text: M2 · Scalar SE — binomial
+        href: articles/m2-scalar-se-binomial.html
+      - text: M3 · Multivariate SUR covariance
+        href: articles/m3-multivariate-sur-covariance.html
+      - text: M4 · Multinomial simplex
+        href: articles/m4-multinomial-simplex.html
+      - text: M5 · Aggregate engines D0 / D1
+        href: articles/m5-aggregate-engines.html
+      - text: M6 · Variance smoothing theory
+        href: articles/m6-variance-smoothing-theory.html
+      - text: M7 · Fréchet envelope theory
+        href: articles/m7-frechet-envelope-theory.html
+      - text: M8 · Output contract
+        href: articles/m8-output-contract.html
+    github:
+      icon: fab fa-github
+      href: https://github.com/joonho112/sitemix
+      aria-label: GitHub
+
+articles:
+- title: Applied Track
+  desc: >
+    Workflow-oriented guides for producing site-level estimates from
+    student rows, sufficient counts, or published aggregates;
+    diagnosing the row schema; smoothing; and using estimates downstream.
+  navbar: ~
+  contents:
+  - a1-getting-started
+  - a2-input-formats
+  - a3-scenario-binomial
+  - a4-multivariate-multinomial
+  - a5-published-aggregates
+  - a6-diagnostics-and-suppression
+  - a7-variance-smoothing-and-frechet
+  - a8-downstream-workflows
+  - a9-case-study-alabama-prek
+
+- title: Methodological Track
+  desc: >
+    Formal specifications — sampling uncertainty, the scalar SE
+    pipeline, SUR and multinomial covariance, aggregate engines,
+    variance smoothing theory, Fréchet envelopes, and the output contract.
+  navbar: ~
+  contents:
+  - m1-statistical-foundations
+  - m2-scalar-se-binomial
+  - m3-multivariate-sur-covariance
+  - m4-multinomial-simplex
+  - m5-aggregate-engines
+  - m6-variance-smoothing-theory
+  - m7-frechet-envelope-theory
+  - m8-output-contract
+
+reference:
+- title: Package
+  contents:
+  - sitemix-package
+
+- title: Estimate site-year rates
+  desc: >
+    Main entry points: student rows, sufficient counts, and published
+    aggregates. Use `sm_estimate()` for the unified dispatcher; the
+    wrappers preconfigure subsets of the same signature.
+  contents:
+  - sm_estimate
+  - sm_estimate_from_counts
+  - sm_estimate_from_aggregates
+
+- title: Audit uncertainty outputs
+  desc: >
+    Diagnose scalar and covariance uncertainty and audit publisher-side
+    suppression before downstream use.
+  contents:
+  - sm_diagnose
+  - sm_suppression_report
+
+- title: Inspect and stress-test covariance
+  desc: >
+    Work with `sm_vcov` matrices directly; compute formal raw pairwise
+    Fréchet intervals and separate projected stress scenarios for
+    unidentified D1 aggregate dependence.
+  contents:
+  - sm_vcov
+  - sm_frechet_envelope
+
+- title: Smooth standard errors (experimental)
+  desc: >
+    Opt-in generalized variance-function/log-variance sensitivity
+    alternatives. A fixed-seed audit found no evidence for default promotion;
+    append-only output preserves canonical SE columns and does not
+    guarantee improvement.
+  contents:
+  - sm_smooth_variance
+
+- title: Reshape published aggregates
+  desc: >
+    Pivot subgroup files into the schema expected by
+    `sm_estimate_from_aggregates()`. Framing X turns subgroups into
+    sites; Framing Y turns them into indicators.
+  contents:
+  - sm_pivot_subgroups_to_sites
+  - sm_pivot_subgroups_to_indicators
+
+- title: Data
+  desc: Bundled example data for documentation, examples, and tests.
+  contents:
+  - alprek_subset
+
+footer:
+  structure:
+    left: developed_by
+    right: built_with
+
+redirects:
+- ["articles/a8-eb-handoff.html", "articles/a8-downstream-workflows.html"]
+- ["articles/m8-eb-handoff-walters-2024.html", "articles/m8-output-contract.html"]

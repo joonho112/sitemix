@@ -1,0 +1,244 @@
+---
+title: "M4 · Multinomial simplex covariance"
+author: "JoonHo Lee"
+date: "2026-07-12"
+abstract: >
+  For methodologists working on Scenario C (mutually exclusive
+  categories summing to the site-year denominator). Derives the
+  simplex covariance, documents the rank deficiency, and runs
+  the simplex row-sum invariant on a synthetic example.
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    fig_caption: true
+    df_print: tibble
+vignette: >
+  %\VignetteIndexEntry{M4 · Multinomial simplex covariance}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, include = FALSE, error = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, results = "markup", comment = "#>", collapse = TRUE,
+  message = FALSE, warning = FALSE, error = FALSE,
+  fig.width = 7, fig.height = 4.5, fig.retina = 2, dpi = 144,
+  fig.align = "center", out.width = "100%"
+)
+options(warn = 2)
+set.seed(
+  1L, kind = "Mersenne-Twister", normal.kind = "Inversion",
+  sample.kind = "Rejection"
+)
+library(sitemix)
+```
+
+# Overview
+
+This article is written for **methodologists** working on Scenario C —
+mutually exclusive categories that sum to the site-year denominator — who
+need the exact simplex covariance `sitemix` assembles and *why* it takes
+this form. We cover, in order:
+
+1. the within-site multinomial model an analyst sees and what `sitemix`
+   encodes;
+2. the local notation this derivation adds;
+3. the simplex covariance and its finite-population corrections;
+4. the rank deficiency and the analytic support rank;
+5. the implementation invariants.
+
+**Established vs. novel.** *Established:* the standard multinomial covariance,
+simplex kernel, and support-rank result ($S-1$ on positive support)
+[@agresti2013categorical]. *This package:* recording that analytic support rank
+as `matrix_rank`, retaining it as structural metadata when a census makes the
+realized covariance zero, and the diagonal-contract exception for zero-support
+categories.
+
+| Result | Attribution |
+|:-------|:------------|
+| multinomial covariance structure | standard [@agresti2013categorical] |
+| full-simplex support rank ($S-1$) | standard [@agresti2013categorical] |
+| analytic `matrix_rank` metadata & boundary diagonal exception | this package (sitemix) |
+
+> **About the example data.** All results here are computed live from
+> `alprek_subset`, an anonymized, illustrative 50-site sample of Alabama
+> First Class Pre-K records shipped in the package (see `?alprek_subset`).
+> It is not a real accountability dataset and must not be cited as empirical
+> Pre-K results. Every code block runs offline with a fixed random seed.
+
+# 1. What an analyst sees, what `sitemix` encodes
+
+For Scenario C with $K$ mutually exclusive categories (e.g.,
+primary language $\in$ {English, Spanish, Other}), the
+within-site joint distribution is multinomial:
+
+$$
+(C_{jt,1}, \ldots, C_{jt,K}) \mid n_{jt}, \pi_{jt}
+\;\sim\; \mathrm{Multinomial}(n_{jt}, \pi_{jt}),
+$$
+
+with the simplex constraint $\sum_k \pi_{jt,k} = 1$.
+
+# 2. Notation map (extends M2)
+
+| Symbol | Meaning | Code | Range |
+|:-------|:--------|:-----|:------|
+| $\pi_{jt,k}$ | Category-$k$ probability | `theta_raw` (per row) | $\sum_k = 1$ |
+| $C_{jt,k}$ | Category-$k$ count | `c_jt_k` | $\sum_k = n_{jt}$ |
+| $\Sigma_{jt}$ | Simplex covariance | `V[[i]]$matrix` | analytic rank $S-1$ for positive support $S$ |
+
+# 3. The simplex covariance
+
+**Proposition 1 (Multinomial covariance).** *For the multinomial
+sampling model on $K$ mutually exclusive categories,*
+
+$$
+\boxed{
+\Sigma_{jt} \;=\; \frac{1}{n_{jt}}\bigl(\mathrm{diag}(\pi_{jt}) - \pi_{jt}\pi_{jt}^{\top}\bigr).
+}
+\tag{M4.1}
+$$
+
+**Proof sketch.** Direct from the moment-generating function of
+the multinomial; the variance of $C_{jt,k}$ is
+$n \pi_k (1 - \pi_k)$ and the covariance of $C_{jt,k}$ and
+$C_{jt,k'}$ (for $k \ne k'$) is $-n \pi_k \pi_{k'}$. Divide by
+$n^2$ to obtain the covariance matrix of the estimated category
+proportions. $\square$
+
+**Attribution.** Classical multinomial-sampling theory; see
+@agresti2013categorical.
+
+Under fixed-population SRSWOR with population size $N$, write
+$M=\mathrm{diag}(\hat\pi)-\hat\pi\hat\pi^\top$ and define
+
+$$
+q=\begin{cases}
+0, & N=n,\\
+(N-n)/(N-1), & N>n.
+\end{cases}
+$$
+
+The first branch includes $N=n=1$. The plug-in and
+design-corrected whole-matrix rules are
+
+$$
+\widehat V_{\mathrm{plugin}}=qM/n,\qquad
+\widehat V_{\mathrm{design}}=
+\begin{cases}
+0_{K\times K}, & N=n,\\
+(N-n)M/[N(n-1)], & N>n\text{ and }n>1.
+\end{cases}
+\tag{M4.2}
+$$
+
+The finite-population factors follow standard SRSWOR theory
+[@cochran_1977].
+
+The design-corrected rule is selected by
+**bias_correction = "binomial_bc"**. Multiplying the whole matrix preserves
+PSD and the simplex identity $V\mathbf 1=0$; a census (**N = n**) has zero
+sampling covariance. The covariance metadata records both the conventional
+FPC and the actually applied plug-in/design multiplier without changing
+n_eff. Without a supplied finite-population design, the corresponding rules
+are $M/n$ and $M/(n-1)$.
+
+# 4. Rank deficiency
+
+Let $S=\#\{k:C_{jt,k}>0\}$ be the observed positive support. The simplex
+constraint $\sum_k \pi_{jt,k} = 1$ implies
+$\mathbf{1}^{\top}\Sigma_{jt} = \mathbf{0}$ (the all-ones
+vector is in the kernel), and every zero-count category contributes a zero
+row and column. Therefore the analytic simplex support rank is $S-1$:
+full support has rank $K-1$, one zero category has rank $K-2$, and degenerate
+support $S=1$ has rank zero. `matrix_rank` records this analytic rank rather
+than a tolerance-dependent eigendecomposition. In a census, the realized
+sampling covariance is exactly zero but `matrix_rank` still records $S-1$;
+`sampling_design` and `sampling_fraction` make that distinction explicit.
+The constructor validates PSD-ness, the simplex kernel, and the support-rank
+metadata; no repair is applied in the current Scenario C path.
+
+The `sm_vcov` constructor records `vcov_method = "multinomial"`
+and `vcov_scale = "raw"`. As in Scenario B, the matrix is on
+the raw scale even when `theta_hat` is on the arcsine scale; this
+matches sitemix's Scenario C contract
+[@lee_2026_sitemix].
+
+For interior categories, the diagonal contract is
+"row_se_raw_squared". At a zero-support category, the Wilson scalar
+surrogate remains positive while the matrix diagonal remains zero to preserve
+the simplex. That intentional exception is recorded as
+"row_se_raw_squared_except_boundary_surrogates". With whole-matrix
+`binomial_bc`, `V$variance_rule` and the applied multiplier record one uniform
+global design-corrected matrix rule. The zero row and column are unchanged by
+that scaling, while their row-level scalar provenance remains plug-in or a
+Wilson surrogate. Validation permits this intentional scalar/matrix
+provenance mismatch only when the matrix row and column are exactly zero.
+
+# 5. Implementation invariants
+
+| ID  | Layer            | Claim                                                          |
+|:----|:-----------------|:----------------------------------------------------------------|
+| MN1 | engine-multinomial | Row sums of `theta_raw` across categories equal 1 (tolerance `1e-12`). |
+| MN2 | sm_vcov          | Row sums of `V[[i]]$matrix` equal 0 (tolerance `1e-12`).         |
+| MN3 | sm_vcov          | `vcov_method = "multinomial"` and `vcov_scale = "raw"`.          |
+| MN4 | sm_vcov          | `matrix_rank = positive_support - 1` (analytic support rank).     |
+| MN5 | sm_vcov          | Whole-matrix `variance_rule` and applied multiplier are uniform.  |
+
+Verify on a synthetic primary-language slice:
+
+```{r invariants}
+data(alprek_subset, package = "sitemix")
+language_data <- transform(
+  alprek_subset,
+  primary_language = sample(c("english", "spanish", "other"),
+                            nrow(alprek_subset), replace = TRUE,
+                            prob = c(0.70, 0.25, 0.05))
+)
+est <- sm_estimate(
+  subset(language_data, year == 2024),
+  family    = "multinomial",
+  indicator = "primary_language",
+  vjt       = TRUE
+)
+V1 <- as.matrix(est$V[[1L]])
+
+# MN1: rows of theta_raw across categories sum to 1 per site-year
+per_site <- aggregate(theta_raw ~ site_id, data = est, FUN = sum)
+stopifnot(all(abs(per_site$theta_raw - 1) < 1e-12))
+
+# MN2: row sums of Sigma are zero
+stopifnot(max(abs(rowSums(V1))) < 1e-12)
+
+# MN3: lexicon
+stopifnot(est$V[[1L]]$vcov_method == "multinomial")
+stopifnot(est$V[[1L]]$vcov_scale == "raw")
+stopifnot(est$V[[1L]]$psd_repair == "none")
+
+# MN4: analytic support rank
+stopifnot(est$V[[1L]]$matrix_rank == est$V[[1L]]$positive_support - 1L)
+
+# MN5: one global matrix variance rule and multiplier
+stopifnot(length(unique(est$V[[1L]]$variance_rule)) == 1L)
+stopifnot(length(unique(est$V[[1L]]$variance_multiplier_applied)) == 1L)
+```
+
+All five invariants hold (`1e-12` exact tolerance where numerical).
+
+# 6. Where to go next
+
+-   [M3 · Multivariate SUR covariance](m3-multivariate-sur-covariance.html)
+    — the sibling derivation for Scenario B (overlapping rather
+    than mutually exclusive).
+-   [M5 · Aggregate engines D0 / D1](m5-aggregate-engines.html)
+    for the aggregate-input analog (cross-marginal covariance
+    unidentified). D1 is a multivariate marginal sensitivity path, not
+    aggregate multinomial composition; Scenario C requires student rows or
+    complete sufficient category counts.
+-   [A4 · Scenarios B / C — multivariate / multinomial](a4-multivariate-multinomial.html)
+    for the applied face including the simplex row-sum invariant.
+
+# References

@@ -1,0 +1,278 @@
+---
+title: "M3 · Multivariate SUR covariance"
+author: "JoonHo Lee"
+date: "2026-07-12"
+abstract: >
+  For methodologists working on Scenario B (overlapping binary
+  indicators with SUR-style covariance). Derives the
+  cross-indicator covariance matrix, locks the `sm_vcov` class
+  spec, and runs the PSD invariant on `alprek_subset`.
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    fig_caption: true
+    df_print: tibble
+vignette: >
+  %\VignetteIndexEntry{M3 · Multivariate SUR covariance}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, include = FALSE, error = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, results = "markup", comment = "#>", collapse = TRUE,
+  message = FALSE, warning = FALSE, error = FALSE,
+  fig.width = 7, fig.height = 4.5, fig.retina = 2, dpi = 144,
+  fig.align = "center", out.width = "100%"
+)
+options(warn = 2)
+set.seed(
+  1L, kind = "Mersenne-Twister", normal.kind = "Inversion",
+  sample.kind = "Rejection"
+)
+library(sitemix)
+```
+
+# Overview
+
+This article is written for **methodologists** working on Scenario B —
+overlapping binary indicators whose within-site cross-covariance is
+non-zero — who need the exact covariance matrix `sitemix` assembles and
+*why* it takes this form. We cover, in order:
+
+1. the joint within-site structure an analyst sees and what `sitemix`
+   encodes;
+2. the local notation this derivation adds;
+3. the SUR cross-covariance derivation and its finite-population
+   corrections;
+4. the `sm_vcov` class spec;
+5. PSD validation of the assembled matrix;
+6. the implementation invariants.
+
+**Established vs. novel.** *Established:* the
+seemingly-unrelated-regression cross-covariance structure [@zellner_1962]
+and design-based finite-population corrections under SRSWOR. *This package:*
+the `sm_vcov` object contract — scale/method provenance, PSD validation, and
+the diagonal exceptions — that packages these results for site-year panels.
+
+| Result | Attribution |
+|:-------|:------------|
+| SUR cross-covariance structure | Zellner (1962) |
+| SRSWOR finite-population correction | standard design-based sampling |
+| `sm_vcov` object contract & PSD validation | this package (sitemix) |
+
+> **About the example data.** All results here are computed live from
+> `alprek_subset`, an anonymized, illustrative 50-site sample of Alabama
+> First Class Pre-K records shipped in the package (see `?alprek_subset`).
+> It is not a real accountability dataset and must not be cited as empirical
+> Pre-K results. Every code block runs offline with a fixed random seed.
+
+# 1. What an analyst sees, what `sitemix` encodes
+
+For Scenario B with $K$ overlapping binary indicators (e.g.,
+FRPM, SNAP, WIC, TANF), the within-site joint distribution is
+*not* a simple product of binomials — students can be in
+multiple indicators simultaneously, so the per-row covariance
+across indicators is non-zero. `sm_estimate(family =
+"multivariate", vjt = TRUE)` returns a `V` list-column whose
+$j$-th element is a $K \times K$ `sm_vcov` object.
+
+# 2. Notation map (extends M2)
+
+| Symbol | Meaning | Code | Range |
+|:-------|:--------|:-----|:------|
+| $K$ | Indicator-component count | `length(indicators)` | $\ge 2$ |
+| $C_{jt,kk'}$ | Joint count (both $k$ and $k'$ positive) | (intermediate) | $\ge 0$ |
+| $p_{xy}$ | Joint proportion estimate | (intermediate) | $[0, \min(p_x, p_y)]$ |
+| $\sigma_{kk'}$ | Cross-covariance element | `V[[i]]$matrix[k,k']` | symmetric |
+| $\Sigma_{jt}$ | Assembled $K \times K$ matrix | `V[[i]]$matrix` | PSD up to `1e-12` |
+
+# 3. The SUR cross-covariance derivation
+
+**Theorem 1 (population SUR cross-covariance).** *For two overlapping
+binary indicators $X_k$ and $X_{k'}$ measured on the same $n$
+IID students per site-year,*
+
+$$
+\boxed{
+\operatorname{Cov}(\hat\pi_k,\hat\pi_{k'})
+\;=\; \frac{\pi_{kk'} - \pi_k\pi_{k'}}{n_{jt}},
+}
+\tag{M3.1}
+$$
+
+*where $\pi_k=\Pr(X_k=1)$, $\pi_{k'}=\Pr(X_{k'}=1)$, and
+$\pi_{kk'}=\Pr(X_k=1,X_{k'}=1)$ are population probabilities.*
+
+**Proof sketch.** Treat each student as a Bernoulli trial in
+$2^K$-cell multinomial space. The sample covariance of the two
+binary marginals reduces to $\mathrm{Cov}(X_k, X_{k'})/n$,
+which simplifies as above. $\square$
+
+**Attribution.** Standard SUR result; see @zellner_1962.
+
+The package does not observe the population probabilities in (M3.1).
+It substitutes the empirical proportions. If
+$Q=\sum_i(y_i-\bar y)(y_i-\bar y)^\top$, the default no-FPC matrix is
+the plug-in estimate $\widehat V_{\mathrm{plugin}}=Q/n^2$; the
+`binomial_bc` alternative is $Q/[n(n-1)]$. Its diagonal therefore
+recovers the corresponding estimated Scenario A raw-scale variance,
+not the unknown population variance itself. This raw-scale matrix
+convention is the one used for Scenario B in `sitemix`
+[@lee_2026_sitemix].
+
+For a fixed population of size $N$ sampled without replacement, define
+
+$$
+q=\begin{cases}
+0, & N=n,\\
+(N-n)/(N-1), & N>n.
+\end{cases}
+$$
+
+The first branch includes the exact one-unit census $N=n=1$. The approved SRSWOR
+whole-matrix rules are
+
+$$
+\widehat V_{\mathrm{plugin}}=qQ/n^2,\qquad
+\widehat V_{\mathrm{design}}=
+\begin{cases}
+0_{K\times K}, & N=n,\\
+(N-n)Q/[Nn(n-1)], & N>n\text{ and }n>1.
+\end{cases}
+\tag{M3.2}
+$$
+
+These are standard without-replacement sampling corrections
+[@cochran_1977].
+
+The second rule is selected by **bias_correction = "binomial_bc"**.
+Both scale the entire matrix rather than replacing only its diagonal, so
+symmetry, PSD, and correlation structure are preserved. **N = n** is a valid
+census and produces a zero matrix. A Wilson boundary surrogate remains a
+named scalar/diagonal regularizer and carries the conventional $q$ multiplier.
+
+The four implemented interior-cell cases are therefore:
+
+| Variance rule | Infinite-population / no supplied $N$ | Fixed-population SRSWOR |
+|:--------------|:---------------------------------------|:--------------------------|
+| plug-in | $Q/n^2$ | $qQ/n^2$ |
+| `binomial_bc` | $Q/[n(n-1)]$ | $(N-n)Q/[Nn(n-1)]$ |
+
+The same multiplier applies to every matrix entry. A diagonal-only
+correction would change correlations and is not the implemented estimand.
+For a constant indicator, empirical cross-covariances are exactly zero.
+`boundary_method = "wilson_floor"` may replace that indicator's zero diagonal
+with a positive, explicitly named scalar/diagonal surrogate, but it never
+creates off-diagonal covariance. Agresti--Coull boundary regularization is
+illegal with `vjt = TRUE`.
+
+# 4. The `sm_vcov` class spec (canonical home)
+
+This vignette is the method location for the `sm_vcov` class
+spec. The primary fields used by Scenario B are:
+
+-   **`matrix`** — the $K \times K$ symmetric PSD numeric
+    matrix.
+-   **`vcov_scale`** — one of `"raw"`, `"arcsine_delta"`,
+    `"logit_delta"`, or reserved `"reference_raw"`. Under
+    Scenario B's SUR construction, `vcov_scale = "raw"` regardless
+    of the row's
+    `estimate_scale` (the SUR formula is numerically stable in
+    raw space).
+-   **`vcov_method`** — set to `"sur"` for Scenario B output.
+-   **`indicator_order`** and **`matrix_rank`** — record the
+    component order and numerical rank.
+-   **Finite-population provenance** — population size, coordinate-aligned
+    sampling fraction, conventional FPC, actually applied multiplier,
+    sampling design, and variance rule. These fields do not alter n_eff.
+-   **Diagonal contract** — "row_se_raw_squared" for Scenario B, making
+    explicit that the raw matrix diagonal matches se_raw squared, not
+    transformed se squared.
+
+For a package-produced Scenario B `sitemix_estimates` object, validation
+cross-checks those matrix fields against every row, including the site-year,
+estimate scale, common denominator, scalar correction rule, and boundary
+rule. Repeating the same tampered `V` over all group rows therefore cannot
+bypass the contract. A stand-alone user-constructed `sm_vcov` remains a more
+general carrier until it is attached to package output.
+
+The full lexicons are documented at `?sm_vcov`: `vcov_method`
+is `NA`, `"sur"`, `"multinomial"`, or
+`"working_independence"`; `vcov_scale` is `"raw"`,
+`"arcsine_delta"`, `"logit_delta"`, or `"reference_raw"`.
+
+# 5. PSD validation
+
+The assembled $\Sigma_{jt}$ is PSD by construction for
+non-degenerate joint counts. Numerical roundoff can produce a
+smallest eigenvalue slightly below zero; the constructor validates
+PSD-ness up to the documented tolerance. The Scenario B path records
+`psd_repair = "none"` because no repair is applied.
+
+# 6. Implementation invariants
+
+| ID    | Layer              | Claim                                                             |
+|:------|:-------------------|:------------------------------------------------------------------|
+| SUR1  | engine-multivariate | (M3.1) holds exactly for two indicators sharing the same $n$.      |
+| SUR2  | sm_vcov            | Every assembled `V[[i]]$matrix` satisfies the documented scale-aware PSD tolerance. |
+| SUR3  | sm_vcov            | `vcov_method = "sur"` and `vcov_scale = "raw"` for Scenario B.    |
+| SUR4  | correction         | Plug-in and `binomial_bc` scale the whole matrix, including off-diagonals. |
+| SUR5  | diagonal contract  | `diag(V) = se_raw^2`; transformed row `se^2` is intentionally different. |
+| SUR6  | boundary           | Constant-indicator off-diagonals are zero; Wilson is a named diagonal surrogate. |
+
+Verify on `alprek_subset`:
+
+```{r invariants}
+data(alprek_subset, package = "sitemix")
+est <- sm_estimate(
+  subset(alprek_subset, year == 2024),
+  family = "multivariate",
+  indicators = c("frpm", "snap"),
+  vjt = TRUE
+)
+V1 <- as.matrix(est$V[[1L]])
+
+# SUR1: closed form cross-covariance
+slice <- subset(alprek_subset, year == 2024 & site_id == est$site_id[1L])
+n <- nrow(slice)
+p_x <- mean(slice$frpm)
+p_y <- mean(slice$snap)
+p_xy <- mean(slice$frpm * slice$snap)
+manual_sigma <- (p_xy - p_x * p_y) / n
+stopifnot(all.equal(V1[1, 2], manual_sigma, tolerance = 1e-10))
+
+# SUR2: PSD
+eig_V1 <- eigen(V1, symmetric = TRUE, only.values = TRUE)$values
+tol_V1 <- 64 * nrow(V1) * .Machine$double.eps * max(abs(eig_V1)) +
+  64 * nrow(V1) * .Machine$double.xmin
+stopifnot(min(eig_V1) >= -tol_V1)
+
+# SUR3: lexicon
+stopifnot(est$V[[1L]]$vcov_method == "sur")
+stopifnot(est$V[[1L]]$vcov_scale == "raw")
+stopifnot(est$V[[1L]]$diag_contract == "row_se_raw_squared")
+stopifnot(est$estimate_scale[[1L]] == "arcsine")
+stopifnot(est$V[[1L]]$psd_repair == "none")
+```
+
+The three checked invariants (SUR1–SUR3) hold (algebraic tolerance
+`1e-10`; PSD uses the scale-aware relative plus machine-range rule
+above). SUR4–SUR6 in the table above are stated but not checked in
+this chunk.
+
+# 7. Where to go next
+
+-   [M4 · Multinomial simplex](m4-multinomial-simplex.html) —
+    the sister derivation for Scenario C (mutually exclusive
+    categories).
+-   [M5 · Aggregate engines D0 / D1](m5-aggregate-engines.html)
+    for the D1 working-independence variant of $V$.
+-   [A4 · Scenarios B / C — multivariate / multinomial](a4-multivariate-multinomial.html)
+    for the applied face of (M3.1) and the `vcov_scale = "raw"`
+    convention.
+
+# References

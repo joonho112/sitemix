@@ -1,0 +1,47 @@
+Package: sitemix
+Title: Site- and Group-Level Proportions, Rates, and Sampling Uncertainty
+Version: 0.2.0
+Date: 2026-07-12
+Authors@R: c(
+    person("JoonHo", "Lee", role = c("aut", "cre"),
+           email = "jlee296@ua.edu",
+           comment = c(ORCID = "0009-0006-4019-8703"))
+  )
+Description: Computes year-by-year site-level point estimates and asymptotic standard
+    errors of proportions and rates for three families: 'binomial' for single binary
+    indicators, 'multivariate' for overlapping binary indicators with joint counts
+    and seemingly unrelated regression covariance, and 'multinomial' for mutually
+    exclusive categories with full-simplex covariance. Accepts either student-level
+    rows or sufficient-count rows as input and returns a 'sitemix_estimates' tibble
+    with an optional variance-covariance list-column for downstream uncertainty
+    propagation. Also accepts published aggregate rows through the D0
+    aggregate-binomial path and the D1 aggregate-marginal working-independence path.
+URL: https://joonho112.github.io/sitemix/,
+    https://github.com/joonho112/sitemix
+BugReports: https://github.com/joonho112/sitemix/issues
+License: MIT + file LICENSE
+Depends:
+    R (>= 4.1.0)
+Imports:
+    rlang (>= 1.1.0),
+    tibble (>= 3.2.0),
+    vctrs (>= 0.6.0),
+    cli (>= 3.6.0),
+    Matrix
+Suggests:
+    testthat (>= 3.2.0),
+    covr,
+    dplyr,
+    knitr,
+    lintr (>= 3.3.0),
+    rmarkdown,
+    mgcv (>= 1.9.0),
+    pkgload,
+    withr
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Encoding: UTF-8
+Language: en-US
+LazyData: true
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.0.0

@@ -1,0 +1,26 @@
+alprek_subset provenance
+========================
+
+Restricted source panel: not shipped with the package.
+Canonical source file basename: student_panel_2021-2026.rds
+Canonical source MD5: fd18882ba1a7ddc287300a7e5bafe84d
+Builder: inst/scripts/build-alprek-subset.R
+Builder version: 1
+Seed: 2026
+Selected real-site digest algorithm: MD5
+Selected real-site digest: edcb883451655cf50b83f635ad221e32
+
+Public artifacts:
+- data/alprek_subset.rda: 7312 rows, 7 columns
+- inst/extdata/alprek_subset.csv: 7312 rows, 7 columns
+- inst/extdata/alprek_subset_counts.rds: 250 rows, 13 columns
+
+Disclosure audit summary:
+- synthetic sites: 50
+- years: 5
+- minimum public site-year n: 4
+- maximum public site-year n: 126
+- TANF zero-count site-year cells: 170
+- original site_code and adece_id columns are not included in shipped artifacts.
+- student_id is synthetic, sequential, and stable across years for the same selected child within a synthetic site.
+- stable student_id values preserve longitudinal structure for examples but are not original source identifiers.

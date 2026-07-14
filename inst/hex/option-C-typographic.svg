@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 618 715"
+     width="618" height="715"
+     role="img" aria-labelledby="title desc">
+  <title id="title">sitemix hex sticker — Option C: typographic</title>
+  <desc id="desc">Dark hexagonal sticker with a large lowercase wordmark "sitemix" centered and a low-contrast histogram strip of vertical ticks along the lower portion suggesting a distribution of site estimates.</desc>
+
+  <defs>
+    <clipPath id="hexClip">
+      <polygon points="309,5 612,179 612,536 309,710 6,536 6,179" />
+    </clipPath>
+  </defs>
+
+  <!-- Hex fill (dark primary) and a slightly lighter border -->
+  <polygon points="309,5 612,179 612,536 309,710 6,536 6,179"
+           fill="#1B4965" stroke="#5FA8D3" stroke-width="2.5" />
+
+  <!-- Large wordmark, dominant -->
+  <text x="309" y="370"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="142" font-weight="700"
+        fill="#F4F4F4"
+        letter-spacing="-4">sitemix</text>
+
+  <!-- Subtitle -->
+  <text x="309" y="430"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="24" font-weight="300"
+        fill="#9EC5DE"
+        letter-spacing="6">SITE-YEAR · EB · R</text>
+
+  <!-- Low-contrast histogram strip across the lower band: tick marks
+       of varying heights -->
+  <g clip-path="url(#hexClip)" opacity="0.85">
+    <!-- 22 ticks spaced across; heights follow a soft bell shape -->
+    <line x1="100" y1="610" x2="100" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="120" y1="600" x2="120" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="140" y1="590" x2="140" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="160" y1="578" x2="160" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="180" y1="568" x2="180" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="200" y1="558" x2="200" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="220" y1="550" x2="220" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="240" y1="544" x2="240" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="260" y1="538" x2="260" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="280" y1="535" x2="280" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="300" y1="533" x2="300" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="320" y1="535" x2="320" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="340" y1="538" x2="340" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="360" y1="544" x2="360" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="380" y1="550" x2="380" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="400" y1="558" x2="400" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="420" y1="568" x2="420" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="440" y1="578" x2="440" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="460" y1="590" x2="460" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="480" y1="600" x2="480" y2="630" stroke="#62B6CB" stroke-width="3" />
+    <line x1="500" y1="610" x2="500" y2="630" stroke="#62B6CB" stroke-width="3" />
+
+    <!-- Baseline -->
+    <line x1="90" y1="635" x2="510" y2="635" stroke="#9EC5DE" stroke-width="2" />
+  </g>
+</svg>

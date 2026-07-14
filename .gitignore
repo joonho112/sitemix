@@ -1,0 +1,26 @@
+.DS_Store
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.tar.gz
+*.Rcheck/
+docs/
+ci-artifacts/
+_book/
+.quarto/
+*_files/
+README.html
+performance-smoke*.csv
+performance-smoke*.txt
+bench-smoke*.csv
+bench-smoke*.txt
+/doc/
+/Meta/
+
+# Internal development scratch and build logs (not part of the package)
+dev/
+log/
+
+# Rendered vignette previews (regenerated into inst/doc and the pkgdown site)
+vignettes/*.html

@@ -1,0 +1,203 @@
+---
+title: "A9 · Case study — Alabama Pre-K"
+author: "JoonHo Lee"
+date: "2026-07-12"
+abstract: >
+  An end-to-end applied case study using the bundled
+  `alprek_subset`. The case study mirrors a realistic project arc:
+  question → data prep → site-level estimation → diagnostics →
+  optional experimental GVF sensitivity → canonical uncertainty export → methods-
+  appendix summary. Use this vignette as the citable URL when you
+  write up your own sitemix workflow.
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    fig_caption: true
+    df_print: tibble
+vignette: >
+  %\VignetteIndexEntry{A9 · Case study — Alabama Pre-K}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, include = FALSE, error = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, results = "markup", comment = "#>", collapse = TRUE,
+  message = FALSE, warning = FALSE, error = FALSE,
+  fig.width = 7, fig.height = 4.5, fig.retina = 2, dpi = 144,
+  fig.align = "center", out.width = "100%"
+)
+options(warn = 2)
+set.seed(
+  1L, kind = "Mersenne-Twister", normal.kind = "Inversion",
+  sample.kind = "Rejection"
+)
+library(sitemix)
+data(alprek_subset, package = "sitemix")
+```
+
+# Overview
+
+## 1. The reporting question
+
+Asha is the accountability lead for a 50-site Alabama Pre-K
+program. The question for the legislative report: **what are
+the site-level FRPM (free and reduced-price meals) take-up rates
+in 2024, and which sites meet the stated publication criteria?**
+
+The audience is the legislature; the deliverable is a table and
+a paragraph in a methods appendix.
+
+## 2. What you will be able to do
+
+By the end of this case study you will be able to complete this full
+`sitemix` pipeline:
+
+1.  **Data prep** — slice `alprek_subset` to the year of
+    interest.
+2.  **Site-level estimation** with `sm_estimate()`.
+3.  **Diagnostics** with `sm_diagnose()`.
+4.  **Optional sensitivity** with the experimental GVF helper, without
+    replacing canonical SEs.
+5.  **Direct uncertainty export** with canonical columns.
+6.  **Methods-appendix paragraph** for the legislative report.
+
+**Prerequisites.** [A1 · Getting started](a1-getting-started.html) for the
+one-call basics; this capstone assembles the full arc.
+
+> **About the example data.** All results here are computed live from
+> `alprek_subset`, an anonymized, illustrative 50-site sample of Alabama
+> First Class Pre-K records shipped in the package (see `?alprek_subset`).
+> It is not a real accountability dataset and must not be cited as empirical
+> Pre-K results. Every code block runs offline with a fixed random seed.
+
+# 3. Data prep
+
+```{r prep}
+target_year <- 2024L
+dat <- subset(alprek_subset, year == target_year)
+nrow(dat)
+length(unique(dat$site_id))
+```
+
+Restricting to 2024 leaves 50 sites in this sample.
+
+# 4. Site-level estimation
+
+```{r estimate}
+est <- sm_estimate(
+  dat,
+  family    = "binomial",
+  indicator = "frpm"
+)
+head(est[, c("site_id", "n", "theta_raw", "theta_hat", "se",
+             "flag_small_n", "flag_below_accountability")], 5)
+```
+
+The default `vst = "arcsine"` returns an arcsine-stabilized estimate
+and its standard error; `estimate_scale` records that choice.
+
+# 5. Diagnostics
+
+```{r diagnose}
+diag <- sm_diagnose(est, verbose = FALSE)
+print(as.data.frame(diag), row.names = FALSE)
+```
+
+The summary reports `n_flag_small_n`, `n_flag_below_accountability`,
+and intrinsic facts such as `scalar_uncertainty_finite`,
+`scalar_se_positive`, and `indicator_scale_consistent`.
+
+# 6. Optional experimental GVF sensitivity
+
+Small sample size alone is not a trigger to smooth. A prespecified simulation
+study found no evidence for promoting either GVF backend to the default,
+so the reporting workflow proceeds with canonical `se`. If a separate analysis
+prespecifies a GVF sensitivity comparison, create an append-only candidate
+under a separate object and column name:
+
+```{r smoothing-sensitivity, eval = FALSE}
+est_sensitivity <- sm_smooth_variance(
+  est,
+  method = "loglinear",
+  overwrite = FALSE
+)
+# Keep est_sensitivity$se_smoothed separate from canonical est$se.
+```
+
+This optional code is deliberately not part of the default executed path and
+makes no general improvement claim.
+
+# 7. Direct uncertainty export
+
+```{r uncertainty-export}
+analysis_input <- data.frame(
+  unit_id        = est$site_id,
+  year           = est$year,
+  indicator      = est$indicator,
+  estimate       = est$theta_hat,
+  std_error      = est$se,
+  estimate_scale = est$estimate_scale,
+  var_method     = est$var_method
+)
+# If a prespecified sensitivity was run, add it under a separate name:
+# analysis_input$std_error_gvf_sensitivity <- est_sensitivity$se_smoothed
+head(analysis_input, 5)
+```
+
+The export is an ordinary data frame. Any downstream package can map
+`estimate` and `std_error` to its own interface while retaining scale
+and variance-method provenance.
+
+# 8. Methods-appendix paragraph (citable template)
+
+> *We computed site-level FRPM rates for the 50 sites in the
+> 2024 cohort using the sitemix R package
+> [@lee_2026_sitemix].
+> Site-level estimates used the arcsine variance-stabilizing
+> transform with the default Wilson boundary surrogate
+> [@wilson_1927]. Rows below the accountability threshold of
+> `n = 30` were flagged but retained in the uncertainty table.
+> We exported canonical unsmoothed standard errors and reported the
+> estimate scale and variance method with every estimate. Experimental
+> GVF alternatives were not substituted for canonical uncertainty.*
+
+# 9. Audit
+
+```{r audit}
+stopifnot(nrow(est) == 50L)
+stopifnot(all(est$indicator == "frpm"))
+stopifnot(diag$scalar_uncertainty_finite == TRUE)
+stopifnot(diag$scalar_se_positive == TRUE)
+stopifnot(diag$indicator_scale_consistent == TRUE)
+stopifnot(all(est$estimate_scale == "arcsine"))
+stopifnot(all(is.finite(est$theta_hat)))
+stopifnot(nrow(analysis_input) == nrow(est))
+stopifnot(identical(analysis_input$std_error, est$se))
+stopifnot(!"se_smoothed" %in% names(est))
+```
+
+# 10. What's next?
+
+-   [M1 · Statistical foundations](m1-statistical-foundations.html)
+    for the sampling-uncertainty framing behind the case study.
+-   [M2 · Scalar SE — binomial](m2-scalar-se-binomial.html)
+    for the arcsine and boundary-method derivations.
+-   [M6 · Variance smoothing theory](m6-variance-smoothing-theory.html)
+    for the experimental sensitivity model and its NO-GO simulation decision.
+-   [M8 · Output contract](m8-output-contract.html)
+    for the package-neutral column and covariance contract.
+
+# 11. Citation
+
+```r
+citation("sitemix")
+```
+
+A canonical BibTeX entry lives in `vignettes/references.bib`
+under the key `lee_2026_sitemix`.
+
+# References

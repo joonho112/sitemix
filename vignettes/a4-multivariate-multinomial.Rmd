@@ -1,0 +1,237 @@
+---
+title: "A4 · Scenarios B / C — multivariate and multinomial"
+author: "JoonHo Lee"
+date: "2026-07-12"
+abstract: >
+  For applied researchers whose data have more than one outcome
+  per site-year and need joint covariance. This vignette
+  disambiguates Scenarios B (overlapping binary indicators with
+  SUR-style covariance) and C (mutually exclusive categories with
+  simplex covariance) and shows how to inspect the `V` list-column.
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    fig_caption: true
+    df_print: tibble
+vignette: >
+  %\VignetteIndexEntry{A4 · Scenarios B / C — multivariate and multinomial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, include = FALSE, error = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, results = "markup", comment = "#>", collapse = TRUE,
+  message = FALSE, warning = FALSE, error = FALSE,
+  fig.width = 7, fig.height = 4.5, fig.retina = 2, dpi = 144,
+  fig.align = "center", out.width = "100%"
+)
+options(warn = 2)
+set.seed(
+  1L, kind = "Mersenne-Twister", normal.kind = "Inversion",
+  sample.kind = "Rejection"
+)
+library(sitemix)
+data(alprek_subset, package = "sitemix")
+```
+
+# Overview
+
+## 1. Why you are here
+
+Priya runs an accountability framework with both `FRPM` status
+(binary) and a language-of-instruction category (4 mutually-
+exclusive levels). Her downstream analysis compares indicators
+jointly, so she needs not just SEs but **covariance** — the
+`V` list-column. She also needs to decide between Scenario B
+(overlapping binaries) and Scenario C (mutually exclusive
+categories) before her first call.
+
+**What you will leave with.** By the end of this article you will be able to:
+
+1.  Distinguish overlapping-indicator (Scenario B) covariance from
+    mutually-exclusive (Scenario C) covariance before your first call.
+2.  Produce a `sitemix_estimates` tibble that carries a joint `V`
+    list-column via `vjt = TRUE`.
+3.  Read the `vcov_scale` and `vcov_method` metadata before consuming
+    a covariance matrix.
+
+**Prerequisites.** [A2 · Input formats](a2-input-formats.html).
+
+> **About the example data.** All results here are computed live from
+> `alprek_subset`, an anonymized, illustrative 50-site sample of Alabama
+> First Class Pre-K records shipped in the package (see `?alprek_subset`),
+> and a synthetic `primary_language` category for the Scenario C example. It
+> is not a real accountability dataset and must not be cited as empirical
+> Pre-K results. Every code block runs offline with a fixed random seed.
+
+# 2. Scenario B vs Scenario C — the disambiguation
+
+Two questions in order:
+
+1.  **"Can a single student be in two indicators
+    simultaneously?"** Yes → Scenario B (overlapping binaries).
+    No → go to question 2.
+2.  **"Do my indicators partition the population (each student
+    belongs to exactly one)?"** Yes → Scenario C (multinomial).
+
+Concrete examples:
+
+-   FRPM / SNAP / WIC / TANF: a student can be in any subset.
+    Scenario B.
+-   Primary language ∈ {English, Spanish, Other}: a student is
+    in exactly one. Scenario C.
+
+The two scenarios share the structure "multiple components per
+site-year with non-diagonal covariance," but they differ in
+**which covariance**: Scenario B uses SUR-style cross-covariance
+from joint proportions; Scenario C uses the multinomial simplex
+covariance `(diag(π) − π π') / n`.
+
+Both scenarios accept student rows through `sm_estimate()` and complete
+sufficient counts through `sm_estimate_from_counts()`. Scenario B count input
+must include every pairwise co-occurrence count; Scenario C count input must
+include every category count and those counts must sum to `n_jt`. Published
+aggregate marginals are a separate D1 multivariate path and are never routed
+to Scenario C.
+
+# 3. Scenario B — overlapping binary indicators
+
+Call `sm_estimate()` with `family = "multivariate"` and an
+`indicators` vector of column names. Set `vjt = TRUE` to attach
+the per-row `V` list-column.
+
+```{r scenario-b}
+benefits_2024 <- sm_estimate(
+  subset(alprek_subset, year == 2024),
+  family     = "multivariate",
+  indicators = c("frpm", "snap", "wic", "tanf"),
+  vjt        = TRUE
+)
+head(benefits_2024, 4)
+```
+
+Each site-year emits 4 rows (one per indicator). The covariance
+across the four indicators for site `S001` is in the first
+element of the `V` list-column:
+
+```{r scenario-b-vcov}
+V_S001 <- benefits_2024$V[[1L]]
+round(as.matrix(V_S001), 4)
+V_S001$vcov_scale
+V_S001$vcov_method
+```
+
+**The `vcov_scale` caveat.** Note that
+`vcov_scale = "raw"`: the covariance matrix is computed on the
+raw probability scale, even though `theta_hat` is on the arcsine
+scale (the default). This is because the SUR construction is
+numerically stable in raw space; the matrix is not currently
+transformed to the arcsine-delta scale.
+
+The practical implication: **do not assume
+`sqrt(diag(V)) == se`**. The row-level `se` is on the arcsine
+scale; the matrix is on the raw scale. Always read
+`V[[i]]$vcov_scale` before consuming the matrix.
+
+# 4. Scenario C — mutually exclusive categories
+
+`alprek_subset` does not ship with a mutually-exclusive category,
+so this section constructs a deterministic synthetic example on
+the same site-year grid.
+
+```{r scenario-c-data}
+language_data <- transform(
+  alprek_subset,
+  primary_language = sample(
+    c("english", "spanish", "other"),
+    nrow(alprek_subset),
+    replace = TRUE,
+    prob    = c(0.70, 0.25, 0.05)
+  )
+)
+language_data <- language_data[
+  c("student_id", "site_id", "year", "primary_language")
+]
+head(language_data, 5)
+```
+
+Now call `sm_estimate()` with `family = "multinomial"`:
+
+```{r scenario-c}
+language_2024 <- sm_estimate(
+  subset(language_data, year == 2024),
+  family    = "multinomial",
+  indicator = "primary_language",
+  vjt       = TRUE
+)
+head(language_2024, 6)
+```
+
+Three rows per site-year (one per category). The covariance for
+site `S001`:
+
+```{r scenario-c-vcov}
+V_lang_S001 <- as.matrix(language_2024$V[[1L]])
+round(V_lang_S001, 4)
+```
+
+The row sums of the simplex covariance are zero (the simplex
+constraint):
+
+```{r simplex-check}
+rowSums(V_lang_S001)
+```
+
+# 5. Preparing scalar and joint uncertainty inputs
+
+Some downstream analyses want one estimate and standard error per
+indicator rather than a joint matrix. Select the canonical columns
+and split them directly:
+
+```{r split}
+scalar_inputs <- split(
+  as.data.frame(benefits_2024[, c(
+    "site_id", "year", "indicator", "theta_hat", "se",
+    "estimate_scale", "var_method"
+  )]),
+  benefits_2024$indicator
+)
+names(scalar_inputs)
+```
+
+This preserves the estimate scale and variance provenance instead of
+silently translating them. Analyses that use cross-indicator
+uncertainty should consume the `V` list-column and its metadata
+directly; see [A8 · Downstream workflows](a8-downstream-workflows.html).
+
+# 6. Audit
+
+```{r audit}
+stopifnot(nrow(benefits_2024) == 200L)  # 50 sites × 4 indicators
+stopifnot(inherits(benefits_2024$V[[1]], "sm_vcov"))
+stopifnot(benefits_2024$V[[1]]$vcov_method == "sur")
+stopifnot(benefits_2024$V[[1]]$vcov_scale == "raw")
+stopifnot(min(eigen(as.matrix(benefits_2024$V[[1]]),
+                    symmetric = TRUE)$values) >= -1e-10)
+stopifnot(nrow(language_2024) == 150L)  # 50 sites × 3 categories
+stopifnot(language_2024$V[[1]]$vcov_method == "multinomial")
+stopifnot(max(abs(rowSums(as.matrix(language_2024$V[[1]])))) < 1e-10)
+```
+
+# 7. What's next?
+
+-   [A6 · Diagnostics and suppression](a6-diagnostics-and-suppression.html)
+    for the `level = "vcov"` diagnostic that confirms PSD and
+    reports the condition number.
+-   [A8 · Downstream workflows](a8-downstream-workflows.html) — when the joint
+    covariance is consumed by a downstream analysis.
+-   [M3 · Multivariate SUR covariance](m3-multivariate-sur-covariance.html)
+    for the formal SUR derivation.
+-   [M4 · Multinomial simplex](m4-multinomial-simplex.html) for
+    the formal simplex-covariance derivation.
+
+# References

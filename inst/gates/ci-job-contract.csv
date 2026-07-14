@@ -1,0 +1,9 @@
+workflow,job_id,role,runner_policy,r_policy,blocking_policy,timeout_minutes,session_required,artifact_required,artifact_retention_days,required_markers
+.github/workflows/R-CMD-check.yaml,R-CMD-check,check-matrix,matrix.config.os,release-devel-oldrel,devel-step-advisory,60,TRUE,TRUE,14,"rcmdcheck::rcmdcheck|error_on = ""note""|audit-test-budget.R|setup-tinytex|manual: true|advisory: true"
+.github/workflows/R-CMD-check.yaml,minimum-R,minimum-r,ubuntu-22.04,4.1.3,blocking,45,TRUE,TRUE,14,"4.1.3|minimum-r-hard-only|isolate-optional-dependencies.R|R CMD INSTALL"
+.github/workflows/R-CMD-check.yaml,dependency-floor,dependency-floor,ubuntu-latest,4.5.1,blocking,30,TRUE,TRUE,14,"4.5.1|audit-dependency-floor.R|--profile=gate"
+.github/workflows/R-CMD-check.yaml,optional-negative,optional-dependency-negative,ubuntu-latest,release,blocking,30,TRUE,TRUE,14,"optional-no-gam|isolate-optional-dependencies.R"
+.github/workflows/R-CMD-check.yaml,package-quality,full-suite-lint-schema-export,ubuntu-latest,release,blocking,30,TRUE,TRUE,14,"audit-lint-gate.R|audit-test-budget.R|package-quality-release"
+.github/workflows/R-CMD-check.yaml,coverage,line-coverage,ubuntu-latest,release,blocking,45,TRUE,TRUE,14,"audit-coverage-gate.R"
+.github/workflows/R-CMD-check.yaml,performance,performance-structure-and-advisory-numerics,ubuntu-latest,release,blocking,30,TRUE,TRUE,14,"performance-contract-self-test.R|performance-smoke.R|--profile=ci-smoke"
+.github/workflows/pkgdown.yaml,documentation,documentation-and-pkgdown-build,ubuntu-latest,release,blocking,45,TRUE,TRUE,14,"audit-documentation-qa.R|--profile=gate|--url-mode=online"

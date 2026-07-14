@@ -1,0 +1,17 @@
+scale,method,metric,expected,tolerance
+raw_se,unsmoothed,relative_mse,0.8609845,0.005
+raw_se,loglinear,relative_mse,1.660669,0.005
+raw_se,unsmoothed,coverage,0.9315476,0.000001
+raw_se,loglinear,coverage,0.9404762,0.000001
+raw_se,unsmoothed,inverse_weight_tv,0.1954405,0.0001
+raw_se,loglinear,inverse_weight_tv,0.2041067,0.0001
+raw_se,loglinear,overall_relative_mse_ratio,1.928802,0.005
+raw_se,loglinear,worst_stratum_relative_mse_ratio,1.994407,0.005
+transformed_se,unsmoothed,relative_mse,0,0.00000000000000000001
+transformed_se,loglinear,relative_mse,0,0.00000000000000000001
+transformed_se,unsmoothed,coverage,0.9117063,0.000001
+transformed_se,loglinear,coverage,0.9117063,0.000001
+transformed_se,unsmoothed,inverse_weight_tv,0,0.000000000001
+transformed_se,loglinear,inverse_weight_tv,0,0.000000000001
+transformed_se,loglinear,overall_relative_mse_ratio,1,0.000001
+transformed_se,loglinear,worst_stratum_relative_mse_ratio,1,0.000001

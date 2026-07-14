@@ -1,0 +1,539 @@
+name: R-CMD-check
+
+'on':
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  R-CMD-check:
+    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+    runs-on: ${{ matrix.config.os }}
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: ubuntu-latest, r: release, profile: rcmd-ubuntu-release, advisory: false, manual: true}
+          - {os: ubuntu-latest, r: devel, profile: rcmd-ubuntu-devel, advisory: true, manual: false}
+          - {os: ubuntu-latest, r: oldrel-1, profile: rcmd-ubuntu-oldrel, advisory: false, manual: false}
+          - {os: macos-latest, r: release, profile: rcmd-macos-release, advisory: false, manual: false}
+          - {os: windows-latest, r: release, profile: rcmd-windows-release, advisory: false, manual: false}
+
+    env:
+      NOT_CRAN: "true"
+      R_KEEP_PKG_SOURCE: "yes"
+      _R_CHECK_FORCE_SUGGESTS_: "true"
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-pandoc@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          pandoc-version: '3.8.3'
+
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-tinytex@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        if: matrix.config.manual == true
+
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          dependencies: '"all"'
+          extra-packages: any::rcmdcheck
+          needs: check
+          install-quarto: false
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Strict R CMD check
+        id: rcmdcheck
+        continue-on-error: ${{ matrix.config.advisory == true }}
+        run: |
+          manual <- identical("${{ matrix.config.manual }}", "true")
+          no_manual <- if (manual) character() else "--no-manual"
+          rcmdcheck::rcmdcheck(
+            args = no_manual,
+            build_args = no_manual,
+            error_on = "note",
+            check_dir = "check"
+          )
+        shell: Rscript {0}
+
+      - name: Test budget and timing gate
+        id: test_budget
+        continue-on-error: ${{ matrix.config.advisory == true }}
+        run: >-
+          Rscript --vanilla inst/scripts/audit-test-budget.R
+          --profile=${{ matrix.config.profile }}
+          --out-dir=ci-artifacts/test-budget/${{ matrix.config.profile }}
+
+      - name: Record advisory R-devel outcomes
+        if: always() && matrix.config.advisory == true
+        run: |
+          dir.create("ci-artifacts/advisory", recursive = TRUE, showWarnings = FALSE)
+          outcome <- data.frame(
+            profile = "${{ matrix.config.profile }}",
+            rcmdcheck = "${{ steps.rcmdcheck.outcome }}",
+            test_budget = "${{ steps.test_budget.outcome }}",
+            stringsAsFactors = FALSE
+          )
+          utils::write.csv(
+            outcome,
+            "ci-artifacts/advisory/r-devel-outcomes.csv",
+            row.names = FALSE
+          )
+          if (any(unlist(outcome[1L, c("rcmdcheck", "test_budget")]) == "failure")) {
+            cat("::warning title=R-devel advisory failure::See the uploaded advisory and check artifacts.\n")
+          }
+          cat(
+            "### R-devel advisory outcomes\n\n",
+            "- R CMD check: ", outcome$rcmdcheck, "\n",
+            "- Test budget: ", outcome$test_budget, "\n",
+            file = Sys.getenv("GITHUB_STEP_SUMMARY"),
+            append = TRUE,
+            sep = ""
+          )
+        shell: Rscript {0}
+
+      - name: Session snapshot
+        if: always()
+        run: |
+          dir.create("ci-artifacts/session", recursive = TRUE, showWarnings = FALSE)
+          writeLines(
+            capture.output(utils::sessionInfo()),
+            file.path("ci-artifacts/session", "${{ matrix.config.profile }}.txt")
+          )
+        shell: Rscript {0}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: check-results-${{ matrix.config.profile }}
+          path: |
+            check
+            ci-artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+  minimum-R:
+    name: minimum R (Ubuntu 22.04, R 4.1.3)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    env:
+      NOT_CRAN: "true"
+      R_KEEP_PKG_SOURCE: "yes"
+      _R_CHECK_FORCE_SUGGESTS_: "false"
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          r-version: '4.1.3'
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          dependencies: '"hard"'
+          extra-packages: any::testthat
+          install-quarto: false
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and install without optional vignettes
+        run: |
+          R CMD build --no-build-vignettes --no-manual .
+          R CMD INSTALL --no-multiarch sitemix_*.tar.gz
+
+      - name: Test budget with dplyr and mgcv isolated
+        run: >-
+          sudo -E "$(command -v Rscript)"
+          inst/scripts/isolate-optional-dependencies.R
+          --profile=minimum-r-hard-only
+          --out-dir=ci-artifacts/test-budget/minimum-r-hard-only
+
+      - name: Installed-package and Matrix smoke
+        run: |
+          stopifnot(
+            getRversion() >= package_version("4.1.0"),
+            getRversion() < package_version("4.2.0")
+          )
+          library(sitemix)
+          data(alprek_subset, package = "sitemix")
+          out <- sm_estimate(
+            subset(alprek_subset, year == 2024),
+            family = "binomial",
+            indicator = "frpm",
+            min_n = 1L
+          )
+          diag <- sm_diagnose(out, verbose = FALSE)
+          frechet <- sitemix:::.sm_frechet_from_vectors(
+            p = c(a = 0.5, b = 0.5, c = 0.5),
+            s = c(a = 0.1, b = 0.1, c = 0.1),
+            indicators = c("a", "b", "c"),
+            psd_method = "higham",
+            psd_tol = 1e-8,
+            psd_max_iter = 100L,
+            return_correlations = FALSE,
+            nearpd_args = list()
+          )
+          stopifnot(
+            nrow(out) > 0L,
+            isTRUE(diag$scalar_uncertainty_finite[[1L]]),
+            isTRUE(diag$scalar_se_positive[[1L]]),
+            frechet$psd_diagnostics$L_iters[[1L]] > 0L,
+            frechet$psd_diagnostics$L_min_eig_after[[1L]] >= -1e-8
+          )
+        shell: Rscript {0}
+
+      - name: Session snapshot
+        if: always()
+        run: |
+          dir.create("ci-artifacts/session", recursive = TRUE, showWarnings = FALSE)
+          writeLines(
+            capture.output(utils::sessionInfo()),
+            "ci-artifacts/session/minimum-r.txt"
+          )
+        shell: Rscript {0}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: minimum-r-artifacts
+          path: ci-artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+  dependency-floor:
+    name: direct dependency floors (R 4.5.1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      NOT_CRAN: "true"
+      R_KEEP_PKG_SOURCE: "yes"
+      _R_CHECK_FORCE_SUGGESTS_: "false"
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          r-version: '4.5.1'
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          dependencies: '"hard"'
+          extra-packages: any::pak
+          install-quarto: false
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install exact direct dependency floors
+        run: |
+          pak::pkg_install(
+            c("cli@3.6.0", "rlang@1.1.0", "vctrs@0.6.0", "tibble@3.2.0"),
+            upgrade = TRUE,
+            ask = FALSE,
+            dependencies = NA
+          )
+        shell: Rscript {0}
+
+      - name: Dependency-floor contract self-test
+        run: Rscript --vanilla inst/scripts/audit-dependency-floor.R --self-test
+
+      - name: Build and install at exact floors
+        run: |
+          mkdir -p ci-artifacts/dependency-floor-source
+          R CMD build --no-build-vignettes --no-manual .
+          cp sitemix_*.tar.gz ci-artifacts/dependency-floor-source/
+          R CMD INSTALL --no-multiarch sitemix_*.tar.gz
+
+      - name: Installed dependency-floor smoke gate
+        run: >-
+          Rscript --vanilla inst/scripts/audit-dependency-floor.R
+          --profile=gate
+          --out-dir=ci-artifacts/dependency-floor
+
+      - name: Session snapshot
+        if: always()
+        run: |
+          dir.create("ci-artifacts/session", recursive = TRUE, showWarnings = FALSE)
+          writeLines(
+            capture.output(utils::sessionInfo()),
+            "ci-artifacts/session/dependency-floor.txt"
+          )
+        shell: Rscript {0}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: dependency-floor-artifacts
+          path: ci-artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+  optional-negative:
+    name: optional dependencies (optional-no-gam)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      NOT_CRAN: "true"
+      R_KEEP_PKG_SOURCE: "yes"
+      _R_CHECK_FORCE_SUGGESTS_: "false"
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          dependencies: '"hard"'
+          extra-packages: |
+            any::testthat
+            any::dplyr
+          install-quarto: false
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run exact optional-negative test budget
+        run: >-
+          sudo -E "$(command -v Rscript)"
+          inst/scripts/isolate-optional-dependencies.R
+          --profile=optional-no-gam
+          --out-dir=ci-artifacts/test-budget/optional-no-gam
+
+      - name: Session snapshot
+        if: always()
+        run: |
+          dir.create("ci-artifacts/session", recursive = TRUE, showWarnings = FALSE)
+          writeLines(
+            capture.output(utils::sessionInfo()),
+            "ci-artifacts/session/optional-no-gam.txt"
+          )
+        shell: Rscript {0}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: optional-negative-optional-no-gam
+          path: ci-artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+  package-quality:
+    name: full suite and lint (ubuntu release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      NOT_CRAN: "true"
+      R_KEEP_PKG_SOURCE: "yes"
+      _R_CHECK_FORCE_SUGGESTS_: "false"
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          dependencies: '"hard"'
+          extra-packages: |
+            any::dplyr
+            any::lintr
+            any::mgcv
+            any::testthat
+            any::yaml
+          install-quarto: false
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint policy gate
+        run: Rscript --vanilla inst/scripts/audit-lint-gate.R --mode=gate --out-dir=ci-artifacts/lint
+
+      - name: CI semantics contract self-test
+        run: Rscript --vanilla inst/scripts/audit-ci-semantics.R --self-test
+
+      - name: CI semantics gate
+        run: >-
+          Rscript --vanilla inst/scripts/audit-ci-semantics.R
+          --profile=gate
+          --out-dir=ci-artifacts/ci-semantics
+
+      - name: Test budget and timing gate
+        run: >-
+          Rscript --vanilla inst/scripts/audit-test-budget.R
+          --profile=package-quality-release
+          --out-dir=ci-artifacts/test-budget/package-quality-release
+
+      - name: Session snapshot
+        if: always()
+        run: |
+          dir.create("ci-artifacts/session", recursive = TRUE, showWarnings = FALSE)
+          writeLines(
+            capture.output(utils::sessionInfo()),
+            "ci-artifacts/session/package-quality.txt"
+          )
+        shell: Rscript {0}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: package-quality-artifacts
+          path: ci-artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+  coverage:
+    name: coverage gate (ubuntu release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      NOT_CRAN: "true"
+      R_KEEP_PKG_SOURCE: "yes"
+      _R_CHECK_FORCE_SUGGESTS_: "false"
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          dependencies: '"hard"'
+          extra-packages: |
+            any::covr
+            any::dplyr
+            any::mgcv
+            any::pkgload
+            any::testthat
+          install-quarto: false
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Coverage audit
+        run: Rscript --vanilla inst/scripts/audit-coverage-gate.R --out-dir=ci-artifacts/coverage
+
+      - name: Session snapshot
+        if: always()
+        run: |
+          dir.create("ci-artifacts/session", recursive = TRUE, showWarnings = FALSE)
+          writeLines(
+            capture.output(utils::sessionInfo()),
+            "ci-artifacts/session/coverage.txt"
+          )
+        shell: Rscript {0}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: coverage-artifacts
+          path: ci-artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+  performance:
+    name: performance smoke (ubuntu release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      NOT_CRAN: "true"
+      R_KEEP_PKG_SOURCE: "yes"
+      _R_CHECK_FORCE_SUGGESTS_: "false"
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          dependencies: '"hard"'
+          extra-packages: any::pkgload
+          install-quarto: false
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Performance contract self-test
+        run: Rscript --vanilla inst/bench/performance-contract-self-test.R
+
+      - name: Performance smoke benchmark
+        timeout-minutes: 20
+        env:
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+          VECLIB_MAXIMUM_THREADS: "1"
+          BLAS_NUM_THREADS: "1"
+        run: >-
+          Rscript --vanilla inst/bench/performance-smoke.R
+          --profile=ci-smoke
+          --warmup=1
+          --reps=3
+          --memory-reps=1
+          --out-dir=ci-artifacts/performance-smoke
+
+      - name: Session snapshot
+        if: always()
+        run: |
+          dir.create("ci-artifacts/session", recursive = TRUE, showWarnings = FALSE)
+          writeLines(
+            capture.output(utils::sessionInfo()),
+            "ci-artifacts/session/performance.txt"
+          )
+        shell: Rscript {0}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: performance-artifacts
+          path: ci-artifacts
+          if-no-files-found: error
+          retention-days: 14

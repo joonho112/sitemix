@@ -1,0 +1,6 @@
+package,description_field,description_constraint,installed_version_policy,expected_installed_version,runtime_profile,rationale
+rlang,Imports,>= 1.1.0,exact,1.1.0,r-4.5.1,Direct runtime floor verified exactly on the frozen pre-R-4.6 profile
+tibble,Imports,>= 3.2.0,exact,3.2.0,r-4.5.1,Direct runtime floor verified exactly on the frozen pre-R-4.6 profile
+vctrs,Imports,>= 0.6.0,exact,0.6.0,r-4.5.1,Direct runtime floor verified exactly on the frozen pre-R-4.6 profile
+cli,Imports,>= 3.6.0,exact,3.6.0,r-4.5.1,Direct runtime floor verified exactly on the frozen pre-R-4.6 profile
+Matrix,Imports,unversioned,compatible,r-4.5.1-compatible,r-4.5.1,R-recommended Matrix remains unversioned and must be available in an R 4.5.1-compatible release
