@@ -35,7 +35,7 @@ Suggests:
     knitr,
     lintr (>= 3.3.0),
     rmarkdown,
-    mgcv (>= 1.9.0),
+    mgcv,
     pkgload,
     withr
 VignetteBuilder: knitr

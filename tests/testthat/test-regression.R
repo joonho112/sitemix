@@ -86,7 +86,7 @@ test_that("ALprek 2024 aggregate regression pins match deterministic baselines",
   expect_lte(max(current$aggregate_d1_alprek_2024_four_indicator$vcov_pins$max_abs_offdiag), 1e-12)
 })
 
-test_that("review CSVs are byte-exact projections of the protected baseline", {
+test_that("review CSVs are value-exact projections of the protected baseline", {
   fixture_dir <- testthat::test_path("_data", "regression")
   baseline <- readRDS(file.path(fixture_dir, "regression-baselines.rds"))
   replay_dir <- tempfile("sitemix-regression-review-")
@@ -102,11 +102,36 @@ test_that("review CSVs are byte-exact projections of the protected baseline", {
   )
   expect_identical(sort(list.files(replay_dir)), sort(expected))
 
+  # Compare parsed values, not raw bytes. write.csv() renders doubles to
+  # ~15 significant digits, so a last-digit (~1e-15, one-ULP) cross-platform
+  # difference in a value breaks a byte-exact check even though the numbers
+  # are identical to machine precision. Numeric columns are compared with a
+  # tight tolerance; every other column must match exactly.
+  read_review_csv <- function(path) {
+    utils::read.csv(path, colClasses = "character", check.names = FALSE)
+  }
   for (name in expected) {
-    current_path <- file.path(fixture_dir, name)
-    replay_path <- file.path(replay_dir, name)
-    current_bytes <- readBin(current_path, what = "raw", n = file.size(current_path))
-    replay_bytes <- readBin(replay_path, what = "raw", n = file.size(replay_path))
-    expect_identical(replay_bytes, current_bytes, info = name)
+    current_csv <- read_review_csv(file.path(fixture_dir, name))
+    replay_csv <- read_review_csv(file.path(replay_dir, name))
+    expect_identical(dim(replay_csv), dim(current_csv), info = name)
+    expect_identical(names(replay_csv), names(current_csv), info = name)
+    for (col in names(current_csv)) {
+      current_col <- current_csv[[col]]
+      replay_col <- replay_csv[[col]]
+      current_num <- suppressWarnings(as.numeric(current_col))
+      replay_num <- suppressWarnings(as.numeric(replay_col))
+      numeric_col <- all(is.na(current_num) == is.na(current_col)) &&
+        all(is.na(replay_num) == is.na(replay_col))
+      if (numeric_col) {
+        expect_equal(
+          replay_num,
+          current_num,
+          tolerance = 1e-8,
+          info = paste(name, col)
+        )
+      } else {
+        expect_identical(replay_col, current_col, info = paste(name, col))
+      }
+    }
   }
 })
