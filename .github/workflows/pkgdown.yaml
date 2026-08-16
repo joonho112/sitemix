@@ -1,0 +1,84 @@
+name: pkgdown-documentation
+
+'on':
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  documentation:
+    name: documentation QA and clean pkgdown build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      NOT_CRAN: "true"
+      R_KEEP_PKG_SOURCE: "yes"
+      _R_CHECK_FORCE_SUGGESTS_: "false"
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-pandoc@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          pandoc-version: '3.8.3'
+
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2.12.1
+        with:
+          dependencies: '"hard"'
+          extra-packages: |
+            any::curl
+            any::knitr
+            any::mgcv
+            any::pkgdown
+            any::pkgload
+            any::rmarkdown
+            any::roxygen2@8.0.0
+            any::spelling
+            any::urlchecker
+            any::xml2
+            any::yaml
+          install-quarto: false
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Unified online documentation QA
+        run: >-
+          Rscript --vanilla inst/scripts/audit-documentation-qa.R
+          --profile=gate
+          --url-mode=online
+          --out-dir=ci-artifacts/documentation
+
+      - name: Session snapshot
+        if: always()
+        run: |
+          dir.create("ci-artifacts/session", recursive = TRUE, showWarnings = FALSE)
+          writeLines(
+            capture.output(utils::sessionInfo()),
+            "ci-artifacts/session/documentation.txt"
+          )
+        shell: Rscript {0}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: documentation-artifacts
+          path: ci-artifacts
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,46 @@
+linters: linters_with_defaults(
+    line_length_linter = line_length_linter(120L),
+    object_length_linter = object_length_linter(60L),
+    object_name_linter = object_name_linter(
+      styles = c("snake_case", "symbols"),
+      regexes = c(
+        "^[A-Z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)*$",
+        "^[a-z][a-z0-9_]*_[A-Z][A-Za-z0-9]*$",
+        "^validate[.](?:sitemix_estimates|sm_vcov)$",
+        "^[.]Random[.]seed$"
+      )
+    ),
+    object_usage_linter = NULL,
+    all_equal_linter = all_equal_linter(),
+    any_duplicated_linter = any_duplicated_linter(),
+    any_is_na_linter = any_is_na_linter(),
+    class_equals_linter = class_equals_linter(),
+    condition_call_linter = condition_call_linter(),
+    condition_message_linter = condition_message_linter(),
+    duplicate_argument_linter = duplicate_argument_linter(),
+    empty_assignment_linter = empty_assignment_linter(),
+    length_levels_linter = length_levels_linter(),
+    list_comparison_linter = list_comparison_linter(),
+    missing_argument_linter = missing_argument_linter(),
+    package_hooks_linter = package_hooks_linter(),
+    routine_registration_linter = routine_registration_linter(),
+    terminal_close_linter = terminal_close_linter(),
+    unreachable_code_linter = unreachable_code_linter()
+  )
+exclusions: list(
+    ".Rproj.user",
+    ".quarto",
+    "_book",
+    "ci-artifacts",
+    "dev",
+    "doc",
+    "docs",
+    "log",
+    "log-v2",
+    "man",
+    "Meta",
+    "pkgdown",
+    "R/RcppExports.R",
+    "sitemix.Rcheck"
+  )
+encoding: "UTF-8"

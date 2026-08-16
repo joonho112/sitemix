@@ -1,0 +1,28 @@
+"filename","measured_lines","covered_lines","uncovered_lines","coverage_pct","uncovered_share_pct","primary_tranche","risk_tier","target_pct","target_uncovered_reduction"
+"R/fpc.R",199,129,70,64.824121,5.422153,"Step 5.5","P0",82.41206,35
+"R/aggregates.R",462,356,106,77.056277,8.210689,"Step 5.4","P1",86.796537,45
+"R/sitemix_estimates.R",1213,937,276,77.246496,21.378776,"Step 5.4","P0",79.719703,30
+"R/output-assembly.R",413,339,74,82.082324,5.731991,"Step 5.4","P0",88.135593,25
+"R/pivot-subgroups.R",531,441,90,83.050847,6.97134,"Step 5.3","P0",91.525424,45
+"R/sur-covariance.R",384,320,64,83.333333,4.957397,"Step 5.5","P0",88.541667,20
+"R/validate-input.R",524,438,86,83.587786,6.661503,"Step 5.5","P1",85.496183,10
+"R/engine-aggregate-d1.R",443,384,59,86.681716,4.570101,"Step 5.4","P0",88.939052,10
+"R/frechet.R",1766,1543,223,87.372593,17.273431,"Step 5.5","P0",89.920725,45
+"R/smooth.R",651,573,78,88.018433,6.041828,"Step 5.5","P0",90.322581,15
+"R/suppression.R",275,244,31,88.727273,2.401239,"Step 5.3","P1",91.272727,7
+"R/engine-aggregate-d0.R",249,222,27,89.156627,2.091402,"Step 5.4","P2",89.156627,0
+"R/variance.R",298,275,23,92.281879,1.781565,"Step 5.5","P2",92.281879,0
+"R/sm_vcov.R",567,525,42,92.592593,3.253292,"Step 5.5","P0",94.356261,10
+"R/errors.R",91,85,6,93.406593,0.464756,"Step 5.4","P2",93.406593,0
+"R/aggregate.R",221,207,14,93.665158,1.084431,"Step 5.4","P2",93.665158,0
+"R/cli-helpers.R",63,60,3,95.238095,0.232378,"monitor","P2",95.238095,0
+"R/multinomial-covariance.R",158,151,7,95.56962,0.542215,"Step 5.5","P2",95.56962,0
+"R/engine-binomial.R",178,173,5,97.191011,0.387297,"Step 5.5","P2",97.191011,0
+"R/sm_diagnose.R",497,491,6,98.792757,0.464756,"Step 5.3","P1",99.396378,3
+"R/sm_estimate.R",266,265,1,99.62406,0.077459,"Step 5.5","P2",99.62406,0
+"R/engine-multinomial.R",104,104,0,100,0,"Step 5.5","monitor",100,0
+"R/engine-multivariate.R",131,131,0,100,0,"Step 5.5","monitor",100,0
+"R/sm_estimate_from_aggregates.R",49,49,0,100,0,"Step 5.5","monitor",100,0
+"R/sm_estimate_from_counts.R",26,26,0,100,0,"Step 5.5","monitor",100,0
+"R/transforms.R",133,133,0,100,0,"Step 5.5","monitor",100,0
+"R/uncertainty-contract.R",155,155,0,100,0,"Step 5.5","monitor",100,0

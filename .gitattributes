@@ -1,0 +1,12 @@
+# Force LF line endings on every platform so fixture checksums
+# (tools::md5sum / sha256sum in tests/testthat/test-test-architecture.R)
+# stay identical on Windows, macOS, and Linux CI checkouts.
+* text=auto eol=lf
+
+# Binary data artifacts: never touch their bytes.
+*.rds binary
+*.rda binary
+*.RData binary
+*.png binary
+*.jpg binary
+*.pdf binary

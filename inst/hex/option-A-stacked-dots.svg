@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 618 715"
+     width="618" height="715"
+     role="img" aria-labelledby="title desc">
+  <title id="title">sitemix hex sticker — Option A: stacked dots</title>
+  <desc id="desc">Dark blue hexagonal sticker with the lowercase wordmark "sitemix" near the top and a curved band of light translucent dots in the lower half evoking many site-year estimates.</desc>
+
+  <!-- Clip path so dots stay inside the hex -->
+  <defs>
+    <clipPath id="hexClip">
+      <polygon points="309,5 612,179 612,536 309,710 6,536 6,179" />
+    </clipPath>
+  </defs>
+
+  <!-- Hex fill (dark primary) and border -->
+  <polygon points="309,5 612,179 612,536 309,710 6,536 6,179"
+           fill="#1B4965" stroke="#0F2E40" stroke-width="2.5" />
+
+  <!-- Wordmark -->
+  <text x="309" y="180"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="92" font-weight="600"
+        fill="#F4F4F4"
+        letter-spacing="-2">sitemix</text>
+
+  <!-- Subtle tagline -->
+  <text x="309" y="225"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="22" font-weight="300"
+        fill="#9EC5DE"
+        letter-spacing="2">site-year estimates</text>
+
+  <!-- Curved band of dots -->
+  <g clip-path="url(#hexClip)">
+    <!-- Larger dots in the back (lower opacity, larger) -->
+    <circle cx="95"  cy="500" r="8.5"  fill="#62B6CB" opacity="0.35" />
+    <circle cx="135" cy="460" r="9"    fill="#62B6CB" opacity="0.45" />
+    <circle cx="175" cy="430" r="7.5"  fill="#62B6CB" opacity="0.40" />
+    <circle cx="215" cy="410" r="8"    fill="#62B6CB" opacity="0.50" />
+    <circle cx="260" cy="395" r="9.5"  fill="#62B6CB" opacity="0.55" />
+    <circle cx="305" cy="388" r="7.5"  fill="#62B6CB" opacity="0.50" />
+    <circle cx="350" cy="395" r="9"    fill="#62B6CB" opacity="0.55" />
+    <circle cx="395" cy="410" r="8.5"  fill="#62B6CB" opacity="0.50" />
+    <circle cx="440" cy="430" r="9"    fill="#62B6CB" opacity="0.45" />
+    <circle cx="480" cy="460" r="8"    fill="#62B6CB" opacity="0.40" />
+    <circle cx="520" cy="500" r="8.5"  fill="#62B6CB" opacity="0.35" />
+
+    <!-- Mid band -->
+    <circle cx="115" cy="540" r="7"    fill="#9EC5DE" opacity="0.70" />
+    <circle cx="155" cy="510" r="8"    fill="#9EC5DE" opacity="0.75" />
+    <circle cx="195" cy="490" r="7.5"  fill="#9EC5DE" opacity="0.70" />
+    <circle cx="235" cy="475" r="8"    fill="#9EC5DE" opacity="0.80" />
+    <circle cx="280" cy="465" r="7"    fill="#9EC5DE" opacity="0.75" />
+    <circle cx="325" cy="462" r="7.5"  fill="#9EC5DE" opacity="0.75" />
+    <circle cx="370" cy="465" r="7"    fill="#9EC5DE" opacity="0.75" />
+    <circle cx="415" cy="475" r="8"    fill="#9EC5DE" opacity="0.80" />
+    <circle cx="460" cy="490" r="7.5"  fill="#9EC5DE" opacity="0.70" />
+    <circle cx="500" cy="510" r="8"    fill="#9EC5DE" opacity="0.75" />
+
+    <!-- Front-band brighter dots -->
+    <circle cx="135" cy="585" r="6.5"  fill="#F4F4F4" opacity="0.95" />
+    <circle cx="175" cy="560" r="7"    fill="#F4F4F4" opacity="0.95" />
+    <circle cx="215" cy="540" r="6.5"  fill="#F4F4F4" opacity="0.95" />
+    <circle cx="255" cy="525" r="7"    fill="#F4F4F4" opacity="0.95" />
+    <circle cx="300" cy="518" r="6.5"  fill="#F4F4F4" opacity="0.95" />
+    <circle cx="345" cy="525" r="7"    fill="#F4F4F4" opacity="0.95" />
+    <circle cx="385" cy="540" r="6.5"  fill="#F4F4F4" opacity="0.95" />
+    <circle cx="425" cy="560" r="7"    fill="#F4F4F4" opacity="0.95" />
+    <circle cx="465" cy="585" r="6.5"  fill="#F4F4F4" opacity="0.95" />
+
+    <!-- Anchor dot center / brighter -->
+    <circle cx="300" cy="630" r="6"    fill="#FFFFFF" opacity="1.00" />
+    <circle cx="260" cy="640" r="5"    fill="#FFFFFF" opacity="0.85" />
+    <circle cx="340" cy="640" r="5"    fill="#FFFFFF" opacity="0.85" />
+    <circle cx="220" cy="652" r="4.5"  fill="#FFFFFF" opacity="0.75" />
+    <circle cx="380" cy="652" r="4.5"  fill="#FFFFFF" opacity="0.75" />
+  </g>
+</svg>

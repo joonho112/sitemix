@@ -1,0 +1,14 @@
+profile,suite_budget_seconds,max_block_seconds,slow_block_threshold_seconds,max_slow_blocks,blocking,gate_wired,notes
+local-full,180,15,5,5,TRUE,FALSE,Post-047 baseline is about 36 seconds with every block below 3 seconds
+architecture-static,180,15,5,5,TRUE,FALSE,Static profile does not execute the suite
+rcmd-ubuntu-release,180,15,5,5,TRUE,TRUE,Ordinary hosted-runner freeze guard
+rcmd-ubuntu-devel,180,15,5,5,FALSE,TRUE,Advisory devel job uses the same machine-readable timing gate
+rcmd-ubuntu-oldrel,300,30,10,5,TRUE,TRUE,Expanded cap for old R and dependency versions
+rcmd-macos-release,180,15,5,5,TRUE,TRUE,Ordinary hosted-runner freeze guard
+rcmd-windows-release,300,30,10,5,TRUE,TRUE,Expanded cap for Windows process and filesystem overhead
+package-quality-release,180,15,5,5,TRUE,TRUE,Coverage runs separately and is not charged to this test-suite cap
+minimum-r-hard-only,300,30,10,5,TRUE,TRUE,Expanded cap for minimum R and fresh-process isolation
+optional-no-gam,180,15,5,5,TRUE,TRUE,Fresh-process optional isolation has a bounded startup allowance
+optional-no-dplyr,180,15,5,5,TRUE,FALSE,Exact negative profile retained for local audit but not wired in CI
+optional-none,180,15,5,5,TRUE,FALSE,Exact negative profile retained for local audit but not wired in CI
+pkgdown-docs,180,15,5,5,TRUE,FALSE,Documentation profile does not execute the suite

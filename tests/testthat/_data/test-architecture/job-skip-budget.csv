@@ -1,0 +1,14 @@
+profile,ci_job,os,r_version,dependency_mode,test_scope,required_present,required_absent,expected_skips,allowed_skip_ids,blocking,gate_wired,notes
+local-full,local,current,current,full,full,dplyr|mgcv,none,0,none,TRUE,FALSE,developer full-suite baseline
+architecture-static,phase5-local,any,any,static,none,none,none,0,none,TRUE,FALSE,dependency-neutral static contract gate
+rcmd-ubuntu-release,R-CMD-check,ubuntu-latest,release,full,full,dplyr|mgcv,none,0,none,TRUE,TRUE,ordinary supported matrix cell wired to the exact test-budget profile
+rcmd-ubuntu-devel,R-CMD-check,ubuntu-latest,devel,full,full,dplyr|mgcv,none,0,none,FALSE,TRUE,advisory devel cell wired with a zero skip budget
+rcmd-ubuntu-oldrel,R-CMD-check,ubuntu-latest,oldrel-1,full,full,dplyr|mgcv,none,0,none,TRUE,TRUE,ordinary supported matrix cell wired to the exact test-budget profile
+rcmd-macos-release,R-CMD-check,macos-latest,release,full,full,dplyr|mgcv,none,0,none,TRUE,TRUE,ordinary supported matrix cell wired to the exact test-budget profile
+rcmd-windows-release,R-CMD-check,windows-latest,release,full,full,dplyr|mgcv,none,0,none,TRUE,TRUE,ordinary supported matrix cell wired to the exact test-budget profile
+package-quality-release,package-quality,ubuntu-latest,release,full,full,dplyr|mgcv,none,0,none,TRUE,TRUE,quality job wired to test-budget coverage and timing gates
+minimum-r-hard-only,minimum-R,ubuntu-22.04,4.1.3,optional-negative,full,none,dplyr|mgcv,2,"tests/testthat/test-output-subset-semantics.R::dplyr verbs share immediate subset and mutation semantics|tests/testthat/test-smooth-variance.R::valid GAM fits satisfy rank, convergence, and prediction gates",TRUE,TRUE,minimum-R job wired through CI-only fresh-process optional isolation
+optional-no-gam,optional-negative,ubuntu-latest,release,optional-negative,full,dplyr,mgcv,1,"tests/testthat/test-smooth-variance.R::valid GAM fits satisfy rank, convergence, and prediction gates",TRUE,TRUE,negative branch wired with mgcv isolated
+optional-no-dplyr,phase5-future,ubuntu-latest,release,optional-negative,full,mgcv,dplyr,1,tests/testthat/test-output-subset-semantics.R::dplyr verbs share immediate subset and mutation semantics,TRUE,FALSE,approved negative profile retained but not wired in the bounded CI matrix
+optional-none,phase5-future,ubuntu-latest,release,optional-negative,full,none,dplyr|mgcv,2,"tests/testthat/test-output-subset-semantics.R::dplyr verbs share immediate subset and mutation semantics|tests/testthat/test-smooth-variance.R::valid GAM fits satisfy rank, convergence, and prediction gates",TRUE,FALSE,approved negative profile retained but not wired in the bounded CI matrix
+pkgdown-docs,pkgdown,ubuntu-latest,release,docs,none,mgcv,none,0,none,TRUE,FALSE,documentation job does not run package tests
