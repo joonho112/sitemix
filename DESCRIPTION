@@ -33,7 +33,7 @@ Suggests:
     covr,
     dplyr,
     knitr,
-    lintr (>= 3.3.0),
+    lintr (>= 3.4.0),
     rmarkdown,
     mgcv,
     pkgload,

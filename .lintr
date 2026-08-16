@@ -28,6 +28,9 @@ linters: linters_with_defaults(
     unreachable_code_linter = unreachable_code_linter()
   )
 exclusions: list(
+    "inst/scripts/audit-ci-semantics.R" = list(unreachable_code_linter = 1100L),
+    "inst/scripts/isolate-optional-dependencies.R" = list(unreachable_code_linter = 46L),
+    "tests/testthat/test-validation-order-contract.R" = list(unreachable_code_linter = 232L),
     ".Rproj.user",
     ".quarto",
     "_book",

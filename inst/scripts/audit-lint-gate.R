@@ -45,7 +45,16 @@ sm_lint_gate_require_source_tree <- function(root) {
 }
 
 sm_lint_gate_exclusions <- function() {
+  # The three unreachable_code_linter exclusions below suppress a false
+  # positive introduced in lintr 3.4.0: a `stop()` used as the default branch
+  # of `switch()` is reachable, but the linter reports the closing
+  # parenthesis as code following `stop()`.
   list(
+    "inst/scripts/audit-ci-semantics.R" = list(unreachable_code_linter = 1100L),
+    "inst/scripts/isolate-optional-dependencies.R" =
+      list(unreachable_code_linter = 46L),
+    "tests/testthat/test-validation-order-contract.R" =
+      list(unreachable_code_linter = 232L),
     ".Rproj.user", ".quarto", "_book", "ci-artifacts", "dev", "doc",
     "docs", "log", "log-v2", "man", "Meta", "pkgdown",
     "R/RcppExports.R", "sitemix.Rcheck"
@@ -103,7 +112,7 @@ sm_lint_gate_assert_developer_config <- function(root) {
   }
   contents <- paste(readLines(path, warn = FALSE), collapse = "\n")
   observed <- sm_lint_gate_md5(contents)
-  expected <- "f6a76974eed88750b923e433bb486250"
+  expected <- "d7c68a16fd386f60e06c8a7fe1690e1a"
   if (!identical(observed, expected)) {
     stop(".lintr has drifted from the script-owned policy.", call. = FALSE)
   }
