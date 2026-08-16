@@ -49,7 +49,7 @@ jobs:
             any::pkgdown
             any::pkgload
             any::rmarkdown
-            any::roxygen2@8.0.0
+            any::roxygen2@8.1.0
             any::spelling
             any::urlchecker
             any::xml2

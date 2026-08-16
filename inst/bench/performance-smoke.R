@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-.bench_budget_md5 <- "d05b2ad43afb3c83b829100f9ceba1e9"
+.bench_budget_md5 <- "48f74008a5c16f5ae1d50d984758fa20"
 .bench_runtime_md5 <- "d3cc4583d99417b96a3595353dcc85d8"
 .bench_calibration_id <- "step68_initial_calibration_20260713"
 .bench_threshold_basis <- "post_phase6_future_regression_calibration"

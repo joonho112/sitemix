@@ -1519,7 +1519,7 @@ test_that("documentation CI is unified online build-only automation", {
     ))
     expect_setequal(dependencies, c(
       "any::curl", "any::knitr", "any::mgcv", "any::pkgdown",
-      "any::pkgload", "any::rmarkdown", "any::roxygen2@8.0.0",
+      "any::pkgload", "any::rmarkdown", "any::roxygen2@8.1.0",
       "any::spelling", "any::urlchecker", "any::xml2", "any::yaml"
     ))
     expect_true(all(vapply(

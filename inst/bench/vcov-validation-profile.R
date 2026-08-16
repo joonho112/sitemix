@@ -137,14 +137,14 @@ sm_vp_step64_source_manifest <- function() {
       "inst/bench/vcov-validation-profile.R"
     ),
     checksum = c(
-      "e7e0d542198a6821155f45d630667144",
-      "bf1c33c2f440fad890fc87b1bbd83d95",
-      "9d2daea1d27bb3a7f3fa78d21aa642ac",
-      "eeea66e3bc64069c0ab143740bad857b",
-      "4685565816452754cec21df54d1b45ce",
+      "dec8e9159ffa7e1e90deb5ad5e48e084",
+      "e55ea3477c9ef9056ad39bb3fc38312d",
+      "9056c91e1161bbdf5db61321dd75f9e2",
+      "afaa6ae7af7d71c0c5b7d7cf9a12162f",
+      "e31525b6e32da13ffd3ab95a7c0bd41b",
       "1cf8f7d81972af36f0901ace5715e8db",
       "a954f6ae9651921bdb9828267b62db34",
-      "498c85aad0803a9e3ae415fb1eb9455b"
+      "f1900cc0f057de702be77ef5e74a488c"
     ),
     stringsAsFactors = FALSE
   )

@@ -11,7 +11,7 @@
   "a6-diagnostics-and-suppression.Rmd",
   "a7-variance-smoothing-and-frechet.Rmd",
   "a8-downstream-workflows.Rmd",
-  "a9-case-study-alabama-prek.Rmd",
+  "a9-case-study-end-to-end.Rmd",
   "m1-statistical-foundations.Rmd",
   "m2-scalar-se-binomial.Rmd",
   "m3-multivariate-sur-covariance.Rmd",
@@ -39,8 +39,8 @@
     "A7 · Variance smoothing and Fréchet stress scenarios",
   "a8-downstream-workflows.Rmd" =
     "A8 · Downstream workflows",
-  "a9-case-study-alabama-prek.Rmd" =
-    "A9 · Case study — Alabama Pre-K",
+  "a9-case-study-end-to-end.Rmd" =
+    "A9 · Case study — end-to-end workflow",
   "m1-statistical-foundations.Rmd" =
     "M1 · Statistical foundations — sampling uncertainty",
   "m2-scalar-se-binomial.Rmd" =
@@ -85,7 +85,7 @@
   "inst/scripts/build-regression-baselines.R" =
     "29e8909b541af31ff47042591b462bd745c8b172bf6574a4ee6a90ced050acb1",
   "tests/testthat/_data/regression/regression-baselines.rds" =
-    "be0527f9357aa7cbb0c014a9b0ce8e60e15252b5270fad5bb99113106f9e075b",
+    "14893814546bf401777e637ff29577d4e32eb672f327eb6760edd4f5c0cffde9",
   "tests/testthat/_snaps/output-schema.md" =
     "ed838cde596fba9618627826af12e5e5b286fa633076474bc9e47f6824885c8e"
 )

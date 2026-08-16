@@ -363,7 +363,7 @@ design_txt <- c(
   sprintf("- between-site sd: %s", paste(sprintf("%s=%.2f", IND, DESIGN$sd_site), collapse = ", ")),
   "- indicator phi correlations and site-effect correlations: see build_info",
   "",
-  "Realised panel:",
+  "Realized panel:",
   sprintf("- rows: %d; sites: %d; years: %d", build_info$row_count,
           build_info$panel_summary$sites, build_info$panel_summary$years),
   sprintf("- site-year cells: %d", build_info$site_year_count),

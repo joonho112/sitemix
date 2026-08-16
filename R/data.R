@@ -35,7 +35,7 @@
 #' high-need on every indicator at once; and within a site-year cell the four
 #' indicators are drawn from a Gaussian copula thresholded at that cell's
 #' indicator probabilities. Design targets, calibrated latent parameters, and a
-#' summary of the realised panel are stored under the `build_info` attribute.
+#' summary of the realized panel are stored under the `build_info` attribute.
 #'
 #' The same builder generates two external artifacts:
 #' \itemize{
@@ -48,7 +48,7 @@
 #' @source
 #' Simulated by `inst/scripts/build-prek-sim.R`. See
 #' `inst/extdata/prek_sim_design.txt` for the generative model and the
-#' realised panel summary.
+#' realized panel summary.
 #'
 #' @seealso
 #' \itemize{

@@ -19,7 +19,7 @@ A tibble with 7,845 rows and 7 columns:
 \source{
 Simulated by \code{inst/scripts/build-prek-sim.R}. See
 \code{inst/extdata/prek_sim_design.txt} for the generative model and the
-realised panel summary.
+realized panel summary.
 }
 \usage{
 prek_sim
@@ -49,7 +49,7 @@ correlated random effects on the logit scale, so high-need sites are
 high-need on every indicator at once; and within a site-year cell the four
 indicators are drawn from a Gaussian copula thresholded at that cell's
 indicator probabilities. Design targets, calibrated latent parameters, and a
-summary of the realised panel are stored under the \code{build_info} attribute.
+summary of the realized panel are stored under the \code{build_info} attribute.
 
 The same builder generates two external artifacts:
 \itemize{

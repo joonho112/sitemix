@@ -25,7 +25,7 @@ Design targets:
 - between-site sd: frpm=0.12, snap=0.15, wic=0.12, tanf=0.02
 - indicator phi correlations and site-effect correlations: see build_info
 
-Realised panel:
+Realized panel:
 - rows: 7845; sites: 50; years: 5
 - site-year cells: 250
 - cell n: min 6, median 24, max 134

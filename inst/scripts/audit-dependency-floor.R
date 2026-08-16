@@ -23,7 +23,7 @@
   "inst/scripts/build-regression-baselines.R" =
     "29e8909b541af31ff47042591b462bd745c8b172bf6574a4ee6a90ced050acb1",
   "tests/testthat/_data/regression/regression-baselines.rds" =
-    "be0527f9357aa7cbb0c014a9b0ce8e60e15252b5270fad5bb99113106f9e075b",
+    "14893814546bf401777e637ff29577d4e32eb672f327eb6760edd4f5c0cffde9",
   "tests/testthat/_snaps/output-schema.md" =
     "ed838cde596fba9618627826af12e5e5b286fa633076474bc9e47f6824885c8e"
 )
