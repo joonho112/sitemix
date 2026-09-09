@@ -281,7 +281,7 @@ output uses the default arcsine transformation.
 
 first_site <- subset(est, site_id == est$site_id[1L])
 first_site <- first_site[match(est$V[[1L]]$indicator_order,
-                             first_site$indicator), ]
+                               first_site$indicator), ]
 stopifnot(all.equal(unname(diag(V1)), first_site$se_raw^2,
                     tolerance = 1e-10))
 data.frame(
