@@ -24,39 +24,39 @@
 
 .vignette_expected_titles <- c(
   "a1-getting-started.Rmd" =
-    "A1 · Getting started — your first site-level estimate",
+    "Getting started with site-level proportions",
   "a2-input-formats.Rmd" =
-    "A2 · Input formats — student rows, counts, or aggregates?",
+    "Choosing an input format",
   "a3-scenario-binomial.Rmd" =
-    "A3 · Scenario A — binomial estimates",
+    "Estimating proportions for a binary indicator",
   "a4-multivariate-multinomial.Rmd" =
-    "A4 · Scenarios B / C — multivariate and multinomial",
+    "Analyzing overlapping indicators and mutually exclusive categories",
   "a5-published-aggregates.Rmd" =
-    "A5 · Published aggregates D0 / D1",
+    "Estimating proportions from published aggregates",
   "a6-diagnostics-and-suppression.Rmd" =
-    "A6 · Diagnostics and suppression",
+    "Checking estimates and handling suppressed data",
   "a7-variance-smoothing-and-frechet.Rmd" =
-    "A7 · Variance smoothing and Fréchet stress scenarios",
+    "Variance smoothing and Fréchet sensitivity analysis",
   "a8-downstream-workflows.Rmd" =
-    "A8 · Downstream workflows",
+    "Using estimates and covariance matrices in further analyses",
   "a9-case-study-end-to-end.Rmd" =
-    "A9 · Case study — end-to-end workflow",
+    "A complete analysis with simulated pre-kindergarten data",
   "m1-statistical-foundations.Rmd" =
-    "M1 · Statistical foundations — sampling uncertainty",
+    "Sampling uncertainty in site-level proportions",
   "m2-scalar-se-binomial.Rmd" =
-    "M2 · Scalar SE — binomial pipeline",
+    "Binomial standard errors and transformations",
   "m3-multivariate-sur-covariance.Rmd" =
-    "M3 · Multivariate SUR covariance",
+    "Covariance for overlapping binary indicators",
   "m4-multinomial-simplex.Rmd" =
-    "M4 · Multinomial simplex covariance",
+    "Covariance for multinomial proportions",
   "m5-aggregate-engines.Rmd" =
-    "M5 · Aggregate engines D0 / D1",
+    "Sampling uncertainty from published aggregates",
   "m6-variance-smoothing-theory.Rmd" =
-    "M6 · Variance smoothing theory",
+    "Experimental models for variance smoothing",
   "m7-frechet-envelope-theory.Rmd" =
-    "M7 · Fréchet pairwise intervals and projected stress theory",
+    "Pairwise Fréchet bounds and projected dependence scenarios",
   "m8-output-contract.Rmd" =
-    "M8 · Output contract"
+    "Understanding returned estimates and uncertainty"
 )
 
 .vignette_warning_expectations <- c(

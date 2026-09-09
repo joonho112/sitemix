@@ -158,11 +158,11 @@ print.sitemix_estimates <- function(x, ...) {
   .sm_restore_sitemix_subset(out, template = x)
 }
 
-#' Restore the output contract after optional dplyr verbs
+#' Reconstruct a result after a dplyr verb
 #'
-#' This method intentionally has no runtime dependency on dplyr. Registering
-#' the S3 method lets dplyr restore a valid `sitemix_estimates` subclass when
-#' dplyr is installed, while the implementation remains ordinary tibble code.
+#' The subset helper restores the class and settings when required columns
+#' remain, or returns a plain tibble when they do not. Method registration
+#' allows optional dplyr use without a runtime dependency on dplyr.
 #'
 #' @param data Reconstructed data returned by a dplyr verb.
 #' @param template Original `sitemix_estimates` object.
@@ -353,9 +353,9 @@ dplyr_reconstruct.sitemix_estimates <- function(data, template) {
       suppression$has_hidden_denominator <- any(hidden_sensitivity)
       suppression$denominator_observed_on_suppressed <- !any(hidden_sensitivity)
     } else {
-      # A canonical suppressed-missing row does not retain row-level
-      # denominator observability. Preserve the original flag conservatively,
-      # while still incorporating any retained explicit hidden sensitivity.
+      # Rows retained by suppression = "drop" do not record whether their
+      # original denominator was observed. Keep the original summary flag
+      # unless a retained sensitivity row explicitly records a hidden value.
       suppression$has_hidden_denominator <-
         any(hidden_sensitivity) || isTRUE(suppression$has_hidden_denominator)
       suppression$denominator_observed_on_suppressed <-
@@ -445,9 +445,8 @@ dplyr_reconstruct.sitemix_estimates <- function(data, template) {
     )
   }
 
-  # Unknown columns after the locked schema are user/audit payload and do not
-  # participate in the statistical contract. Reserved optional names are still
-  # fully validated by their dedicated validators below.
+  # Additional user columns do not enter statistical validation. They cannot
+  # use reserved names; supported optional columns have their own validators.
   extras <- setdiff(names_x, c(.sm_sitemix_columns, .sm_sitemix_optional_columns))
   reserved_conflicts <- intersect(extras, .sm_sitemix_reserved_extra_names)
   if (length(reserved_conflicts) > 0L) {
@@ -1121,10 +1120,9 @@ dplyr_reconstruct.sitemix_estimates <- function(data, template) {
 
   groups <- split(seq_len(nrow(x)), paste(x$site_id, x$year, sep = "\r"))
   for (idx in groups) {
-    # Scenario D1 also has family="multivariate", but its identified input
-    # provenance is aggregate and its matrix is working independence. Scenario
-    # B is the non-aggregate multivariate path and must retain the SUR contract
-    # even when every repeated V object is tampered in the same way.
+    # B and D1 both use family = "multivariate". Aggregate D1 uses working
+    # independence; non-aggregate B requires SUR labels. Checking the input
+    # mode also catches an incorrect label copied to every repeated V.
     if (all(x$input_mode[idx] == "aggregate")) {
       next
     }
@@ -1441,9 +1439,9 @@ dplyr_reconstruct.sitemix_estimates <- function(data, template) {
         row_identity = identity
       )
     }
-    # With at least one interior coordinate, row provenance identifies the
-    # global matrix rule. In the all-boundary support-one case, a zero matrix
-    # cannot distinguish plugin from design-corrected construction.
+    # An interior row's correction label identifies the whole-matrix rule.
+    # When only one category has positive support, the zero matrix cannot
+    # distinguish plug-in from design-corrected construction.
     has_interior <- any(!x$flag_zero_cell[idx])
     if (has_interior) {
       expected_matrix_rule <- if (any(corrected)) {

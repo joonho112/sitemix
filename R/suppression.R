@@ -1,55 +1,45 @@
 # Aggregate suppression detection ------------------------------------------
 
-#' Audit aggregate-input suppression and accountability tiers
+#' Summarize suppression and reporting thresholds in aggregate data
 #'
 #' @encoding UTF-8
 #'
 #' @description
-#' `sm_suppression_report()` audits the \strong{three-tier aggregate
-#' denominator regime} before estimation. It reports observed tier
-#' counts and denominator observability per group; it does \strong{not}
-#' impute hidden values. Use it before [sm_estimate_from_aggregates()]
-#' to understand how many rows are publisher-suppressed (Tier 1),
-#' observed but below accountability threshold (Tier 2), or observed
-#' and publishable (Tier 3).
+#' `sm_suppression_report()` counts publisher-suppressed rows and rows
+#' below a chosen denominator threshold. It also reports whether
+#' suppressed denominators are observed. Use it to examine published
+#' input data before calling [sm_estimate_from_aggregates()]. It does
+#' not fill in hidden values.
 #'
 #' @details
-#' \strong{Three-tier framework.} Aggregate inputs from state and
-#' district publishers carry three distinct denominator regimes that
-#' the audit summarizes separately:
-#'
+#' The report groups rows into three tiers:
 #' \describe{
-#'   \item{\strong{Tier 1 -- publisher-suppressed}}{The publisher
-#'     masked the row. Detected via missing numerator / denominator,
-#'     an explicit publisher suppression flag (controlled by
-#'     \code{suppression_col} and \code{suppression_flag_value}), or
-#'     a user-supplied predicate (\code{suppression_when}).
-#'     These rows cannot be estimated; they appear in the report so
-#'     the analyst can retain canonical missing audit rows or explicitly
-#'     acknowledge a separated variance-sensitivity scenario through the
-#'     aggregate estimator's \code{suppression =} argument.}
-#'   \item{\strong{Tier 2 -- observed below accountability}}{
-#'     Denominator is present and \eqn{n_{jt} <}{n_jt <}
-#'     \code{accountability_n}. The row is estimable, but the
-#'     publisher (or the analyst's project rules) treats it as too
-#'     small to publish individually.}
-#'   \item{\strong{Tier 3 -- observed and meets threshold}}{
-#'     Denominator is present and \eqn{n_{jt} \ge}{n_jt >=}
-#'     \code{accountability_n}. The row is estimable and publishable
-#'     under the project's accountability rules.}
+#'   \item{Tier 1 -- suppressed}{Rows identified by a publisher flag or
+#'     a missing numerator with an observed positive denominator. A
+#'     \code{suppression_when} predicate overrides both rules. Missing
+#'     denominators alone do not identify suppression.}
+#'   \item{Tier 2 -- below threshold}{Rows that are not suppressed and have
+#'     an observed denominator smaller than \code{accountability_n}.}
+#'   \item{Tier 3 -- meets threshold}{Rows that are not suppressed and have
+#'     an observed denominator at least as large as \code{accountability_n}.}
 #' }
+#' These tiers describe suppression and the chosen size threshold.
+#' The report retains missing-denominator counts separately. Its
+#' \code{accountability_n} threshold can be changed; it is distinct
+#' from the fixed 11--29 denominator range used by
+#' \code{sm_smooth_variance(scope = "tier2")}.
 #'
-#' The function returns one row per group defined by \code{by} (e.g.,
-#' \code{c("subgroup", "year")}) with Tier 1 / Tier 2 / Tier 3 counts
-#' and the share of the total. This is the recommended pre-flight
-#' check for any D0 or D1 estimation; the [sm_diagnose()] audit
-#' operates on the post-estimation tibble and assumes Tier 1 rows
-#' have already been dispositioned.
+#' Each group defined by \code{by} (for example,
+#' \code{c("subgroup", "year")}) receives counts and proportions.
+#' For suppressed rows, the report distinguishes retaining missing
+#' estimates from an explicitly acknowledged variance-sensitivity
+#' analysis. Use [sm_diagnose()] to examine the resulting estimates.
 #'
 #' @param x A data frame or tibble of aggregate input data. Required
-#'   columns depend on the publisher schema; see
-#'   [sm_estimate_from_aggregates()] for the canonical input format.
-#' @param by Character vector. Columns to group the report by after
+#'   columns depend on the input format; see
+#'   [sm_estimate_from_aggregates()].
+#' @param by A character vector, or \code{NULL} for one overall row.
+#'   Columns to group the report by after
 #'   aggregate normalization. Defaults to
 #'   \code{c("subgroup", "year")}. Each group gets its own row in
 #'   the returned tibble.
@@ -57,10 +47,10 @@
 #'   column names. Defaults to \code{c("site_id", "year")}.
 #' @param numerator_col Character scalar or \code{NULL} (default
 #'   \code{NULL}). Source numerator column name. Required when the
-#'   publisher schema uses non-default column names.
+#'   publisher uses other column names.
 #' @param denominator_col Character scalar or \code{NULL} (default
 #'   \code{NULL}). Source denominator column name. Required when the
-#'   publisher schema uses non-default column names.
+#'   publisher uses other column names.
 #' @param indicator_col Character scalar or \code{NULL} (default
 #'   \code{NULL}). Source indicator column for long-form input (one
 #'   row per site-year-indicator).
@@ -68,19 +58,22 @@
 #'   \code{NULL}). Source subgroup column for publisher files with
 #'   subgroup decomposition.
 #' @param suppression_col Character scalar or \code{NULL} (default
-#'   \code{NULL}). Source publisher suppression flag column.
+#'   \code{NULL}). Source publisher suppression flag column. With
+#'   \code{NULL}, an existing \code{suppression_flag} column is used.
 #' @param suppression_flag_value Value or vector of values marking
 #'   publisher suppression in \code{suppression_col}. Defaults to
 #'   \code{""} (the empty string).
 #' @param suppression_when Function or \code{NULL} (default
-#'   \code{NULL}). Optional predicate with highest detection
-#'   priority; overrides flag-based detection.
-#' @param min_n Positive integer scalar. Tier-1 boundary reference
-#'   used for diagnostics on the boundary between observed and
-#'   suppressed rows. Defaults to \code{10L}.
+#'   \code{NULL}). Optional predicate returning one logical value per
+#'   normalized row; overrides flag and missing-numerator detection.
+#' @param min_n A positive whole number stored in the report's
+#'   \code{min_n} attribute. Defaults to \code{10L}. The tier counts
+#'   use suppression status and \code{accountability_n}; changing
+#'   \code{min_n} alone does not change those counts.
 #' @param accountability_n Positive integer scalar. Tier-2 /
-#'   Tier-3 boundary. Rows with \eqn{n_{jt} <}{n_jt <}
-#'   \code{accountability_n} are classified Tier 2; others Tier 3.
+#'   Tier-3 boundary. Among rows that are not suppressed, those with
+#'   \eqn{n_{jt} <}{n_jt <} \code{accountability_n} are Tier 2;
+#'   those meeting the threshold are Tier 3.
 #'   Defaults to \code{30L}.
 #'
 #' @return A \code{sitemix_suppression_report} tibble with one row
@@ -98,12 +91,13 @@
 #'     \item{\code{n_suppressed_hidden_denominator}}{Integer count
 #'       of suppressed rows whose denominator is also hidden.}
 #'     \item{\code{n_denominator_missing}}{Integer count of rows
-#'       missing the denominator column.}
+#'       with a missing denominator value.}
 #'     \item{\code{pct_suppressed}}{Numeric share of suppressed
 #'       rows in the group (Tier 1).}
 #'     \item{\code{pct_below_accountability}}{Numeric share of
-#'       rows that are not publishable under the three-tier framework:
-#'       Tier 1 publisher-suppressed rows plus Tier 2 observed rows
+#'       suppressed rows plus rows that are not suppressed and fall below
+#'       the threshold:
+#'       Tier 1 rows plus Tier 2 rows
 #'       below \code{accountability_n}.}
 #'     \item{\code{median_n_suppressed}}{Numeric; median denominator
 #'       of suppressed rows when observable, else \code{NA}.}
@@ -111,10 +105,10 @@
 #'       \code{TRUE} when every Tier 1 row in the group carries an
 #'       observable denominator.}
 #'     \item{\code{suppression_sources}}{Character; a compact
-#'       enumeration of which detection rule fired (publisher flag,
-#'       structural missingness, or user predicate).}
+#'       list of the detection rules used (publisher flag,
+#'       missing numerator, or user predicate).}
 #'     \item{\code{recommended_action}}{Character; a one-line
-#'       recommendation distinguishing canonical missing retention from
+#'       recommendation distinguishing retained missing estimates from
 #'       an acknowledged variance sensitivity.}
 #'     \item{\code{sensitivity_role}}{Character with two values:
 #'       \itemize{
@@ -129,12 +123,13 @@
 #'       \code{TRUE} whenever a Tier-1 row is present.}
 #'     \item{\code{upper_bound_role}}{Character; identifies the
 #'       legacy \code{"upper_bound"} option as a non-identified
-#'       variance-sensitivity scenario, never an estimate. Legacy counterpart
-#'       of \code{sensitivity_role}; it retains \code{"not_applicable"} when
-#'       Tier 1 is absent, where the canonical role is \code{"none"}.}
+#'       variance-sensitivity scenario rather than an estimate. This older
+#'       counterpart of \code{sensitivity_role} uses \code{"not_applicable"}
+#'       when Tier 1 is absent, whereas \code{sensitivity_role} uses
+#'       \code{"none"}.}
 #'   }
 #'
-#' The report also retains two legacy compatibility aliases.
+#' Two older column names are also retained:
 #' \code{upper_bound_numeric_variance_available} mirrors
 #' \code{sensitivity_numeric_variance_available};
 #' \code{upper_bound_requires_acknowledgement} mirrors
@@ -143,12 +138,12 @@
 #' @seealso
 #' \itemize{
 #'   \item \code{\link[=sm_estimate_from_aggregates]{sm_estimate_from_aggregates()}}
-#'     for the upstream aggregate estimator and suppression controls.
+#'     for estimating proportions and handling suppressed input rows.
 #'   \item \code{\link[=sm_diagnose]{sm_diagnose()}} for the post-estimation
-#'     audit.
+#'     diagnostics.
 #'   \item \code{\link[=sm_pivot_subgroups_to_sites]{sm_pivot_subgroups_to_sites()}}
 #'     and \code{\link[=sm_pivot_subgroups_to_indicators]{sm_pivot_subgroups_to_indicators()}}
-#'     for subgroup-file pivots used before this audit.
+#'     for reshaping subgroup data before making the report.
 #'   \item \code{vignette("a5-published-aggregates")} and
 #'     \code{vignette("a6-diagnostics-and-suppression")} for the applied
 #'     walkthroughs.
@@ -156,7 +151,7 @@
 #'
 #' @examples
 #' \dontshow{set.seed(1L)}
-#' # Build a small aggregate slice from bundled counts:
+#' # Prepare aggregate counts from the simulated data:
 #' counts_path <- system.file(
 #'   "extdata", "prek_sim_counts.rds",
 #'   package = "sitemix", mustWork = TRUE

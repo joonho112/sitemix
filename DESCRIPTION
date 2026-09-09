@@ -1,5 +1,5 @@
 Package: sitemix
-Title: Site- and Group-Level Proportions, Rates, and Sampling Uncertainty
+Title: Proportions and Sampling Uncertainty for Sites and Groups
 Version: 0.3.0
 Date: 2026-07-12
 Authors@R: c(
@@ -7,15 +7,14 @@ Authors@R: c(
            email = "jlee296@ua.edu",
            comment = c(ORCID = "0009-0006-4019-8703"))
   )
-Description: Computes year-by-year site-level point estimates and asymptotic standard
-    errors of proportions and rates for three families: 'binomial' for single binary
-    indicators, 'multivariate' for overlapping binary indicators with joint counts
-    and seemingly unrelated regression covariance, and 'multinomial' for mutually
-    exclusive categories with full-simplex covariance. Accepts either student-level
-    rows or sufficient-count rows as input and returns a 'sitemix_estimates' tibble
-    with an optional variance-covariance list-column for downstream uncertainty
-    propagation. Also accepts published aggregate rows through the D0
-    aggregate-binomial path and the D1 aggregate-marginal working-independence path.
+Description: Estimates proportions and their sampling uncertainty for sites and
+    groups observed over time. Accepts individual records, sufficient counts, or
+    published aggregate counts. Handles single binary indicators, overlapping
+    binary indicators, and mutually exclusive categories. Returns estimates and
+    standard errors on raw and reported scales, sample-size flags, and optional
+    within-site covariance matrices. For published marginal counts, covariance
+    calculations use a working-independence assumption because joint counts are
+    unavailable.
 URL: https://joonho112.github.io/sitemix/,
     https://github.com/joonho112/sitemix
 BugReports: https://github.com/joonho112/sitemix/issues

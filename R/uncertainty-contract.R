@@ -1,4 +1,4 @@
-# Intrinsic uncertainty-contract helpers -----------------------------------
+# Sampling-uncertainty checks ---------------------------------------------
 
 .sm_has_v <- function(x) {
   "V" %in% names(x)

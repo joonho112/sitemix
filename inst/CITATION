@@ -4,7 +4,7 @@ bibentry(
   bibtype = "Manual",
   key     = "lee_2026_sitemix",
   title   = "sitemix: Site- and Group-Level Proportions, Rates, and Sampling Uncertainty",
-  author  = person(given = "JoonHo", family = "Lee"),
+  author  = person(given = "JoonHo", family = "Lee", email = "jlee296@ua.edu"),
   year    = "2026",
   note    = paste("R package version", meta$Version),
   url     = "https://joonho112.github.io/sitemix/"

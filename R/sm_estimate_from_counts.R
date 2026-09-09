@@ -1,63 +1,70 @@
 # Count-input wrapper -------------------------------------------------------
 
-#' Estimate site-year rates from sufficient counts
+#' Estimate site-year proportions from sufficient counts
 #'
 #' @encoding UTF-8
 #'
 #' @description
-#' `sm_estimate_from_counts()` is the sufficient-counts wrapper around
-#' [sm_estimate()] for sites that have already aggregated their student
-#' rows into complete per-site-year sufficient statistics. It locks
-#' `from_counts = TRUE` in the underlying dispatch; otherwise the
-#' contract -- arguments, output schema, scale conventions -- is
-#' identical to [sm_estimate()]. The sufficient-counts identity
-#' guarantees agreement with [sm_estimate()] applied to the original
-#' student rows to within `1e-10`; see
-#' \code{vignette("m2-scalar-se-binomial", package = "sitemix")} for
-#' the T2.5 invariant.
-#'
-#' This wrapper is the recommended public entry point for sufficient counts.
-#' Its v0.2 formals are frozen, and no argument is deprecated. Direct
-#' \code{sm_estimate(..., from_counts = TRUE)} calls remain supported for
-#' compatibility and produce the same result.
+#' `sm_estimate_from_counts()` estimates proportions and standard errors
+#' from one row of counts per site and year. It calls [sm_estimate()] with
+#' \code{from_counts = TRUE}, so you do not need to set the input type.
+#' You can also use \code{sm_estimate(..., from_counts = TRUE)} directly.
 #'
 #' @details
-#' The input `data` is one row per site-year with an `n_jt` denominator
-#' and family-specific \verb{c_jt_*} columns. Scenario A requires one
-#' named marginal count. Scenario B requires two or more ordered marginal
-#' counts plus every ordered pairwise co-occurrence count; joint feasibility
-#' is verified for \eqn{K = 2}{K = 2} and \eqn{K = 3}{K = 3}, while
-#' \eqn{K \ge 4}{K >= 4} count input fails closed. Scenario C requires at
-#' least two category counts whose row sum equals `n_jt`; the category order
-#' can be set explicitly by `indicators`.
+#' Each row needs the site and year columns named by \code{id_cols}, an
+#' \code{n_jt} denominator, and count columns for the chosen \code{family}:
+#' \describe{
+#'   \item{\code{"binomial"} (A)}{One marginal count named
+#'     \verb{c_jt_<indicator>}, with its label supplied in \code{indicator}.}
+#'   \item{\code{"multivariate"} (B)}{At least two marginal counts named
+#'     \verb{c_jt_<indicator>}, plus a co-occurrence count for every pair.
+#'     Pair names follow the order in \code{indicators}: for example,
+#'     \code{indicators = c("frpm", "snap")} requires
+#'     \code{c_jt_frpm}, \code{c_jt_snap}, and \code{c_jt_frpm_snap}.}
+#'   \item{\code{"multinomial"} (C)}{At least two category counts in
+#'     \verb{c_jt_*} columns, summing to \code{n_jt} in each row.
+#'     Use \code{indicators} to set the category order explicitly.}
+#' }
 #'
-#' This wrapper raises \code{sitemix_error_invalid_from_counts} if
-#' the caller passes `from_counts` explicitly; call [sm_estimate()]
-#' directly if you need to override the wrapper's lock. See the
-#' Scenario dispatch table in [sm_estimate()] for which family /
-#' indicator combinations apply.
+#' For overlapping indicators, \code{vjt = TRUE} requests covariance and
+#' checks whether the counts can come from a common sample. This check
+#' supports two or three indicators. Counts with four or more indicators
+#' are accepted when \code{vjt = FALSE}; requesting covariance for them
+#' raises \code{sitemix_error_input_indicator_count}. Use student rows
+#' with [sm_estimate()] if covariance is needed for four or more indicators.
+#'
+#' Counts constructed from the same retained student rows, including the
+#' same missing-value exclusions, give the same estimates and standard
+#' errors up to numerical rounding when the family, indicator order, and
+#' estimation options match. Covariance values also agree for supported
+#' requests. The \code{input_mode} column distinguishes the two input types.
+#'
+#' Do not pass \code{from_counts} to this function: it is set internally,
+#' and supplying it raises \code{sitemix_error_invalid_from_counts}.
+#' Use [sm_estimate()] to set the input type yourself, or
+#' [sm_estimate_from_aggregates()] for published aggregate rows.
 #'
 #' @inheritParams sm_estimate
 #' @param ... Additional arguments forwarded to [sm_estimate()].
 #'
-#' @return A \code{sitemix_estimates} tibble with the same column
-#'   structure as [sm_estimate()]; see that function's \emph{Return}
-#'   section for the canonical column glossary and object metadata.
+#' @return A \code{sitemix_estimates} tibble with one row per
+#'   site-year-indicator. It has the same columns and scale information as
+#'   [sm_estimate()]; see that function's \emph{Value} section for the
+#'   estimates, standard errors, optional covariance, and object attributes.
 #'
 #' @seealso
 #' \itemize{
-#'   \item \code{\link[=sm_estimate]{sm_estimate()}} for the main dispatcher
-#'     and canonical column glossary.
+#'   \item \code{\link[=sm_estimate]{sm_estimate()}} for estimation options
+#'     and returned columns.
 #'   \item \code{\link[=sm_estimate_from_aggregates]{sm_estimate_from_aggregates()}}
-#'     for the published-aggregates sister wrapper.
-#'   \item \code{\link[=sm_diagnose]{sm_diagnose()}} for output uncertainty
-#'     auditing.
-#'   \item \code{vignette("a2-input-formats")} for the input-mode decision
-#'     tree.
-#'   \item \code{vignette("a3-scenario-binomial")} for the Scenario A counts
-#'     pathway.
-#'   \item \code{vignette("m2-scalar-se-binomial")} for the T2.5
-#'     sufficient-counts identity.
+#'     for published aggregate rows.
+#'   \item \code{\link[=sm_diagnose]{sm_diagnose()}} for checking estimates
+#'     and their uncertainty.
+#'   \item \code{vignette("a2-input-formats")} for choosing an input format.
+#'   \item \code{vignette("a3-scenario-binomial")} for a binomial example
+#'     using counts.
+#'   \item \code{vignette("m2-scalar-se-binomial")} for why sufficient
+#'     counts reproduce the binomial calculations from student rows.
 #' }
 #'
 #' @examples
@@ -68,7 +75,7 @@
 #' )
 #' counts <- readRDS(counts_path)
 #'
-#' # Build a one-indicator sufficient-counts slice for Scenario A:
+#' # Estimate SNAP proportions for 2024 from sufficient counts:
 #' snap_counts <- counts[
 #'   counts$year == 2024,
 #'   c("site_id", "year", "n_jt", "c_jt_snap")

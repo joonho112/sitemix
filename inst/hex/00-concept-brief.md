@@ -1,6 +1,6 @@
 # sitemix Hex Sticker — Concept Brief
 
-**Author:** JoonHo Lee
+**Author:** JoonHo Lee (jlee296@ua.edu)
 **Date:** 2026-05-27
 
 ## Audience

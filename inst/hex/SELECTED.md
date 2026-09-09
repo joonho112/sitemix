@@ -5,7 +5,7 @@
 **Canonical source:** `inst/hex/sitemix-hex.svg` (copy of Option B)
 
 **Selection date:** 2026-05-27
-**Selected by:** JoonHo Lee
+**Selected by:** JoonHo Lee (jlee296@ua.edu)
 
 ## Rationale
 

@@ -139,10 +139,8 @@
 }
 
 .sm_validate_logit_boundary_support <- function(C, n, estimate_scale) {
-  # Phase 1-4 fail-fast: logit + boundary cells errors regardless of
-  # boundary_method. The Ch. 12 override "accept with warning when AC shifts
-  # the boundary off (0,1) before transform" is deferred to Phase 5 when
-  # warning emission is wired up.
+  # Boundary SE adjustments leave the observed proportion at 0 or 1,
+  # where the logit point estimate is not finite.
   if (!identical(estimate_scale, "logit")) {
     return(invisible(TRUE))
   }
@@ -223,10 +221,8 @@
 }
 
 .sm_vcov_scale_from_estimate_scale <- function(estimate_scale) {
-  # The arcsine VST variance 1/(4 n_eff) is the asymptotic delta-method
-  # result on the arcsine scale, so the
-  # 1x1 binomial V correctly carries vcov_scale = "arcsine_delta" even
-  # though no literal delta computation runs in this function.
+  # The arcsine variance approximation 1/(4 * n_eff) comes from the
+  # asymptotic delta method, which the "arcsine_delta" scale label records.
   switch(
     estimate_scale,
     none = "raw",

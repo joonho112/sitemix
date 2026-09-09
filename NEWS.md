@@ -1,5 +1,13 @@
 # sitemix 0.3.0 (development)
 
+## Documentation
+
+- Reorganized help, examples, and method articles around inputs, returned
+  estimates, and interpretation. Clarified scales, boundary calculations,
+  finite-population corrections, suppression, smoothing, and Fréchet results.
+- Updated article titles and navigation while preserving article URLs.
+  Package calculations, public arguments, and example data are unchanged.
+
 ## Example data is now fully simulated
 
 - **`alprek_subset` is replaced by `prek_sim`.** The example panel shipped

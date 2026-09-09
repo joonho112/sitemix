@@ -283,6 +283,49 @@ doc_protected_manifest <- function(root) {
   )
 }
 
+doc_generated_paths <- function(package_dir) {
+  c(
+    file.path(package_dir, "NAMESPACE"),
+    list.files(
+      file.path(package_dir, "man"),
+      pattern = "[.]Rd$",
+      full.names = TRUE
+    )
+  )
+}
+
+doc_mark_for_regeneration <- function(package_dir) {
+  paths <- doc_generated_paths(package_dir)
+  for (path in paths[file.exists(paths)]) {
+    lines <- readLines(path, warn = FALSE)
+    marker <- if (basename(path) == "NAMESPACE") {
+      paste("#", "Generated", "by roxygen2: do not edit by hand")
+    } else {
+      paste("%", "Generated", "by roxygen2: do not edit by hand")
+    }
+    signature <- paste("^.", "Generated", "by roxygen2")
+    if (!length(lines) || !grepl(signature, lines[[1L]])) {
+      separator <- if (basename(path) == "NAMESPACE") "" else character()
+      writeLines(c(marker, separator, lines), path, useBytes = TRUE)
+    }
+  }
+  invisible(paths)
+}
+
+doc_strip_generator_markers <- function(package_dir) {
+  paths <- doc_generated_paths(package_dir)
+  for (path in paths[file.exists(paths)]) {
+    lines <- readLines(path, warn = FALSE)
+    signature <- paste("^.", "Generated", "by roxygen2")
+    if (length(lines) && grepl(signature, lines[[1L]])) {
+      lines <- lines[-1L]
+      if (length(lines) && !nzchar(lines[[1L]])) lines <- lines[-1L]
+      writeLines(lines, path, useBytes = TRUE)
+    }
+  }
+  invisible(paths)
+}
+
 doc_regenerate <- function(package_dir, log_path) {
   messages <- character()
   warnings <- character()
@@ -291,12 +334,14 @@ doc_regenerate <- function(package_dir, log_path) {
       {
         old <- setwd(package_dir)
         on.exit(setwd(old), add = TRUE)
+        doc_mark_for_regeneration(package_dir)
         roxygen2::roxygenise(
           ".",
           roclets = c("rd", "namespace"),
           load_code = "pkgload",
           clean = TRUE
         )
+        doc_strip_generator_markers(package_dir)
         rmarkdown::render(
           "README.Rmd",
           output_format = "github_document",

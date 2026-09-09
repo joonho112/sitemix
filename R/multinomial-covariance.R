@@ -123,10 +123,10 @@
     K = length(categories)
   )
 
-  # Scalar Wilson SE treats each category as a 2-outcome binomial
-  # (category-k vs. not-k), per Ch. 13 sec-ch13-edge. This preserves a
-  # non-zero scalar se_raw at C_k=0 while the multinomial diagonal stays at
-  # 0 to keep the simplex row-sum-zero invariant on V.
+  # Scalar SEs use a binomial model for category k versus all other categories.
+  # Wilson can give positive se_raw at C_k=0 while V keeps a zero boundary
+  # row/column and zero row sums. At an exact census, FPC also sets the
+  # scalar SE to zero.
   se_raw <- vapply(seq_along(category_counts), function(i) {
     .sm_binomial_scalar_raw(
       C = category_counts[[i]],

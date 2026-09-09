@@ -1,14 +1,12 @@
 ---
-title: "A9 · Case study — end-to-end workflow"
-author: "JoonHo Lee"
+title: "A complete analysis with simulated pre-kindergarten data"
+author: "JoonHo Lee (jlee296@ua.edu)"
 date: "2026-07-12"
 abstract: >
-  An end-to-end applied case study using the bundled
-  `prek_sim`. The case study mirrors a realistic project arc:
-  question → data prep → site-level estimation → diagnostics →
-  optional experimental GVF sensitivity → canonical uncertainty export → methods-
-  appendix summary. Use this vignette as the citable URL when you
-  write up your own sitemix workflow.
+  Follow a complete analysis of FRPM proportions in simulated
+  pre-kindergarten data, from selecting a year to checking and exporting
+  estimates. The example also shows how to describe the calculation and
+  keep an optional smoothing comparison separate.
 output:
   rmarkdown::html_vignette:
     toc: true
@@ -16,7 +14,7 @@ output:
     fig_caption: true
     df_print: tibble
 vignette: >
-  %\VignetteIndexEntry{A9 · Case study — end-to-end workflow}
+  %\VignetteIndexEntry{A complete analysis with simulated pre-kindergarten data}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 bibliography: references.bib
@@ -39,42 +37,18 @@ library(sitemix)
 data(prek_sim, package = "sitemix")
 ```
 
-# Overview
+This example estimates the proportion of students receiving free and
+reduced-price meals (FRPM) at each of 50 simulated sites in 2024. We prepare
+a table of rates and sampling uncertainty and flag small denominators for
+review. A reporting threshold is a chosen rule in the example, not a finding
+about whether a real program may publish its data.
 
-## 1. The reporting question
+The bundled `prek_sim` panel contains no real children or programs. Every
+result below is a calculation on simulated records, so it should not be
+reported as an empirical Pre-K result. See [Getting started](a1-getting-started.html)
+for the first estimation call on its own.
 
-Asha is the accountability lead for a 50-site state pre-kindergarten
-program. The question for the legislative report: **what are
-the site-level FRPM (free and reduced-price meals) take-up rates
-in 2024, and which sites meet the stated publication criteria?**
-
-The audience is the legislature; the deliverable is a table and
-a paragraph in a methods appendix.
-
-## 2. What you will be able to do
-
-By the end of this case study you will be able to complete this full
-`sitemix` pipeline:
-
-1.  **Data prep** — slice `prek_sim` to the year of
-    interest.
-2.  **Site-level estimation** with `sm_estimate()`.
-3.  **Diagnostics** with `sm_diagnose()`.
-4.  **Optional sensitivity** with the experimental GVF helper, without
-    replacing canonical SEs.
-5.  **Direct uncertainty export** with canonical columns.
-6.  **Methods-appendix paragraph** for the legislative report.
-
-**Prerequisites.** [A1 · Getting started](a1-getting-started.html) for the
-one-call basics; this capstone assembles the full arc.
-
-> **About the example data.** All results here are computed live from
-> `prek_sim`, a fully simulated 50-site pre-kindergarten panel shipped in
-> the package (see `?prek_sim`). It describes no real children, sites, or
-> program, and must not be cited as empirical Pre-K results. Every code
-> block runs offline with a fixed random seed.
-
-# 3. Data prep
+# Select the year
 
 ```{r prep}
 target_year <- 2024L
@@ -85,7 +59,7 @@ length(unique(dat$site_id))
 
 Restricting to 2024 leaves 50 sites in this sample.
 
-# 4. Site-level estimation
+# Estimate FRPM proportions
 
 ```{r estimate}
 est <- sm_estimate(
@@ -98,9 +72,11 @@ head(est[, c("site_id", "n", "theta_raw", "theta_hat", "se",
 ```
 
 The default `vst = "arcsine"` returns an arcsine-stabilized estimate
-and its standard error; `estimate_scale` records that choice.
+and its standard error; `estimate_scale` records that choice. `theta_raw`
+retains the proportion for reporting. Both small-sample and accountability
+flags are returned without removing the flagged rows.
 
-# 5. Diagnostics
+# Review the estimates
 
 ```{r diagnose}
 diag <- sm_diagnose(est, verbose = FALSE)
@@ -108,16 +84,16 @@ print(as.data.frame(diag), row.names = FALSE)
 ```
 
 The summary reports `n_flag_small_n`, `n_flag_below_accountability`,
-and intrinsic facts such as `scalar_uncertainty_finite`,
+and checks such as `scalar_uncertainty_finite`,
 `scalar_se_positive`, and `indicator_scale_consistent`.
 
-# 6. Optional experimental GVF sensitivity
+# An optional variance-smoothing comparison
 
-Small sample size alone is not a trigger to smooth. A prespecified simulation
-study found no evidence for promoting either GVF backend to the default,
-so the reporting workflow proceeds with canonical `se`. If a separate analysis
-prespecifies a GVF sensitivity comparison, create an append-only candidate
-under a separate object and column name:
+This analysis uses the original `se`. Small sample size alone is not a
+reason to replace it with a smoothed value. The optional GVF helper is
+experimental, and improved precision or model performance is not guaranteed.
+If a separate, prespecified sensitivity analysis calls for smoothing, create
+another object and retain the additional SE column:
 
 ```{r smoothing-sensitivity, eval = FALSE}
 est_sensitivity <- sm_smooth_variance(
@@ -125,13 +101,14 @@ est_sensitivity <- sm_smooth_variance(
   method = "loglinear",
   overwrite = FALSE
 )
-# Keep est_sensitivity$se_smoothed separate from canonical est$se.
+# Keep est_sensitivity$se_smoothed alongside the original est$se.
 ```
 
-This optional code is deliberately not part of the default executed path and
-makes no general improvement claim.
+The optional chunk is marked `eval = FALSE`; the reporting example below
+uses the original estimates. See [the variance-smoothing methods](m6-variance-smoothing-theory.html)
+for the model assumptions and the scope of the package's simulation checks.
 
-# 7. Direct uncertainty export
+# Export estimates and retain the review flags
 
 ```{r uncertainty-export}
 analysis_input <- data.frame(
@@ -141,31 +118,45 @@ analysis_input <- data.frame(
   estimate       = est$theta_hat,
   std_error      = est$se,
   estimate_scale = est$estimate_scale,
-  var_method     = est$var_method
+  var_method     = est$var_method,
+  n              = est$n,
+  proportion     = est$theta_raw,
+  se_raw         = est$se_raw,
+  flag_small_n   = est$flag_small_n,
+  flag_below_accountability = est$flag_below_accountability,
+  flag_zero_cell = est$flag_zero_cell,
+  flag_suppressed = est$flag_suppressed
 )
 # If a prespecified sensitivity was run, add it under a separate name:
 # analysis_input$std_error_gvf_sensitivity <- est_sensitivity$se_smoothed
 head(analysis_input, 5)
 ```
 
-The export is an ordinary data frame. Any downstream package can map
-`estimate` and `std_error` to its own interface while retaining scale
-and variance-method provenance.
+The table retains all sites. For a percentage table, use `100 * proportion`
+and, when needed, `100 * se_raw`. For an arcsine-scale analysis, use
+`estimate` with `std_error`, keeping `estimate_scale` and `var_method`.
+The flags and denominator remain available to explain later row selection.
+[Using estimates in further analyses](a8-downstream-workflows.html) shows
+additional handling for suppressed rows, exact censuses, and covariance
+matrices; this example contains complete student records.
 
-# 8. Methods-appendix paragraph (citable template)
+# Describe what was calculated
 
-> *We computed site-level FRPM rates for the 50 sites in the
-> 2024 cohort using the sitemix R package
-> [@lee_2026_sitemix].
-> Site-level estimates used the arcsine variance-stabilizing
-> transform with the default Wilson boundary surrogate
-> [@wilson_1927]. Rows below the accountability threshold of
-> `n = 30` were flagged but retained in the uncertainty table.
-> We exported canonical unsmoothed standard errors and reported the
-> estimate scale and variance method with every estimate. Experimental
-> GVF alternatives were not substituted for canonical uncertainty.*
+A methods description should identify the data, estimate scale, uncertainty
+calculation, and any row-selection rules. For this simulated example:
 
-# 9. Audit
+> We calculated FRPM proportions for 50 simulated pre-kindergarten sites in
+> 2024 using sitemix [@lee_2026_sitemix]. We retained raw proportions for
+> percentage reporting and arcsine-transformed estimates with their
+> delta-method standard errors for further analysis. We used the package's
+> default boundary setting, which supplies a Wilson-based variance surrogate
+> if a proportion is 0 or 1 [@wilson_1927]. Sites with n < 30 were flagged
+> but retained in the exported table. The table contains the original
+> unsmoothed standard errors, their scale and calculation method, and the
+> denominator and review flags. These simulated results are not estimates
+> for real children or programs.
+
+# Check the exported table
 
 ```{r audit}
 stopifnot(nrow(est) == 50L)
@@ -180,24 +171,24 @@ stopifnot(identical(analysis_input$std_error, est$se))
 stopifnot(!"se_smoothed" %in% names(est))
 ```
 
-# 10. What's next?
+# Methods and related examples
 
--   [M1 · Statistical foundations](m1-statistical-foundations.html)
+-   [Sampling uncertainty in site-level proportions](m1-statistical-foundations.html)
     for the sampling-uncertainty framing behind the case study.
--   [M2 · Scalar SE — binomial](m2-scalar-se-binomial.html)
+-   [Binomial standard errors and transformations](m2-scalar-se-binomial.html)
     for the arcsine and boundary-method derivations.
--   [M6 · Variance smoothing theory](m6-variance-smoothing-theory.html)
-    for the experimental sensitivity model and its NO-GO simulation decision.
--   [M8 · Output contract](m8-output-contract.html)
-    for the package-neutral column and covariance contract.
+-   [Experimental models for variance smoothing](m6-variance-smoothing-theory.html)
+    for the experimental variance model and its simulation findings.
+-   [Understanding returned estimates and uncertainty](m8-output-contract.html)
+    for the returned columns and covariance-scale requirements.
 
-# 11. Citation
+# Cite the software
 
 ```r
 citation("sitemix")
 ```
 
-A canonical BibTeX entry lives in `vignettes/references.bib`
-under the key `lee_2026_sitemix`.
+The bibliography entry used in this article is `lee_2026_sitemix`.
+Use `citation("sitemix")` to obtain citation details for your installed version.
 
 # References

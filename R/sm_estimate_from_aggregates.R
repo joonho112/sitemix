@@ -5,46 +5,63 @@
 #' @encoding UTF-8
 #'
 #' @description
-#' `sm_estimate_from_aggregates()` is the published-aggregates wrapper
-#' around [sm_estimate()] for analysts working from publisher CSVs
-#' rather than student rows. It locks `from_aggregates = TRUE` in the
-#' underlying dispatch and refuses `from_counts` (raises
-#' \code{sitemix_error_input_path_conflict}). The aggregate path
-#' supports two scenarios: \strong{D0} single-indicator binomial rows
-#' (one numerator and one denominator per site-year) and \strong{D1}
-#' marginal multivariate rows (multiple aggregate marginals per
-#' site-year) with optional working-independence covariance and
-#' raw pairwise Fréchet intervals and projected stress scenarios via
-#' [sm_frechet_envelope()]. Aggregate multinomial composition is not a
-#' D1 mode and is rejected with
-#' \code{sitemix_error_ambiguous_dispatch}; use
+#' `sm_estimate_from_aggregates()` estimates site-year proportions and
+#' standard errors from published numerator and denominator counts. Use
+#' \code{family = "binomial"} for one indicator (D0), or
+#' \code{family = "multivariate"} for several marginal indicators (D1).
+#' D1 can return a covariance matrix based on working independence;
+#' marginal counts alone do not identify cross-indicator dependence.
+#'
+#' This function calls [sm_estimate()] with \code{from_aggregates = TRUE}.
+#' Calling \code{sm_estimate(..., from_aggregates = TRUE)} directly
+#' produces the same result. Do not pass \code{from_aggregates} or
+#' \code{from_counts} through \code{...}; the latter raises
+#' \code{sitemix_error_input_path_conflict}. Published aggregates do not
+#' support \code{family = "multinomial"}; this raises
+#' \code{sitemix_error_ambiguous_dispatch}. Use
 #' [sm_estimate_from_counts()] with complete category counts for Scenario C.
 #'
-#' This wrapper is the recommended public entry point for published aggregate
-#' rows. Its v0.2 formals are frozen, and no argument is deprecated. Direct
-#' \code{sm_estimate(..., from_aggregates = TRUE)} calls remain supported for
-#' compatibility and produce the same result.
-#'
 #' @details
-#' \strong{D0 vs D1.} The aggregate-input dispatch follows the same
-#' Scenario taxonomy as [sm_estimate()]:
+#' \strong{Input columns.} Each row needs the site and year columns named
+#' by \code{id_cols}. Counts can be arranged in either of two forms:
+#' \itemize{
+#'   \item Long form: one row per site-year-indicator, with
+#'     \code{indicator}, \code{c_jt}, and \code{n_jt}. For D0, the
+#'     \code{indicator} argument can supply the label when the column
+#'     is absent.
+#'   \item Wide form: one row per site-year, with numerator columns named
+#'     \verb{c_jt_<indicator>}. Supply either a common \code{n_jt}
+#'     denominator or a matching \verb{n_jt_<indicator>} column for
+#'     every indicator. Do not mix these denominator forms. Use
+#'     \code{indicators} to specify the marginal indicator names.
+#' }
+#' Use \code{numerator_col}, \code{denominator_col},
+#' \code{indicator_col}, \code{subgroup_col}, and \code{suppression_col}
+#' when the corresponding columns have other names. With \code{NULL}
+#' (the default), the function uses existing \code{c_jt}, \code{n_jt},
+#' \code{indicator}, \code{subgroup}, and \code{suppression_flag}
+#' columns, respectively. Wide-form numerator and per-indicator denominator
+#' columns use the naming patterns above. Subgroup and suppression-flag
+#' columns are optional.
+#'
+#' \strong{One or several indicators.} Choose the family to match the
+#' available counts:
 #'
 #' \describe{
 #'   \item{\strong{D0}}{Use when \code{family = "binomial"} and the
-#'     input has one row per site-year with explicit
-#'     \code{numerator_col} and \code{denominator_col}.}
+#'     input has one numerator and one denominator per site-year.}
 #'   \item{\strong{D1}}{Use when \code{family = "multivariate"}
 #'     and the input has multiple aggregate
-#'     marginals per site-year. The cross-indicator covariance is not
-#'     identified from marginals alone; the engine emits a diagonal
-#'     working-independence \code{V} (when \code{vjt = TRUE}). For a
-#'     pairwise interval and projected stress analysis of unidentified joints, see
-#'     [sm_frechet_envelope()].}
+#'     marginals per site-year. With \code{vjt = TRUE}, the returned
+#'     \code{V} is diagonal: off-diagonal zeros express a working
+#'     independence assumption, not observed independence. For raw pairwise
+#'     Fréchet intervals and separately labeled projected stress scenarios,
+#'     see [sm_frechet_envelope()].}
 #' }
 #'
 #' Set \code{aggregate_case = "auto"} (default) to resolve one unique
 #' indicator as D0 and two or more as D1; pass \code{"D0"} or
-#' \code{"D1"} to assert the case. D1 requires the same ordered
+#' \code{"D1"} to require that case. D1 requires the same ordered
 #' indicator set in every site-year group. Set
 #' \code{sampling_relation = "same_units"} only when the marginal
 #' rows are known to describe the same observational units, or
@@ -52,47 +69,46 @@
 #' \code{"unknown"} makes no such claim. Common denominators are
 #' recorded separately and never imply \code{"same_units"}.
 #'
-#' \strong{Subgroup framings.} For publisher files where each site
-#' carries multiple subgroup rows, pivot the file first via
-#' [sm_pivot_subgroups_to_sites()] (Framing X) or
-#' [sm_pivot_subgroups_to_indicators()] (Framing Y), then pass the
-#' pivoted table here. See
+#' \strong{Subgroups.} If each site has several subgroup rows, decide
+#' whether to estimate each subgroup as a separate site (Framing X) or
+#' as an indicator within the original site (Framing Y). Reshape the file
+#' first with [sm_pivot_subgroups_to_sites()] or
+#' [sm_pivot_subgroups_to_indicators()], respectively, then pass the
+#' resulting table here. See
 #' \code{vignette("a5-published-aggregates", package = "sitemix")}.
 #'
-#' \strong{Suppression.} The wrapper exposes these publisher-side controls:
-#' \itemize{
-#'   \item Detection: \code{suppression_col}, \code{suppression_flag_value},
-#'     and \code{suppression_when}.
-#'   \item Policy mode: \code{suppression}.
-#'   \item Sensitivity point: \code{suppressed_theta_hat}.
-#'   \item Required acknowledgement:
-#'     \code{suppression_sensitivity_acknowledge}.
-#'   \item Hidden denominators: \code{suppressed_n_strategy} and
-#'     \code{suppressed_n_bound}.
-#' }
-#' For an
-#' audit pass before estimation, use [sm_suppression_report()].
-#' \code{suppression = "drop"} retains an unavailable audit row with
-#' canonical estimate and SE columns missing. The legacy
-#' \code{"upper_bound"} label now means a separated worst-case variance
-#' sensitivity.
+#' \strong{Suppression.} Use [sm_suppression_report()] to count
+#' publisher-suppressed rows before estimation. Detection uses the
+#' suppression flag and missing numerators unless \code{suppression_when}
+#' supplies a custom rule; see the suppression arguments below.
+#' \code{suppression = "drop"} retains each suppressed row with missing
+#' estimates and standard errors.
 #'
-#' \code{suppression_sensitivity_acknowledge = TRUE} is required for that
-#' sensitivity; it never populates canonical estimates or ordinary covariance.
+#' \code{suppression = "upper_bound"} requires
+#' \code{suppression_sensitivity_acknowledge = TRUE} when suppressed rows
+#' are present. It stores a worst-case Bernoulli variance scenario in
+#' separate \code{sensitivity_*} fields, leaving the estimate and SE
+#' columns missing. These rows cannot supply ordinary covariance or formal
+#' Fréchet inputs. A hidden denominator cannot support a numeric sensitivity
+#' variance; \code{suppressed_n_strategy} and \code{suppressed_n_bound}
+#' record the available denominator information without estimating that
+#' variance.
 #'
 #' @inheritParams sm_estimate
 #' @param ... Additional arguments forwarded to [sm_estimate()].
 #'
-#' @return A \code{sitemix_estimates} tibble with the same column
-#'   structure as [sm_estimate()]; see that function's \emph{Return}
-#'   section for the canonical column glossary and object metadata.
+#' @return A \code{sitemix_estimates} tibble with one row per
+#'   site-year-indicator. It contains proportions, standard errors,
+#'   their scales and calculation methods, and suppression flags.
+#'   With \code{vjt = TRUE}, it also includes a \code{V} list-column.
+#'   See [sm_estimate()] for the returned columns and attributes.
 #'
 #' @seealso
 #' \itemize{
-#'   \item \code{\link[=sm_estimate]{sm_estimate()}} for the main dispatcher
-#'     and canonical column glossary.
+#'   \item \code{\link[=sm_estimate]{sm_estimate()}} for estimation options
+#'     and returned columns.
 #'   \item \code{\link[=sm_estimate_from_counts]{sm_estimate_from_counts()}}
-#'     for the sufficient-counts sister wrapper.
+#'     for estimates from sufficient counts.
 #'   \item \code{\link[=sm_pivot_subgroups_to_sites]{sm_pivot_subgroups_to_sites()}}
 #'     and \code{\link[=sm_pivot_subgroups_to_indicators]{sm_pivot_subgroups_to_indicators()}}
 #'     for the Framing X and Framing Y pivots.
@@ -102,13 +118,13 @@
 #'     aggregate sensitivity.
 #'   \item \code{vignette("a5-published-aggregates")} for the applied
 #'     walkthrough.
-#'   \item \code{vignette("m5-aggregate-engines")} for formal D0 / D1
-#'     specifications.
+#'   \item \code{vignette("m5-aggregate-engines")} for D0 / D1
+#'     estimation methods and assumptions.
 #' }
 #'
 #' @examples
 #' \dontshow{set.seed(1L)}
-#' # Build a D0 aggregate slice from the bundled count artifact:
+#' # Select one indicator and year from the bundled simulated counts:
 #' counts_path <- system.file(
 #'   "extdata", "prek_sim_counts.rds",
 #'   package = "sitemix", mustWork = TRUE
@@ -126,6 +142,7 @@
 #'   indicator = "frpm"
 #' )
 #' head(est, 5)
+#' # theta_hat and se use this scale; theta_raw remains a proportion.
 #' unique(est$estimate_scale)
 #'
 #' @family estimation

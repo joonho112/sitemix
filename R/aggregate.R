@@ -1,4 +1,4 @@
-# Aggregation substrate -----------------------------------------------------
+# Student aggregation and count-input preparation --------------------------
 
 .sm_prepare_counts <- function(
   data,

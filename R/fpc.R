@@ -1,4 +1,4 @@
-# Finite-population normalization and provenance ---------------------------
+# Finite-population sizes and sampling multipliers -------------------------
 
 .sm_fpc_group_key <- function(site_id, year) {
   site_id <- as.character(site_id)

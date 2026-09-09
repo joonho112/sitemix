@@ -323,6 +323,9 @@
     return(n_observed)
   }
 
+  # The chosen bound replaces even an observed n here. The row builder uses
+  # denominator_observed separately to decide whether numeric sensitivity
+  # is available.
   .sm_validate_hidden_suppressed_n(
     suppression = "upper_bound",
     suppressed_n_strategy = "worst_case_bound",

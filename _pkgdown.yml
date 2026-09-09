@@ -5,6 +5,21 @@ development:
 
 template:
   bootstrap: 5
+  math-rendering: katex
+  includes:
+    in_header: |
+      <style>
+      .katex-display {
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-block: 0.3rem;
+      }
+      .katex-display > .katex {
+        display: inline-block;
+        min-width: 100%;
+      }
+      </style>
   bootswatch: cosmo
   bslib:
     primary: '#1B4965'
@@ -18,74 +33,72 @@ template:
 
 authors:
   JoonHo Lee:
-    href: https://github.com/joonho112
+    html: "JoonHo Lee ([jlee296@ua.edu](mailto:jlee296@ua.edu))"
 
 home:
-  title: "sitemix — Proportions, rates, and sampling uncertainty"
+  title: "sitemix — Site-level proportions and sampling uncertainty"
   description: |
-    Site- and group-level point estimates, standard errors, and optional
-    covariance matrices. Covers student-row, sufficient-count, and
-    published-aggregate inputs across five
-    scenarios (A binomial, B multivariate, C multinomial, D0 / D1
-    aggregate). Ships diagnostics, publisher-side suppression
-    auditing, optional variance smoothing, and Fréchet-envelope
-    sensitivity for unidentified D1 covariance.
+    Estimate proportions and sampling uncertainty from student records,
+    counts, or published aggregates. Return standard errors and optional
+    covariance matrices, with diagnostics and tools for suppressed data
+    and sensitivity analysis.
   links:
-  - text: "Get started in 5 minutes"
+  - text: "Getting started"
     href: articles/a1-getting-started.html
   - text: "Choose an input format"
     href: articles/a2-input-formats.html
-  - text: "Theory: sampling uncertainty"
+  - text: "Understand sampling uncertainty"
     href: articles/m1-statistical-foundations.html
   sidebar:
     structure: [links, license, community, citation, authors, dev]
 
 navbar:
   structure:
-    left:  [intro, reference, articles, news]
+    left:  [intro, reference, articles, methods, news]
     right: [search, github]
   components:
     intro:
       text: Get started
       href: articles/a1-getting-started.html
     articles:
-      text: Vignettes
+      text: Articles
       menu:
-      - text: '--- Applied Track ---'
-      - text: A1 · Getting started
+      - text: Getting started
         href: articles/a1-getting-started.html
-      - text: A2 · Input formats
+      - text: Choosing an input format
         href: articles/a2-input-formats.html
-      - text: A3 · Scenario A — binomial
+      - text: Binary proportions
         href: articles/a3-scenario-binomial.html
-      - text: A4 · Scenarios B / C — multivariate / multinomial
+      - text: Overlapping indicators and categories
         href: articles/a4-multivariate-multinomial.html
-      - text: A5 · Published aggregates D0 / D1
+      - text: Published aggregates
         href: articles/a5-published-aggregates.html
-      - text: A6 · Diagnostics and suppression
+      - text: Diagnostics and suppressed data
         href: articles/a6-diagnostics-and-suppression.html
-      - text: A7 · Variance smoothing and Fréchet
+      - text: Smoothing and sensitivity analysis
         href: articles/a7-variance-smoothing-and-frechet.html
-      - text: A8 · Downstream workflows
+      - text: Using estimates in further analyses
         href: articles/a8-downstream-workflows.html
-      - text: A9 · Case study — end-to-end workflow
+      - text: A complete simulated example
         href: articles/a9-case-study-end-to-end.html
-      - text: '--- Methodological Track ---'
-      - text: M1 · Statistical foundations
+    methods:
+      text: Methods
+      menu:
+      - text: Sampling uncertainty
         href: articles/m1-statistical-foundations.html
-      - text: M2 · Scalar SE — binomial
+      - text: Binomial SEs and transformations
         href: articles/m2-scalar-se-binomial.html
-      - text: M3 · Multivariate SUR covariance
+      - text: Covariance for overlapping indicators
         href: articles/m3-multivariate-sur-covariance.html
-      - text: M4 · Multinomial simplex
+      - text: Multinomial covariance
         href: articles/m4-multinomial-simplex.html
-      - text: M5 · Aggregate engines D0 / D1
+      - text: Uncertainty from aggregates
         href: articles/m5-aggregate-engines.html
-      - text: M6 · Variance smoothing theory
+      - text: Experimental variance smoothing
         href: articles/m6-variance-smoothing-theory.html
-      - text: M7 · Fréchet envelope theory
+      - text: Fréchet bounds and projections
         href: articles/m7-frechet-envelope-theory.html
-      - text: M8 · Output contract
+      - text: Understanding returned estimates
         href: articles/m8-output-contract.html
     github:
       icon: fab fa-github
@@ -93,11 +106,10 @@ navbar:
       aria-label: GitHub
 
 articles:
-- title: Applied Track
+- title: Applied examples
   desc: >
-    Workflow-oriented guides for producing site-level estimates from
-    student rows, sufficient counts, or published aggregates;
-    diagnosing the row schema; smoothing; and using estimates downstream.
+    Choose an input format, estimate proportions, check the results,
+    and use their uncertainty in further analyses.
   navbar: ~
   contents:
   - a1-getting-started
@@ -110,11 +122,10 @@ articles:
   - a8-downstream-workflows
   - a9-case-study-end-to-end
 
-- title: Methodological Track
+- title: Methods
   desc: >
-    Formal specifications — sampling uncertainty, the scalar SE
-    pipeline, SUR and multinomial covariance, aggregate engines,
-    variance smoothing theory, Fréchet envelopes, and the output contract.
+    Assumptions and formulas for standard errors, covariance,
+    aggregate data, variance smoothing, and Fréchet sensitivity analysis.
   navbar: ~
   contents:
   - m1-statistical-foundations
@@ -127,57 +138,54 @@ articles:
   - m8-output-contract
 
 reference:
-- title: Package
+- title: Package overview
   contents:
   - sitemix-package
 
-- title: Estimate site-year rates
+- title: Estimate proportions
   desc: >
-    Main entry points: student rows, sufficient counts, and published
-    aggregates. Use `sm_estimate()` for the unified dispatcher; the
-    wrappers preconfigure subsets of the same signature.
+    Estimate site-year proportions from student records, counts, or
+    published aggregates. The count and aggregate wrappers select the
+    corresponding input path.
   contents:
   - sm_estimate
   - sm_estimate_from_counts
   - sm_estimate_from_aggregates
 
-- title: Audit uncertainty outputs
+- title: Check estimates and suppression
   desc: >
-    Diagnose scalar and covariance uncertainty and audit publisher-side
-    suppression before downstream use.
+    Examine returned estimates and covariance, or summarize suppression
+    and denominator thresholds in a publisher's input table.
   contents:
   - sm_diagnose
   - sm_suppression_report
 
-- title: Inspect and stress-test covariance
+- title: Covariance and dependence
   desc: >
-    Work with `sm_vcov` matrices directly; compute formal raw pairwise
-    Fréchet intervals and separate projected stress scenarios for
-    unidentified D1 aggregate dependence.
+    Inspect covariance matrices and explore dependence when only marginal
+    counts are available. Fréchet results separate pairwise intervals
+    from projected dependence scenarios.
   contents:
   - sm_vcov
   - sm_frechet_envelope
 
-- title: Smooth standard errors (experimental)
+- title: Experimental variance smoothing
   desc: >
-    Opt-in generalized variance-function/log-variance sensitivity
-    alternatives. A fixed-seed audit found no evidence for default promotion;
-    append-only output preserves canonical SE columns and does not
-    guarantee improvement.
+    Fit a log-variance model to eligible rows. The function adds alternative
+    standard errors by default; improved performance is not guaranteed.
   contents:
   - sm_smooth_variance
 
-- title: Reshape published aggregates
+- title: Reshape subgroup data
   desc: >
-    Pivot subgroup files into the schema expected by
-    `sm_estimate_from_aggregates()`. Framing X turns subgroups into
-    sites; Framing Y turns them into indicators.
+    Prepare subgroup tables for estimation. Treat subgroups as separate
+    sites or as indicators within a site, according to the analysis.
   contents:
   - sm_pivot_subgroups_to_sites
   - sm_pivot_subgroups_to_indicators
 
-- title: Data
-  desc: Bundled example data for documentation, examples, and tests.
+- title: Simulated example data
+  desc: A simulated pre-kindergarten panel for learning and checking the methods.
   contents:
   - prek_sim
 

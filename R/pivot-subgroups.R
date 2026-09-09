@@ -1,133 +1,156 @@
 # Subgroup aggregate pivot helpers -----------------------------------------
 
-#' Pivot subgroup aggregate rows into subgroup-as-site input (Framing X)
+#' Prepare published counts for subgroup rates or compositions
 #'
 #' @encoding UTF-8
 #'
 #' @description
-#' `sm_pivot_subgroups_to_sites()` implements \strong{Framing X} for
-#' school-by-subgroup aggregate rows: each \code{(site, subgroup)}
-#' pair becomes its own aggregate site with a composite
-#' \code{site_id}. The output is consumable by
-#' [sm_estimate_from_aggregates()] (default) or, with an explicit
-#' composition \code{partition_target}, by [sm_estimate_from_counts()]
-#' as Scenario C multinomial count input. Use this when subgroup × site
-#' is the unit of analysis; for the alternative framing where
-#' subgroups become indicators of the original site, see
-#' [sm_pivot_subgroups_to_indicators()] (Framing Y).
+#' `sm_pivot_subgroups_to_sites()` reshapes published subgroup counts
+#' for estimation. By default, each site-subgroup pair receives a
+#' combined \code{site_id}, keeping its own numerator and denominator.
+#' Pass this table to [sm_estimate_from_aggregates()] to estimate a rate
+#' within each subgroup. The documentation calls this \strong{Framing X}.
+#'
+#' A composition \code{partition_target} instead prepares category counts
+#' with a common denominator for [sm_estimate_from_counts()] with
+#' \code{family = "multinomial"} (Scenario C). These counts describe
+#' each subgroup's share of a site total, rather than its within-subgroup
+#' rate. The function reshapes counts; it does not estimate rates or
+#' standard errors.
 #'
 #' @details
-#' \strong{Framing X vs Framing Y.} The two pivot helpers solve the
-#' same input problem (publisher files where each row is a
-#' school-by-subgroup observation) but produce different schemas:
-#'
+#' \strong{Rates and compositions.} Choose \code{partition_target}
+#' according to the quantity you want to estimate:
 #' \describe{
-#'   \item{\strong{Framing X (this function)}}{Each subgroup becomes
-#'     its own site. The composite \code{site_id} is constructed by
-#'     concatenating the source site identifier and the subgroup
-#'     label with \code{separator}. Downstream estimation treats
-#'     subgroup × site as the keyed pair. Use when the analyst's
-#'     question is "what is each subgroup's rate within each site?"}
-#'   \item{\strong{Framing Y (sister function)}}{Each subgroup
-#'     becomes a marginal indicator of the original site. The
-#'     site_id is preserved; the indicator column carries the
-#'     subgroup label. Use when the analyst's question is "what does each
-#'     site's subgroup profile look like?" See the
-#'     \link[=sm_pivot_subgroups_to_indicators]{Framing Y helper}.}
+#'   \item{\code{"none"} (default)}{Retains each subgroup's numerator
+#'     and denominator for a conditional rate: cases within that subgroup
+#'     divided by its own denominator. The combined \code{site_id}
+#'     joins the source site and subgroup label with \code{separator}.
+#'     This is binomial aggregate input (D0).}
+#'   \item{\code{"denominator_composition"}}{Uses subgroup denominator
+#'     counts as category counts. The common denominator is their sum,
+#'     checked against the \code{ALL} denominator. The resulting
+#'     proportions describe each subgroup's share of the site's
+#'     denominator total.}
+#'   \item{\code{"case_composition"}}{Uses subgroup numerator counts
+#'     as category counts. The common denominator is their sum, checked
+#'     against the \code{ALL} numerator. The resulting proportions
+#'     describe how the site's cases are distributed across subgroups.}
 #' }
+#' For a composition, the subgroups must represent mutually exclusive
+#' categories covering the population or cases being counted. Both targets
+#' require at least two categories, the same complete category set in every
+#' site-year, and exactly one total row. A missing category row is an error;
+#' supply an explicit zero for a category with no observations. Category
+#' counts must sum to the relevant total within \code{partition_tolerance},
+#' and that total must be positive. These count checks do not establish
+#' whether the source categories overlap.
 #'
-#' \strong{Partition targets.} Pass \code{partition_target = "none"}
-#' (default) for D0-ready conditional-rate output. Pass
-#' \code{"denominator_composition"} or \code{"case_composition"} to
-#' emit Scenario C multinomial count input; both partition targets
-#' require one complete, identical category grid per site-year and one
-#' explicit total row in \code{subgroup_col}. Total labels are normalized to
-#' canonical \code{"ALL"} from the fixed publisher vocabulary
+#' Denominator composition requires observed denominators for every category
+#' and the total, but permits suppressed numerators. For case composition,
+#' every category and the total must have an observed numerator that is not
+#' suppressed.
+#'
+#' To keep subgroups as marginal indicators of the original site instead
+#' of assigning combined site identifiers, use
+#' [sm_pivot_subgroups_to_indicators()] (Framing Y). That alternative
+#' retains each subgroup's own numerator and denominator.
+#'
+#' \strong{Total labels.} The function recognizes the publisher labels
 #' \code{"ALL"}, \code{"ALL STUDENT"}, \code{"ALL STUDENTS"},
-#' \code{"TOTAL"}, and \code{"OVERALL"}; matching ignores case, surrounding
-#' whitespace, and punctuation between words. Two labels that collapse to
-#' \code{"ALL"} in the same site-year are duplicates and fail closed.
-#' Composition sums are checked against the canonical total within
-#' \code{partition_tolerance}; a missing category row is never inferred to be
-#' a structural zero.
+#' \code{"TOTAL"}, and \code{"OVERALL"} as \code{"ALL"}.
+#' Matching ignores case, surrounding whitespace, and punctuation between
+#' words. Two recognized total labels in the same site-year become
+#' duplicate \code{"ALL"} rows and raise an error. With the default
+#' target, the combined \code{site_id} uses \code{"ALL"}, while
+#' \code{source_subgroup} preserves the publisher's spelling.
 #'
-#' \strong{Mixed-level scope.} Mixed school/district/state routing is not
-#' identified by the current public arguments. Any non-\code{NULL}
-#' \code{level_override} or \code{rtype_col} therefore fails closed with the
-#' stable invalid-level condition documented for \code{level_override}. Split
-#' mixed-level publisher files into homogeneous tables before calling either
-#' pivot helper.
+#' \strong{Reporting levels.} Split files that mix school, district, or
+#' state rows into separate tables for each reporting level before calling
+#' either subgroup helper. The functions do not separate these levels.
+#' Supplying \code{level_override} or \code{rtype_col} raises
+#' \code{sitemix_error_invalid_level_override}; both must remain \code{NULL}.
 #'
 #' @param data A data frame or tibble containing subgroup aggregate
 #'   rows, one row per \code{(site, year, subgroup)} triple.
-#' @param site_col Character scalar. Column name containing source
+#' @param site_col A single column name containing source
 #'   site identifiers. Defaults to \code{"site_id"}.
-#' @param year_col Character scalar. Column name containing
+#' @param year_col A single column name containing
 #'   integer-like years. Defaults to \code{"year"}.
-#' @param subgroup_col Character scalar. Column name containing
+#' @param subgroup_col A single column name containing
 #'   subgroup labels. Required.
-#' @param numerator_col Character scalar. Column name containing
-#'   aggregate numerators. Required.
-#' @param denominator_col Character scalar. Column name containing
-#'   aggregate denominators. Required.
-#' @param indicator Character scalar. Single indicator label to
+#' @param numerator_col A single column name containing
+#'   aggregate numerator counts. Required.
+#' @param denominator_col A single column name containing
+#'   aggregate denominator counts. Required.
+#' @param indicator A single string giving the indicator label to
 #'   place in the output \code{indicator} column. Defaults to
 #'   \code{"subgroup_rate"}.
-#' @param separator Character scalar. Separator used to construct
-#'   composite subgroup-as-site IDs. Defaults to \code{"_"}.
-#' @param level_override Must be \code{NULL} (default). Mixed-level override
-#'   semantics are intentionally unsupported and any other value raises
+#' @param separator A single non-empty string used to join the source
+#'   site and subgroup labels. Defaults to \code{"_"}.
+#' @param level_override Must be \code{NULL} (default). Other values raise
 #'   \code{sitemix_error_invalid_level_override}.
-#' @param rtype_col Must be \code{NULL} (default). Declaring a publisher row-
-#'   type column raises the same stable invalid-level condition as
-#'   \code{level_override}; split the source into one homogeneous reporting
-#'   level first.
-#' @param partition_target Character scalar. Explicit partition
-#'   estimand. One of \code{"none"} (default; D0 conditional-rate
+#' @param rtype_col Must be \code{NULL} (default). Other values raise
+#'   \code{sitemix_error_invalid_level_override}; split the source by
+#'   reporting level before using this function.
+#' @param partition_target A single string selecting the counts to
+#'   prepare: \code{"none"} (default; D0 conditional-rate
 #'   rows), \code{"denominator_composition"}, or
 #'   \code{"case_composition"} (both return Scenario C count input).
-#' @param partition_tolerance Non-negative numeric scalar. Absolute
+#' @param partition_tolerance A single finite, non-negative number. Absolute
 #'   tolerance for composition partition checks against the
 #'   required \code{ALL} row. Defaults to \code{0.5}.
-#' @param suppression_col Character scalar or \code{NULL} (default
-#'   \code{NULL}). Optional publisher suppression flag column.
+#' @param suppression_col A single column name, or \code{NULL}
+#'   (default). Names the publisher suppression flag column. With
+#'   \code{NULL}, an existing \code{suppression_flag} column is used
+#'   if present. If neither source is available, source rows receive
+#'   \code{suppression_flag = FALSE}.
 #' @param suppression_flag_value Value or vector of values marking
-#'   publisher suppression in \code{suppression_col}. Defaults to
+#'   publisher suppression in the flag column. Defaults to
 #'   \code{""}.
 #'
-#' @return A tibble consumable by [sm_estimate_from_aggregates()]
-#'   when \code{partition_target = "none"}, or by
-#'   [sm_estimate_from_counts()] with
-#'   \code{family = "multinomial"} when a composition target is
-#'   requested. Schema for the default case:
+#' @return With \code{partition_target = "none"}, a tibble with one
+#'   row per site-year-subgroup for [sm_estimate_from_aggregates()].
+#'   It contains:
 #'   \describe{
 #'     \item{\code{site_id}}{Composite identifier constructed by
 #'       joining the source site and subgroup labels with
 #'       \code{separator}.}
-#'     \item{\code{year}}{Integer year (copied verbatim).}
+#'     \item{\code{year}}{The source year, stored as an integer.}
 #'     \item{\code{indicator}}{Character scalar (the \code{indicator}
 #'       argument).}
 #'     \item{\code{c_jt}, \code{n_jt}}{Numerator and denominator
 #'       copied from \code{numerator_col} and \code{denominator_col}.}
 #'     \item{\code{suppression_flag}}{Always-present logical. It is
 #'       \code{TRUE} for rows flagged by the publisher and otherwise
-#'       \code{FALSE}; when no \code{suppression_col} is supplied, all rows
-#'       are \code{FALSE}.}
+#'       \code{FALSE}. Flags come from \code{suppression_col}, or from an
+#'       existing \code{suppression_flag} column when that argument is
+#'       \code{NULL}. If neither source flag column is available, all rows
+#'       receive \code{FALSE}.}
 #'     \item{\code{framing}}{Character scalar; the framing label
 #'       (\code{"subgroup_as_site"}).}
 #'     \item{\code{source_site_id}, \code{source_subgroup}}{The
 #'       original site and publisher subgroup labels, preserved for
-#'       traceback. A recognized total alias is canonicalized only in the
-#'       composite \code{site_id}; \code{source_subgroup} keeps its source
+#'       reference. A recognized total label becomes \code{"ALL"} only in
+#'       the combined \code{site_id}; \code{source_subgroup} keeps its source
 #'       spelling.}
 #'   }
+#'
+#'   With a composition target, a tibble with one row per original
+#'   site-year, containing \code{site_id}, \code{year}, a common
+#'   \code{n_jt}, and one \verb{c_jt_<category>} column per non-total
+#'   subgroup. The common \code{n_jt} is the sum of these category counts;
+#'   the \code{ALL} row supplies the comparison total and is not a category.
+#'   The \code{partition_categories} and \code{indicator_order}
+#'   attributes record category order. Use this order as \code{indicators}
+#'   in [sm_estimate_from_counts()] with \code{family = "multinomial"}.
 #'
 #' @seealso
 #' \itemize{
 #'   \item \link[=sm_pivot_subgroups_to_indicators]{Framing Y helper}.
-#'   \item \link[=sm_estimate_from_aggregates]{Aggregate wrapper} for the
+#'   \item \link[=sm_estimate_from_aggregates]{Aggregate estimation} for the
 #'     default output.
-#'   \item \link[=sm_estimate_from_counts]{Counts wrapper} for composition
+#'   \item \link[=sm_estimate_from_counts]{Estimation from counts} for composition
 #'     targets.
 #'   \item \link[=sm_suppression_report]{Suppression audit} before pivoting.
 #'   \item \code{vignette("a5-published-aggregates")} for the walkthrough.
@@ -664,52 +687,85 @@ sm_pivot_subgroups_to_sites <- function(
   invisible(TRUE)
 }
 
-#' Pivot subgroup aggregate rows into subgroup-as-indicator input (Framing Y)
+#' Prepare subgroup rates as indicators within each site
 #'
 #' @encoding UTF-8
 #'
 #' @description
-#' `sm_pivot_subgroups_to_indicators()` implements \strong{Framing Y}
-#' for school-by-subgroup aggregate rows: each subgroup becomes a D1
-#' marginal indicator while the original site remains the
-#' \code{site_id}. The \link[=sm_estimate_from_aggregates]{aggregate wrapper}
-#' consumes this D1 output. For the alternative framing
-#' where subgroups become composite sites, see the
-#' \link[=sm_pivot_subgroups_to_sites]{Framing X helper}.
+#' `sm_pivot_subgroups_to_indicators()` prepares published subgroup
+#' counts for comparing subgroup rates within each site. It keeps the
+#' original \code{site_id} and uses each subgroup label as an
+#' \code{indicator}, preserving that subgroup's numerator and denominator.
+#' The documentation calls this \strong{Framing Y}.
+#'
+#' Pass the result to [sm_estimate_from_aggregates()] with
+#' \code{family = "multivariate"} for marginal aggregate estimates
+#' (D1). This helper reshapes the counts; it does not estimate rates,
+#' standard errors, or dependence between subgroups.
 #'
 #' @details
-#' \strong{Framing X vs Framing Y.} The two pivot helpers solve the
-#' same input problem but produce different schemas (see the
-#' \link[=sm_pivot_subgroups_to_sites]{Framing X details} for the side-by-side
-#' comparison). Pick Framing Y when the analyst's question is "what
-#' does each site's subgroup profile look like?" — each subgroup
-#' becomes a column-like marginal indicator and the downstream D1
-#' estimator computes per-marginal SEs with working-independence
-#' cross-marginal covariance. The fixed total-alias vocabulary documented for
-#' [sm_pivot_subgroups_to_sites()] is normalized to canonical \code{"ALL"}
-#' before duplicate and grid checks. Mixed-level routing is likewise
-#' unsupported and must be split upstream.
+#' \strong{Analysis unit and denominator.} Each returned site-year has
+#' several subgroup indicators. Their rates are conditional on membership
+#' in each subgroup, using that subgroup's own denominator. Equal counts or
+#' denominators do not show that the same observational units contributed to
+#' different indicators. For example, two disjoint subgroups can have the
+#' same number of students. Subgroups can also overlap; labels and marginal
+#' counts alone do not identify the joint counts.
+#'
+#' When estimating D1 rates, set \code{sampling_relation} in
+#' [sm_estimate_from_aggregates()] from the source information:
+#' \code{"same_units"} only when the marginals describe the same
+#' observed units, \code{"different_units"} when they differ, or
+#' \code{"unknown"} when this is not known. The pivot does not determine
+#' this relationship. If covariance is requested, D1 uses working
+#' independence; its off-diagonal zeros are an assumption. See
+#' [sm_frechet_envelope()] for the conditions on raw pairwise intervals
+#' and projected stress scenarios.
+#'
+#' Use [sm_pivot_subgroups_to_sites()] with its default
+#' \code{partition_target = "none"} when each site-subgroup pair should
+#' instead have its own site identifier (Framing X). Both defaults preserve
+#' subgroup-specific numerators and denominators. If the question concerns
+#' subgroup shares of a common site total, use that function's explicit
+#' composition targets; merely representing subgroups as indicators does
+#' not create multinomial composition counts.
+#'
+#' \strong{Subgroup selection and missing rows.} \code{indicator_set}
+#' selects and orders subgroup labels. Each retained site-year must have
+#' at least two indicators and the same selected indicator set. With
+#' \code{na_action = "drop_row"}, any missing count or publisher-suppressed
+#' indicator removes the entire site-year group. With \code{"keep_na"},
+#' the function retains those groups and inserts missing subgroup rows with
+#' \code{NA} counts and \code{suppression_flag = TRUE}. These are missing
+#' values, not zero counts. Review the suppression and hidden-denominator
+#' settings in [sm_estimate_from_aggregates()] before estimation.
+#'
+#' Recognized total labels, listed in [sm_pivot_subgroups_to_sites()],
+#' become \code{"ALL"} before duplicate and indicator-set checks.
+#' \code{source_subgroup} retains the publisher's spelling for observed
+#' rows. Split files containing school, district, or state rows by reporting
+#' level before using either helper; these functions do not separate levels.
 #'
 #' @inheritParams sm_pivot_subgroups_to_sites
-#' @param indicator_set Character vector or \code{NULL} (default
-#'   \code{NULL}). Optional subgroup labels to retain and order in
-#'   the output. When \code{NULL}, labels are taken from first
-#'   appearance in \code{subgroup_col}. Recognized total aliases in this
-#'   vector are normalized to canonical \code{"ALL"}; alias collisions are
-#'   rejected as duplicate indicators.
-#' @param na_action Character scalar. Missing/suppressed row
-#'   handling. One of \code{"drop_row"} (default; removes rows
-#'   whose numerator or denominator is missing or whose suppression
-#'   flag is present) or \code{"keep_na"} (keeps/inserts NA rows
-#'   for downstream suppression handling).
+#' @param indicator_set A character vector of at least two distinct
+#'   subgroup labels to retain in the specified order, or \code{NULL}
+#'   (default). With \code{NULL}, labels follow their first appearance in
+#'   \code{subgroup_col}. Supplied labels must occur in the data.
+#'   Recognized total labels become \code{"ALL"}; labels that then
+#'   coincide are rejected as duplicate indicators.
+#' @param na_action A single string: \code{"drop_row"} (default) or
+#'   \code{"keep_na"}. The default removes the entire site-year group
+#'   if any selected subgroup has a missing numerator, missing denominator,
+#'   or publisher suppression flag. \code{"keep_na"} retains these
+#'   groups and inserts \code{NA} rows for absent subgroup indicators.
 #'
-#' @return A tibble consumable by the
-#'   \link[=sm_estimate_from_aggregates]{aggregate wrapper} with
-#'   \code{family = "multivariate"} and
-#'   \code{aggregate_case = "D1"}. Schema:
+#' @return A tibble with one row per retained site-year-subgroup,
+#'   ordered by site, year, and \code{indicator_set}. It is structured
+#'   for [sm_estimate_from_aggregates()] with
+#'   \code{family = "multivariate"} and \code{aggregate_case = "D1"}.
+#'   It contains:
 #'   \describe{
-#'     \item{\code{site_id}}{Original source site identifier
-#'       (preserved, not composite).}
+#'     \item{\code{site_id}}{Original source site identifier.}
 #'     \item{\code{year}}{Integer year.}
 #'     \item{\code{indicator}}{Character scalar; the subgroup label
 #'       (each subgroup becomes a marginal indicator).}
@@ -717,20 +773,28 @@ sm_pivot_subgroups_to_sites <- function(
 #'       from \code{numerator_col} and \code{denominator_col}.}
 #'     \item{\code{suppression_flag}}{Always-present logical. It is
 #'       \code{TRUE} for publisher-flagged rows and otherwise \code{FALSE}.
-#'       Without a source flag, observed rows are \code{FALSE}; synthesized
-#'       incomplete-grid rows created by \code{na_action = "keep_na"} are
+#'       Flags come from \code{suppression_col}, or from an existing
+#'       \code{suppression_flag} column when that argument is \code{NULL}.
+#'       Without either source flag column, observed rows are \code{FALSE};
+#'       missing subgroup rows inserted by \code{na_action = "keep_na"} are
 #'       \code{TRUE}.}
 #'     \item{\code{framing}}{Character scalar; the framing label
 #'       (\code{"subgroup_as_indicator"}).}
 #'     \item{\code{source_subgroup}}{Original publisher subgroup label for
-#'       observed rows; synthesized incomplete-grid rows carry
+#'       observed rows; inserted missing-subgroup rows carry
 #'       \code{NA_character_}.}
 #'   }
 #'
+#'   The \code{indicator_set} attribute records the selected subgroup
+#'   order. The \code{framing} and \code{na_action} attributes record
+#'   how the table was prepared. An error is raised if no site-year groups
+#'   remain or fewer than two indicators are retained per group.
+#'
 #' @seealso
 #' \itemize{
-#'   \item \link[=sm_pivot_subgroups_to_sites]{Framing X helper}.
-#'   \item \link[=sm_estimate_from_aggregates]{Aggregate wrapper} for the D1
+#'   \item \link[=sm_pivot_subgroups_to_sites]{Subgroup-as-site and composition counts}
+#'     for the alternative analysis units and denominators.
+#'   \item \link[=sm_estimate_from_aggregates]{Aggregate estimation} for the D1
 #'     estimator.
 #'   \item \link[=sm_frechet_envelope]{Fréchet diagnostic} for pairwise
 #'     intervals and projected stress.
