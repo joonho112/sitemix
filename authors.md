@@ -2,7 +2,7 @@
 
 ## Authors
 
-- **[JoonHo Lee](https://github.com/joonho112)**. Author, maintainer.
+- **JoonHo Lee (<jlee296@ua.edu>)**. Author, maintainer.
   [](https://orcid.org/0009-0006-4019-8703)
 
 ## Citation

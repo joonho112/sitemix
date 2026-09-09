@@ -1,4 +1,4 @@
-pandoc: '3.8'
+pandoc: '3.9'
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
@@ -19,7 +19,7 @@ articles:
   m6-variance-smoothing-theory: m6-variance-smoothing-theory.html
   m7-frechet-envelope-theory: m7-frechet-envelope-theory.html
   m8-output-contract: m8-output-contract.html
-last_built: 2026-08-16T17:37Z
+last_built: 2026-09-09T23:10Z
 urls:
   reference: https://joonho112.github.io/sitemix/reference
   article: https://joonho112.github.io/sitemix/articles

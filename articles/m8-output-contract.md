@@ -1,207 +1,229 @@
-# M8 · Output contract
+# Understanding returned estimates and uncertainty
 
 Abstract
 
-For methodologists evaluating how sitemix outputs can be consumed by
-reporting systems or statistical models. Defines a package-neutral
-scalar and covariance contract, the required scale metadata, and
-executable invariants for reporting, meta-analysis, small-area
-estimation, hierarchical models, and other direct-column workflows.
+Read the estimates, standard errors, covariance matrices, and diagnostic
+fields returned by sitemix. Match each quantity to its scale, retain
+missing and zero-uncertainty rows when exporting, and check the
+information needed for a subsequent analysis.
 
-## Overview
+The result of
+[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
+is a `sitemix_estimates` tibble. Its columns contain estimates and their
+sampling uncertainty; its attributes record choices that apply to the
+object as a whole. This article explains how to read those values and
+check them before exporting or using them in another analysis. The
+examples use the package’s fully simulated `prek_sim` data. They
+describe no real children or programs.
 
-This article is written for **methodologists** evaluating how sitemix
-outputs can be consumed by reporting systems or statistical models who
-need the package-neutral contract every consumer inherits and *why* it
-stays independent of any downstream class. We cover, in order:
+## Read the scalar estimates
 
-1.  the scope of the output contract;
-2.  the notation-to-field crosswalk;
-3.  the scalar contract;
-4.  the covariance contract;
-5.  the scenario map;
-6.  the diagnostic-facts table;
-7.  the implementation invariants;
-8.  why Fréchet projections are stress scenarios, not covariance bounds;
-9.  the consumer checklist.
+Each row describes one `site_id`, `year`, and `indicator`, which may
+represent a site or a group constructed by a pivot. Keep these
+identifiers with the values. The most frequently used columns are:
 
-**Established vs. novel.** *Established:* the downstream use cases
-sitemix serves — reporting, meta-analysis, small-area estimation,
-hierarchical modeling — are standard and package-independent. *This
-package:* the package-neutral scalar and covariance output contract, the
-diagnostic-facts table, and the UO1–UO6 invariants that any consumer can
-check.
-
-| Result | Attribution |
+| Field | Meaning |
 |:---|:---|
-| downstream use cases (reporting / meta-analysis / small-area / hierarchical) | standard, package-independent |
-| package-neutral output contract + diagnostic facts + UO invariants | this package (sitemix) |
+| `theta_raw` | Observed proportion, \hat\pi |
+| `theta_hat` | Reported estimate, \hat\theta=g(\hat\pi) under the selected transformation |
+| `se_raw` | Standard error on the proportion scale |
+| `se` | Standard error on the scale of `theta_hat` |
+| `n` | Recorded row denominator; suppression can record a bound instead of an observed count |
+| `n_eff` | Calculation denominator for identified rows; it can record the same bound on an unavailable row |
+| `estimate_scale`, `transform` | Labels identifying the estimate and transformation |
+| `var_method` | Method used for the reported scalar uncertainty |
+| `flag_small_n`, `flag_zero_cell`, `flag_suppressed`, `flag_below_accountability` | Conditions to inspect alongside the estimate |
 
-> **About the example data.** All results here are computed live from
-> `prek_sim`, a fully simulated 50-site pre-kindergarten panel shipped
-> in the package (see
-> [`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)).
-> It describes no real children, sites, or program, and must not be
-> cited as empirical Pre-K results. Every code block runs offline with a
-> fixed random seed.
+`theta_raw` and `theta_hat` agree for `vst = "none"`. By default,
+`theta_hat` is on the arcsine-square-root scale and `se` is its
+corresponding working SE. Anscombe adjustment changes the probability
+used in the point transformation as described in [Binomial standard
+errors and
+transformations](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md);
+it does not change the observed `theta_raw`. Boundary handling can
+supply a positive raw SE at an observed zero or one. Read `var_method`
+rather than assuming every SE is the unadjusted binomial formula.
 
-## 1. Scope
+For a hidden suppressed denominator, `n` and `n_eff` may record
+`suppressed_n_bound` even though no numeric sampling or sensitivity
+variance is available. Those recorded values do not identify the actual
+sample size. Inspect `sensitivity_n`, `sensitivity_method`, the original
+input, and `attr(x, "suppression")$denominator_observed_on_suppressed`
+for aggregate results (where `x` is the returned object). For identified
+rows, `n_eff` is a calculation-specific denominator, not a general
+survey effective sample size. [Sampling uncertainty from published
+aggregates](https://joonho112.github.io/sitemix/articles/m5-aggregate-engines.md)
+explains the observed- and hidden-denominator cases.
 
-sitemix quantifies sampling uncertainty for site- and group-level
-proportions and rates. Its output contract is the data carried by a
-`sitemix_estimates` tibble; it does not depend on a consumer-specific
-class. A downstream system may use the estimates for reporting,
-meta-analysis, small-area estimation, or another model, provided it
-respects the recorded scales and provenance.
+Optional columns depend on the request. `V` stores within-site-year
+covariance when requested; B, C, and D1 also carry `K`. Aggregate
+results add `estimate_status` and suppression information. An
+acknowledged suppression sensitivity analysis adds `sensitivity_*`
+columns while leaving the ordinary estimate and SE missing. Smoothing
+adds alternative SE columns and method information by default. These
+additions do not make every returned row identified or eligible for a
+model.
 
-## 2. Notation crosswalk
+Some information is stored in attributes, including `family`,
+`sitemix_role`, `aggregate_case`, the D1 unit relationship, suppression
+settings, and smoothing results. Save relevant attributes alongside an
+export; a CSV cannot retain R attributes or validate a
+`sitemix_estimates` object. The example below saves them in
+`object_metadata`. Renaming an exported column does not change its scale
+or statistical meaning.
 
-| Symbol | sitemix field | Meaning |
-|:---|:---|:---|
-| $`\hat\theta_{jt,k}`$ | `theta_hat` | estimate on `estimate_scale` |
-| $`s_{jt,k}`$ | `se` | scalar standard error on the same scale |
-| $`\hat\pi_{jt,k}`$ | `theta_raw` | raw proportion or rate |
-| $`V_{jt}`$ | `V` | optional within-site covariance matrix |
-| $`\sigma_{jt,k}`$ | `estimate_scale` | row estimate/SE scale |
-| $`\sigma^V_{jt}`$ | `V[[i]]$vcov_scale` | covariance scale |
-| $`m_{jt,k}`$ | `var_method` | scalar uncertainty provenance |
-| $`d_{jt,k}`$ | eight FPC/design columns, when present | sampling-design provenance block |
+## Retain the finite-population information
 
-The row identifiers `site_id`, `year`, and `indicator` bind these
-quantities to observational units. Consumers may rename columns, but
-should not discard the scale or method fields during translation.
-Object-level family, role, D1, suppression, and smoothing provenance
-should be captured in an explicit sidecar before conversion because a
-plain data frame is not a validated `sitemix_estimates` object.
+Supplying a fixed population adds these eight columns together:
 
-## 3. Scalar contract
-
-**Definition 1 (scalar audit row).** For every output row $`r`$, the
-tuple
-
-``` math
-(\text{unit}_r,\; \hat\theta_r,\; s_r,\; \sigma_r,\; m_r;\; d_r)
-```
-
-contains the canonical estimate and standard error (which can be missing
-for suppressed rows), their declared scale and method provenance, and
-the row’s suppression/accountability/status fields. Optional sensitivity
-fields remain separate and are not ordinary sampling uncertainty. The
-optional $`d_r`$ is absent when no fixed population is supplied. When
-present, it is the indivisible eight-column FPC/design block:
-
-| Field | Portable meaning |
+| Field | Meaning |
 |:---|:---|
-| `population_size` | fixed site-year population size $`N`$ |
-| `sampling_fraction` | $`n/N`$ |
-| `fpc_variance_multiplier` | canonical SRSWOR variance multiplier $`q`$ |
-| `fpc_se_multiplier` | canonical $`\sqrt q`$ |
-| `variance_multiplier_applied` | multiplier actually applied under the selected scalar rule |
-| `se_multiplier_applied` | square root of the applied variance multiplier |
-| `sampling_design` | design label, currently `SRSWOR` |
+| `population_size` | Fixed site-year population size N |
+| `sampling_fraction` | n/N |
+| `fpc_variance_multiplier` | Conventional SRSWOR plug-in variance multiplier q |
+| `fpc_se_multiplier` | \sqrt q |
+| `variance_multiplier_applied` | Multiplier used by the selected scalar variance rule |
+| `se_multiplier_applied` | Square root of the applied variance multiplier |
+| `sampling_design` | Design label, currently `SRSWOR` |
 | `variance_rule` | `plugin` or `design_corrected` |
 
-A consumer must preserve all eight fields together. The canonical and
-applied multipliers differ for corrected interior rows, so retaining
-only $`N`$ or only the numerical SE is not a complete audit contract.
-`n_eff` is not part of this block and is not changed by
-finite-population correction.
+Keep all eight in an export so another reader can reconstruct which rule
+was used. For plug-in rows outside a census, q=(N-n)/(N-1); corrected
+interior rows instead use (N-n)/N as their applied multiplier. Boundary
+surrogates use the plug-in multiplier, and the exact census case has
+multiplier zero. [Binomial standard errors and
+transformations](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
+explains the assumptions and exceptions. `n_eff` is separate from these
+fields: FPC does not change it. Without a supplied fixed population, the
+eight-column block is absent.
 
-**Definition 2 (inverse-variance-eligible row).** A scalar audit row is
-eligible only when it is identified, its estimate and standard error are
-finite, and $`s_r > 0`$. An exact SRSWOR census with $`s_r = 0`$ is
-valid but forms a separate audited state; a consumer must not create an
-infinite weight. Suppressed-missing and non-identified sensitivity rows
-remain in the exchange for count reconciliation but are ineligible.
+## Choose rows for inverse-variance weighting
 
-The scalar contract is portable because ordinary columns represent all
-of its fields. No constructor from another package is part of the
-sitemix API.
+A report can retain every output row, including suppressed and census
+rows. For an inverse-variance calculation, separately identify rows with
+an identified, finite estimate and a finite, strictly positive SE. Use
+an estimate and SE on the same scale. The example’s `iv_eligible` column
+records this selection; it is created by the example and is not an
+estimator output.
 
-## 4. Covariance contract
+An exact SRSWOR census can validly have zero SE. Retain that fact
+without calculating an infinite weight. Suppressed-missing rows and
+sensitivity values that are not identified cannot supply ordinary
+inverse-variance weights. Keep an exclusion reason and reconcile row
+counts before filtering, as illustrated in [Using estimates and
+covariance matrices in further
+analyses](https://joonho112.github.io/sitemix/articles/a8-downstream-workflows.md).
+These numerical conditions permit a weight calculation; a subsequent
+model still needs its own assumptions. `sitemix` does not fit that model
+or construct another package’s input class.
 
-**Definition 3 (joint uncertainty group).** For exactly one
-`(site_id, year)` tuple with $`K`$ indicators, `V` is a symmetric
-$`K \times K`$ matrix with indicator dimnames and `sm_vcov` metadata.
-The group is complete only when its row indicators equal
-`indicator_order`, without duplicates, and its row count, matrix
-dimensions, dimnames, and matrix tuple metadata all agree. When the
-output carries `K`, it must also equal the row and matrix dimension;
-Scenario A/D0 can validly carry a keyed 1-by-1 `V` without a `K` column.
-Tuple keys and matrix coordinates are authoritative; incidental
-data-frame row order is not.
+## Match a covariance matrix to its estimates
 
-**Definition 4 (joint-consumption gate).** Before extraction, run
+When requested, `V` contains one covariance object per site-year,
+repeated across that group’s indicator rows. Each object is an `sm_vcov`
+with a symmetric matrix, indicator names, and information about its
+calculation. Use [`as.matrix()`](https://rdrr.io/r/base/matrix.html) to
+extract the numeric matrix. Before calculating a joint quantity, select
+a complete `(site_id, year)` group and match the rows to
+`V[[i]]$indicator_order`. Check for duplicate or missing indicators and
+confirm that the matrix names, dimensions, site, and year agree. The `K`
+column, when present, must agree with the dimension. A/D0 can return a
+keyed 1-by-1 matrix without a `K` column.
+
+The matrix scale need not match the reported scalar scale. Use
+`vcov_scale`, `diag_contract`, and `estimate_scale` together:
+
+| Quantity to analyze | Point estimate and matrix needed |
+|:---|:---|
+| Reported estimates | `theta_hat` with a matrix on a compatible reported scale |
+| Raw proportions | `theta_raw` with `vcov_scale = "raw"` and the documented raw diagonal relationship |
+
+A B matrix is raw-scale by default, while the default `theta_hat` and
+`se` are transformed. Its diagonal agrees with `se_raw^2`, not the
+transformed `se^2`. A C matrix is also raw-scale; its empirical
+multinomial diagonal can differ from a boundary-adjusted `se_raw^2`. The
+value `diag_contract = "row_se_raw_squared_except_boundary_surrogates"`
+records that exception. See [Covariance for overlapping binary
+indicators](https://joonho112.github.io/sitemix/articles/m3-multivariate-sur-covariance.md)
+and [Covariance for multinomial
+proportions](https://joonho112.github.io/sitemix/articles/m4-multinomial-simplex.md)
+for the formulas. An unchecked diagonal relationship (`"not_checked"`)
+does not establish a matching SE.
+
+For a named linear contrast a, the estimate is a^\top\hat\theta and its
+variance is a^\top V a, using the selected compatible scale. This does
+not require matrix inversion. A valid singular multinomial covariance or
+an exact census zero matrix can still support such a calculation. C’s
+recorded support rank describes the unscaled empirical composition; at
+census the numeric matrix has rank zero.
+
+Run
 [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-at summary, row, and covariance levels. Consumption requires identified
-finite coordinates, no suppression or sensitivity role, a valid
-positive-semidefinite repeated matrix, no diagnostic error, valid
-smoothing provenance, and `v_stale` exactly `FALSE`. A partial
-coordinate group, an unknown stale state, or a smoothed scalar
-alternative paired with the old canonical matrix fails closed.
+at summary, row, and covariance levels before extraction. Inspect
+errors, complete coordinate groups, repeated-matrix agreement, and scale
+compatibility. If smoothing is present, also inspect
+`smoothing_provenance_valid` and `v_stale`. A smoothed scalar
+alternative cannot simply be paired with an unchanged matrix on the same
+scale. The smoother normally appends columns and leaves `V` unchanged; a
+successful fit cannot overwrite matching row SEs while retaining their
+old matrix. The skip and different-scale cases are explained in
+[Experimental models for variance
+smoothing](https://joonho112.github.io/sitemix/articles/m6-variance-smoothing-theory.md).
 
-`vcov_scale`, `diag_contract`, and row-level `estimate_scale` determine
-which point estimate can accompany `V`:
+## Which scenarios return a matrix?
 
-| Analysis branch | Required companion |
-|:---|:---|
-| reported | `theta_hat`, only when diagnostics say the estimate and matrix scales are compatible |
-| raw | `theta_raw`, only when `vcov_scale = "raw"` and `diag_contract` explicitly identifies the raw row-SE companion |
+| Input case | Scalar rows | Optional `V` |
+|:---|:---|:---|
+| A: one binary indicator | One rate per site-year | 1 x 1 on the reported scale |
+| B: overlapping binaries | One rate per indicator | Raw covariance from joint observations or supported joint counts |
+| C: exclusive categories | One proportion per category | Raw multinomial covariance |
+| D0: one published marginal | One rate per site-year | 1 x 1 on the reported scale for observed counts |
+| D1: several published marginals | One rate per marginal | Working-independence diagonal on the reported scale |
 
-There is no automatic transformation for an incompatible reported branch
-and no automatic companion for `diag_contract = "not_checked"`. For a
-complete named contrast $`a`$, use $`a^\top\hat\theta`$ and
-$`a^\top V a`$. This operation does not require `solve(V)`: a valid
-singular multinomial matrix and an exact census zero matrix remain
-legitimate covariance states.
+These matrices require `vjt = TRUE` and valid inputs. Suppressed
+aggregate rows cannot enter ordinary `V`. B counts with K≥4 can produce
+scalar output but are currently rejected when covariance is requested
+because joint feasibility is not checked for that count representation.
+Fréchet sensitivity matrices are returned separately, as described
+below.
 
-## 5. Scenario map
+## Read the diagnostic fields together
 
-| Scenario | Scalar rows | Optional joint `V` | Main provenance |
-|:---|:--:|:--:|:---|
-| A: one binary indicator | yes | 1 x 1 when `vjt = TRUE` | `var_method`, `estimate_scale` |
-| B: overlapping binaries | yes | yes when `vjt = TRUE` | SUR metadata |
-| C: exclusive categories | yes | yes when `vjt = TRUE` | simplex metadata |
-| D0: published single indicator | yes | 1 x 1 when `vjt = TRUE` | aggregate/suppression metadata |
-| D1: published multiple indicators | yes | method-dependent | aggregate/sensitivity metadata |
-
-The map describes which uncertainty objects sitemix can return. It does
-not promise compatibility with an external model or software package.
-
-## 6. Diagnostic facts
-
-At summary level,
 [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-exposes facts rather than a single consumer-readiness flag:
+returns several checks so that an analysis can use the ones relevant to
+its calculation. No single field establishes suitability for every
+model.
 
-| Field | Required interpretation |
+| Summary field | Interpretation |
 |:---|:---|
-| `scalar_uncertainty_finite` | identified canonical estimates and SEs are finite |
-| `scalar_se_positive` | identified non-census scalar SEs are strictly positive |
-| `n_zero_uncertainty_census` | exact SRSWOR census rows are valid but not inverse-weighted |
-| `indicator_scale_consistent` | one estimate scale is used within each indicator |
-| `v_present` | a covariance payload is available |
-| `v_valid` | the payload passed structural and PSD validation |
-| `estimate_vcov_scale_compatible` | estimate and covariance scale pairs are compatible |
-| `n_suppressed_missing` / `n_suppression_sensitivity` | coordinates that cannot enter an ordinary joint group |
-| `smoothing_provenance_valid` / `v_stale` | whether canonical covariance is coherent after smoothing activity |
+| `scalar_uncertainty_finite` | At least one identified row exists and its reported estimates and SEs are all finite |
+| `scalar_se_positive` | At least one identified row exists and all identified scalar SEs are positive; a census zero makes this `FALSE` |
+| `n_zero_uncertainty_census` | Count of identified exact-SRSWOR-census rows with zero raw and reported SE |
+| `indicator_scale_consistent` | Each indicator uses one estimate scale |
+| `v_present` | A `V` column is present |
+| `v_valid` | The matrix objects passed validation |
+| `estimate_vcov_scale_compatible` | Reported estimate scales match the matrix scales |
+| `n_suppressed_missing` / `n_suppression_sensitivity` | Counts of unavailable rows, excluded from ordinary scalar and joint calculations |
+| `smoothing_provenance_valid` / `v_stale` | Whether the recorded smoothing information is valid and whether matching covariance is stale |
 
-`v_valid` and scale compatibility are `NA` when `V` is absent. This
-distinguishes “not applicable” from a failed covariance check.
+When `V` is absent, `v_valid` and scale compatibility are `NA`. Without
+smoothing, `smoothing_provenance_valid` is `NA` and `v_stale` is
+`FALSE`. These missing values describe an inapplicable check. With a B
+matrix, `v_valid = TRUE` and `estimate_vcov_scale_compatible = FALSE`
+can occur together: the matrix can be valid for raw proportions while
+the reported estimates are arcsine-transformed. The example below
+selects the raw values explicitly. Diagnostic warning and error fields
+are returned information; inspect them separately from any R warning
+emitted by a function call.
 
-## 7. Implementation invariants
+## Check and export an example
 
-| ID | Claim |
-|:---|:---|
-| UO1 | All-row scalar export preserves identity, estimate, SE, scale, method, and present audit/status columns. |
-| UO2 | IV eligibility is explicit: identified finite positive-SE rows only; census zero, suppression, and sensitivity are retained but not weighted. |
-| UO3 | A returned `V` matrix is square, symmetric, and labeled by indicator. |
-| UO4 | Diagnostics report estimate/covariance scale compatibility independently of matrix validity. |
-| UO5 | Tuple keys, row indicators, `indicator_order`, dimnames, `K` when present, and all three diagnostic levels agree before conversion. A strict multivariate consumer may require `K`; a scalar 1-by-1 group need not carry it. |
-| UO6 | A named linear contrast uses the explicitly selected compatible point scale and $`a^\top V a`$, without matrix inversion. |
-| UO7 | If any row-level FPC/design field is present, all eight are present and portable together. |
+The next examples retain every scalar row, select eligible rows
+explicitly, and then calculate a raw-scale contrast using a complete
+covariance group. The assertions make mismatched rows or scales visible
+before the calculation.
 
-Verify these claims on bundled data:
+### Scalar export and eligibility
 
 ``` r
 
@@ -217,7 +239,7 @@ est_b <- sm_estimate(
   vjt = TRUE
 )
 
-# UO1: validate first, then make an all-row package-neutral scalar export.
+# Diagnose the estimates, then retain every scalar row and its metadata.
 diag_s <- sm_diagnose(est, verbose = FALSE)
 object_metadata <- attributes(est)[c(
   "description", "family", "sitemix_role", "aggregate_case",
@@ -228,7 +250,7 @@ audit_columns <- setdiff(names(est), c("V", "K"))
 scalar <- as.data.frame(est[, audit_columns, drop = FALSE])
 stopifnot(nrow(scalar) == nrow(est))
 
-# UO2: eligibility is a local, auditable consumer decision.
+# Add an explicit eligibility decision for inverse-variance weighting.
 status <- if ("estimate_status" %in% names(scalar)) {
   scalar$estimate_status
 } else {
@@ -242,7 +264,25 @@ stopifnot(diag_s$scalar_se_positive)
 stopifnot(diag_s$indicator_scale_consistent)
 stopifnot(sum(table(scalar$iv_eligible)) == nrow(est))
 
-# UO7: finite-population design provenance is an all-or-none row block.
+table(iv_eligible = scalar$iv_eligible)
+#> iv_eligible
+#> TRUE
+#>   50
+```
+
+All 50 rows in this example are identified and have a positive finite
+SE. The table reconciles the selection with the exported row count. For
+a result with census or suppressed rows, keep those rows and record why
+their weights are unavailable; do not reuse the positive-SE assertions
+as universal claims.
+
+### Preserve the population-size fields
+
+A separate eight-student example shows the fields added by `fpc = 20`.
+
+``` r
+
+# Check that the complete finite-population field set is present.
 fpc_fields <- c(
   "population_size", "sampling_fraction",
   "fpc_variance_multiplier", "fpc_se_multiplier",
@@ -260,8 +300,26 @@ stopifnot(all(fpc_fields %in% names(est_fpc)))
 stopifnot(!anyNA(est_fpc[fpc_fields]))
 stopifnot(identical(est_fpc$n_eff, 8))
 
-# UO3/UO5: diagnose first; align tuple keys and matrix coordinates rather than
-# incidental row order.
+as.data.frame(est_fpc)[fpc_fields]
+#>   population_size sampling_fraction fpc_variance_multiplier fpc_se_multiplier
+#> 1              20               0.4               0.6315789         0.7947194
+#>   variance_multiplier_applied se_multiplier_applied sampling_design
+#> 1                   0.6315789             0.7947194          SRSWOR
+#>   variance_rule
+#> 1        plugin
+```
+
+The conventional and applied variance multipliers are both 12/19 under
+this plug-in calculation. The recorded denominator remains eight.
+
+### Align a complete covariance group
+
+The B example above returns a raw matrix for each site-year. Check all
+three diagnostic levels and align the first group’s rows to its matrix.
+
+``` r
+
+# Match site-year keys and matrix coordinates.
 diag_b <- sm_diagnose(est_b, verbose = FALSE)
 diag_b_row <- sm_diagnose(est_b, level = "row", verbose = FALSE)
 diag_b_vcov <- sm_diagnose(est_b, level = "vcov", verbose = FALSE)
@@ -310,9 +368,16 @@ if ("K" %in% names(block)) {
 stopifnot(isTRUE(all.equal(V, t(V), tolerance = 1e-12)))
 stopifnot(identical(rownames(V), V_object$indicator_order))
 stopifnot(identical(colnames(V), V_object$indicator_order))
+```
 
-# UO4/UO6: matrix validity and scale compatibility are separate facts. This
-# Scenario-B result needs an explicit raw branch; a reported branch is blocked.
+These checks establish the group and coordinate correspondence. They do
+not make its raw matrix compatible with the default arcsine estimates.
+The next calculation uses `theta_raw` and compares the FRPM and SNAP
+proportions.
+
+``` r
+
+# Use raw points with the validated raw covariance matrix.
 stopifnot(!diag_b$estimate_vcov_scale_compatible)
 stopifnot(identical(V_object$vcov_scale, "raw"))
 stopifnot(V_object$diag_contract %in% c(
@@ -332,25 +397,52 @@ stopifnot(
   contrast_variance >= -1e-14
 )
 contrast_variance <- max(0, contrast_variance)
+data.frame(
+  site_id = first_key$site_id,
+  year = first_key$year,
+  frpm_minus_snap = contrast_estimate,
+  contrast_se = sqrt(contrast_variance)
+)
+#>   site_id year frpm_minus_snap contrast_se
+#> 1    S001 2024      -0.1111111   0.1888526
 ```
 
-## 8. Fréchet projections are stress scenarios, not covariance bounds
+The difference is on the proportion scale, and the SE includes the
+observed FRPM–SNAP covariance. Multiplying both by 100 expresses them in
+percentage points. The calculation uses the full named contrast and does
+not invert the matrix. The tiny negative-variance allowance is only for
+floating-point rounding in this example.
 
+## Use a Fréchet scenario for sensitivity analysis
+
+For D1 marginals observed on the same units,
 [`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)
-is not an alternative constructor for ordinary `V`. For approved D1a
-input, `raw_pairwise_intervals` contains the formal raw-scale pairwise
-intervals. The projected matrices repair incompatible pairwise corners
-into positive-semidefinite **stress scenarios**. Their canonical role is
-`stress_scenario_not_bound`; projection can change signs, leave raw
-intervals, or reverse the two requested corners for particular
-contrasts.
+can calculate pairwise covariance intervals conditional on the supplied
+marginal proportions. Formal D1a use requires explicit `same_units`, a
+common finite denominator, the IID plug-in calculation, no FPC or
+`binomial_bc`, and `anscombe = FALSE`. These are not confidence
+intervals for population covariances. [Pairwise Fréchet bounds and
+projected dependence
+scenarios](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md)
+gives the derivation and explains why different-unit D1b use is
+heuristic.
 
-The following example validates the envelope through
-[`summary()`](https://rdrr.io/r/base/summary.html), extracts one plain
-matrix, and carries the scenario and projection diagnostics in a
-sidecar. The downstream contrast is rerun under that scenario; the
-matrix is never relabeled `sm_vcov` or inserted into the ordinary `V`
-column.
+`raw_pairwise_intervals` contains those pairwise results. For K\>2,
+setting all pairs to their lower endpoints can produce an indefinite
+matrix. The projected fields provide PSD dependence scenarios for a
+joint sensitivity calculation. Their role is recorded as
+`stress_scenario_not_bound`: PSD alone does not establish a jointly
+attainable binary distribution or sharp multivariate covariance bounds.
+Projection can alter an entry’s sign, take it outside its raw pairwise
+interval, or reverse the ordering of projected entries. Keep these
+diagnostics with the scenario.
+
+The following three-indicator example checks `summary(envelope)`,
+extracts one plain matrix, and calculates the variance of the a-minus-b
+contrast. `stress_sidecar` is an example-created table that saves the
+scenario labels and diagnostic results alongside that variance. The
+calculation is separate from the ordinary `V` object and does not fit a
+downstream model.
 
 ``` r
 
@@ -443,49 +535,52 @@ stress_sidecar
 #> 1                         0       0.005760642
 ```
 
-For $`K=2`$, an identity projection still does not turn the projected
-field into a bound: the formal statement remains in
-`raw_pairwise_intervals`. D1b uses
-`frechet_scope = "heuristic_stress_test"` and its pairwise ranges are
-heuristic, not identified covariance intervals. Deprecated lower/upper
-aliases are not a portable exchange contract.
+The displayed variance describes the selected negative-dependence
+scenario. It is not a lower or upper limit for every possible a-minus-b
+variance. `projection_status` and `projection_distance_relative` show
+whether and how much the source corner changed; the sign, range, and
+ordering counts describe changes to individual entries. Retain the full
+envelope when another reader needs all scenarios or diagnostic fields,
+rather than only this summary.
 
-## 9. Consumer checklist
+For K=2, the projected matrices equal their original corners before
+projection. In formal D1a use their entries therefore coincide
+numerically with the pairwise endpoints, while the projected-field role
+remains a sensitivity scenario. Use `raw_pairwise_intervals` when
+reporting the formal interval. D1b records
+`frechet_scope = "heuristic_stress_test"`; its covariance ranges do not
+gain a formal interpretation from a successful PSD check. Deprecated
+lower/upper aliases are documented in the help, but the descriptive
+current fields make the intended use clearer.
 
-Before using sitemix output elsewhere:
+## Before using the result elsewhere
 
-1.  Preserve row identifiers and `indicator` ordering.
-2.  Map `theta_hat` and `se` without changing their scale implicitly.
-3.  Preserve `estimate_scale`, `var_method`, suppression/accountability
-    flags, and every present `estimate_status`/`sensitivity_*` field.
-4.  If any FPC/design field is present, carry all eight fields together:
-    `population_size`, `sampling_fraction`, `fpc_variance_multiplier`,
-    `fpc_se_multiplier`, `variance_multiplier_applied`,
-    `se_multiplier_applied`, `sampling_design`, and `variance_rule`.
-5.  Assign an explicit eligibility/exclusion reason and reconcile all
-    row counts before filtering; never treat sensitivity variance or
-    census zero as an ordinary inverse-variance weight.
-6.  For joint analysis, run all three diagnostic levels and align
-    complete tuple/coordinate groups with `indicator_order`, matrix
-    dimnames, and `K` when present. A strict multivariate consumer may
-    require `K`; Scenario A/D0 1-by-1 covariance can validly omit it.
-7.  Select either a compatible reported branch or an explicit raw
-    branch; evaluate named contrasts with $`a^\top V a`$ without
-    assuming invertibility.
-8.  Reject stale covariance, invalid smoothing provenance, partial
-    groups, suppression, and sensitivity coordinates.
-9.  Keep Fréchet projections as separately labeled stress-scenario
-    matrices, with their full projection-diagnostic sidecar.
-10. Carry applicable object-level provenance in an explicit metadata
-    sidecar.
+Keep row identifiers, indicator order, estimate/SE scales, method
+labels, status and suppression fields, and any population-size fields
+with the values. Save applicable object attributes separately. Retain
+unavailable rows long enough to explain exclusions, and choose finite
+positive-SE rows explicitly for inverse-variance calculations.
 
-## 10. Where to go next
+For joint calculations, check complete groups and matrix coordinates at
+all three diagnostic levels. Select the compatible point-estimate scale,
+inspect smoothing and stale-matrix information, and calculate named
+contrasts without assuming the matrix has an inverse. Keep Fréchet
+scenarios separate from ordinary sampling covariance and retain their
+diagnostics. The statistical assumptions of a subsequent model require a
+separate assessment.
 
-- [A8 · Downstream
-  workflows](https://joonho112.github.io/sitemix/articles/a8-downstream-workflows.md)
-  for the applied direct-column workflow.
-- [M1 · Statistical
-  foundations](https://joonho112.github.io/sitemix/articles/m1-statistical-foundations.md)
-  for the sampling models behind `theta_hat`, `se`, and `V`.
+## Related examples
+
+- [Using estimates and covariance matrices in further
+  analyses](https://joonho112.github.io/sitemix/articles/a8-downstream-workflows.md)
+  walks through export and a raw covariance contrast with the simulated
+  site data.
+- [Sampling uncertainty in site-level
+  proportions](https://joonho112.github.io/sitemix/articles/m1-statistical-foundations.md)
+  explains the sampling models behind the estimates and their
+  uncertainty.
+- [Pairwise Fréchet bounds and projected dependence
+  scenarios](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md)
+  derives the pairwise probability bounds and discusses PSD projection.
 
 ## References

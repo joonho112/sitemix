@@ -1,74 +1,46 @@
-# A2 · Input formats — student rows, counts, or aggregates?
+# Choosing an input format
 
 Abstract
 
-For applied researchers who have site-year data in some form but are not
-sure which sitemix entry function applies. This vignette walks through a
-three-branch decision tree (student rows / sufficient counts / published
-aggregates), gives one runnable example per branch, and shows the
-equivalence between branches.
+Choose an estimation function from the information in your data:
+individual student records, sufficient counts, or published aggregates.
+Examples show the required columns and the conditions under which counts
+reproduce estimates from student records.
 
-## Overview
+Choose the function by what each row represents and which counts are
+available. For a single binary indicator, a numerator and denominator
+contain the information needed to reproduce the calculation from student
+records. For several indicators, the distinction between marginal
+counts, joint counts, and category counts matters.
 
-### 1. Why you are here
+## Match your data to a function
 
-Marco is a state-agency analyst. Three different districts handed him
-three different files: District A sent one row per student (student
-rows); District B sent pre-aggregated count rows (sufficient counts);
-District C sent the publisher’s CSV (a published aggregate). Marco needs
-to estimate site-level rates from all three without spending a day
-deciding which sitemix function to call.
+| Information in the file | Required columns | Function |
+|:---|:---|:---|
+| One row per student-year | Site and year, plus binary indicators or a categorical variable | [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md) (A/B/C) |
+| One row of sufficient counts per site-year | Site and year, `n_jt`, and the complete counts for the chosen family | [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md) (A/B/C) |
+| Published numerator/denominator pairs, possibly with suppression or missing joint counts | Site and year, indicator labels, and numerator/denominator columns in long or wide form | [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md) (D0/D1) |
 
-This vignette is the decision tree.
+The labels A/B/C/D0/D1 identify these combinations in the documentation.
+A publisher can supply complete sufficient counts, and those counts can
+be used with
+[`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md).
+The choice depends on the information retained in the file, not who
+created it. Separate counts for FRPM and SNAP, for example, do not
+reveal how many students receive both.
 
-**What you will leave with.** By the end of this article you will be
-able to:
+The examples use the bundled `prek_sim` records and counts derived from
+them. These describe 50 simulated pre-kindergarten sites and no real
+children or programs; the results illustrate calculations, not empirical
+Pre-K findings. [Getting started with site-level
+proportions](https://joonho112.github.io/sitemix/articles/a1-getting-started.md)
+explains the main returned columns.
 
-1.  Decide whether your site-year data are student rows, sufficient
-    counts, or a published aggregate.
-2.  Call the matching entry function
-    ([`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md),
-    [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md),
-    or
-    [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)).
-3.  Rely on the count-versus-rows equivalence guarantee when your source
-    data are already aggregated.
+## Estimate from student records
 
-**Prerequisites.** [A1 · Getting
-started](https://joonho112.github.io/sitemix/articles/a1-getting-started.md).
-
-> **About the example data.** All results here are computed live from
-> `prek_sim`, a fully simulated 50-site pre-kindergarten panel shipped
-> in the package (see
-> [`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)),
-> and `prek_sim_counts` for the sufficient-count path. It describes no
-> real children, sites, or program, and must not be cited as empirical
-> Pre-K results. Every code block runs offline with a fixed random seed.
-
-## 2. The three-branch decision tree
-
-Use the table below to pick your entry point.
-
-| Your data look like | Use this function | Scenario |
-|:---|:---|:--:|
-| One row per **student-year** | [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md) | A/B/C |
-| One row per **site-year** with complete family-specific sufficient counts | [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md) | A/B/C |
-| Publisher CSV with one row per **site-year** (or **site-year-subgroup**), with `c_jt` and `n_jt` columns or analogous | [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md) | D0/D1 |
-
-Three questions to disambiguate:
-
-1.  **“Does every row identify one student?”** Yes → branch 1 (student
-    rows). No → branch 2 or 3.
-2.  **“Does every row carry an explicit numerator and denominator?”**
-    Yes → branch 2 (counts) or 3 (aggregates).
-3.  **“Is the data product a publisher CSV with a known schema (e.g.,
-    state accountability files)?”** Yes → branch 3. Otherwise → branch
-    2.
-
-## 3. Branch 1 — student rows
-
-This is the modal entry point and the one A1 demonstrated. One row per
-student-year; the indicator column is logical or 0/1.
+For one binary indicator, the data need `site_id`, `year`, and a logical
+or numeric 0/1 column. Here `frpm` records free and reduced-price meal
+status, and the call estimates one proportion per site in 2024.
 
 ``` r
 
@@ -92,24 +64,45 @@ head(est_rows, 3)
 #> #   flag_suppressed <lgl>, framing <chr>, flag_below_accountability <lgl>
 ```
 
-Use when your data are an enrollment file, a student-level
-administrative export, or any table where each row is one student in one
-year.
+Each returned row contains a site’s raw proportion in `theta_raw` and
+the estimate and standard error on `estimate_scale` in `theta_hat` and
+`se`. The default scale is `"arcsine"` for all three functions shown
+here. Supply `id_cols` if the site and year columns have different
+names.
 
-## 4. Branch 2 — sufficient counts
+For overlapping binary indicators, use `family = "multivariate"` and
+name the columns in `indicators`. For a mutually exclusive categorical
+variable, use `family = "multinomial"` and name its column in
+`indicator`. Those two analyses are illustrated in [Analyzing
+overlapping indicators and mutually exclusive
+categories](https://joonho112.github.io/sitemix/articles/a4-multivariate-multinomial.md).
 
-When student rows have already been aggregated to one row per site-year
-with complete family-specific sufficient statistics, use
-[`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md).
-The package ships a count artifact derived deterministically from
-`prek_sim`:
+## Estimate from sufficient counts
 
-- Scenario A needs `n_jt` and one `c_jt_<indicator>` column.
-- Scenario B needs `n_jt`, all ordered marginal counts, and all ordered
-  pairwise co-occurrence counts. Count-input feasibility is verified for
-  two or three indicators and fails closed at four or more.
-- Scenario C needs `n_jt` and at least two `c_jt_<category>` columns
-  whose row sum is exactly `n_jt`.
+A sufficient-count table has one row per site-year. Along with the site
+and year columns, the required counts depend on `family`:
+
+- `"binomial"` (A): `n_jt` and one `c_jt_<indicator>` column.
+- `"multivariate"` (B): `n_jt`, every marginal count, and a
+  co-occurrence count for every pair. Pair names follow the order in
+  `indicators`: `indicators = c("frpm", "snap")` requires `c_jt_frpm`,
+  `c_jt_snap`, and `c_jt_frpm_snap`.
+- `"multinomial"` (C): `n_jt` and at least two `c_jt_<category>` columns
+  whose sum is `n_jt` in each row. `indicators` specifies category
+  order.
+
+For overlapping indicators, `vjt = TRUE` requests covariance and checks
+whether the counts can come from one common sample. That check supports
+two or three indicators. Counts for four or more indicators are accepted
+with `vjt = FALSE`; requesting covariance raises
+`sitemix_error_input_indicator_count`. Use student records if you need
+covariance for four or more overlapping indicators. Complete pairwise
+counts are still required for the multivariate counts input when
+`vjt = FALSE`.
+
+The package includes a count table derived from `prek_sim`. Select the
+denominator and SNAP count for 2024, then name that indicator in the
+call:
 
 ``` r
 
@@ -151,22 +144,36 @@ head(est_counts, 3)
 #> #   flag_suppressed <lgl>, framing <chr>, flag_below_accountability <lgl>
 ```
 
-## 5. Branch 3 — published aggregates
+The `c_jt_snap` column supplies the numerator and `n_jt` the
+denominator. The result has one row per site for SNAP, with the same
+estimate and standard-error columns as the student-record result. This
+example uses a different indicator from the FRPM example above; the
+comparison below uses SNAP for both inputs.
 
-When the file is a publisher product (you did not aggregate it
-yourself), use
-[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md).
-The wrapper supports two cases: **D0** (one numerator/denominator per
-site-year) and **D1** (multiple aggregate marginals per site-year).
+## Estimate from published aggregates
 
-D1 is a multivariate marginal model, not aggregate multinomial
-composition. `family = "multinomial"` is therefore rejected on this
-branch; a Scenario C composition must use student rows or complete
-sufficient category counts.
+Use
+[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+for a published single indicator (`family = "binomial"`, D0) or several
+published marginal indicators (`family = "multivariate"`, D1). In long
+form, the standard columns are `site_id`, `year`, `indicator`, `c_jt`,
+and `n_jt`. A D0 call can supply the indicator label through `indicator`
+if that column is absent.
+
+In wide form, use `c_jt_<indicator>` numerator columns and either a
+common `n_jt` or one `n_jt_<indicator>` for each numerator. Do not mix
+the two denominator forms. Column-mapping arguments such as
+`numerator_col` and `denominator_col` allow other source column names;
+`NULL` uses the standard names. The [function
+help](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+lists the full mappings, including subgroup and suppression flags.
+
+To illustrate D0 without an external download, arrange the simulated
+FRPM counts in the standard long form:
 
 ``` r
 
-# Build a D0 aggregate slice from the bundled count file:
+# Arrange the simulated counts as published numerator/denominator rows:
 d0 <- counts[counts$year == 2024, c("site_id", "year", "n_jt", "c_jt_frpm")]
 d0$indicator <- "frpm"
 d0$c_jt <- d0$c_jt_frpm
@@ -191,16 +198,45 @@ head(est_agg, 3)
 #> #   flag_suppressed <lgl>, framing <chr>, flag_below_accountability <lgl>
 ```
 
-For D1 (multiple marginals) and the publisher-side suppression audit,
-read [A5 · Published aggregates D0 /
-D1](https://joonho112.github.io/sitemix/articles/a5-published-aggregates.md).
+Here `theta_raw` is the observed `c_jt / n_jt`. It describes the same
+FRPM records as `est_rows`; only the input form has changed. For
+complete, non-suppressed counts, matching options give the same
+numerical estimates and standard errors, while fields describing the
+input type can differ.
 
-## 6. The equivalence guarantee
+For D1, marginal counts do not identify cross-indicator covariance.
+Requested `V` matrices use working independence: their off-diagonal
+zeros are an assumption. Record whether the marginals refer to the same
+observational units with `sampling_relation`; equal denominators alone
+do not establish that they do.
 
-Branches 1 and 2 must agree on the same underlying data. The
-sufficient-counts identity (T2.5 in [M2 · Scalar SE —
-binomial](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md))
-guarantees:
+Missing joint counts are different from suppressed marginal counts. The
+former leave dependence unknown even when all marginal proportions are
+observed. Suppression hides a numerator or denominator needed for a
+particular rate. With an observed denominator, `suppression = "drop"`
+retains suppressed rows with missing estimates and SEs. Separately
+acknowledged variance-sensitivity values do not recover those estimates
+or supply ordinary covariance. Hidden denominators require additional
+settings and cannot support numeric sensitivity variances. See
+[Estimating proportions from published
+aggregates](https://joonho112.github.io/sitemix/articles/a5-published-aggregates.md)
+for D1, subgroup files, and suppression handling.
+
+Published marginals also do not establish a multinomial composition.
+`family = "multinomial"` is rejected by the aggregate function; use
+student categories or complete sufficient category counts for Scenario
+C.
+
+## Compare student records with their counts
+
+The counts must summarize the same retained student records, including
+the same missing-value exclusions. Match the family, indicator order,
+transformations, corrections, and other estimation options. Under these
+conditions, estimates and standard errors agree up to numerical
+rounding; covariance also agrees for requests supported by the count
+input.
+
+This comparison uses the same 2024 SNAP records and default options:
 
 ``` r
 
@@ -221,11 +257,24 @@ stopifnot(all.equal(snap_from_counts$theta_hat, snap_2024$theta_hat))
 stopifnot(all.equal(snap_from_counts$se, snap_2024$se))
 ```
 
-The two pathways agree to numerical tolerance. If you have a choice
-between student rows and counts, prefer student rows for clarity; the
-counts path exists for users whose source data are already aggregated.
+The checks compare site IDs, raw proportions, transformed estimates, and
+standard errors. They pass without printed output. The `input_mode`
+column still distinguishes `"student_level"` from `"counts_full_suff"`;
+numerical agreement does not require the two objects to have identical
+metadata. The binomial calculation is explained in [Binomial standard
+errors and
+transformations](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md).
 
-## 7. Audit
+Keep the input that preserves the information your analysis needs.
+Student records allow you to change the indicator set and missing-value
+exclusions. Counts are enough for the supported calculations when the
+required counts and their source definitions are available.
+
+## Check the example results
+
+All three examples use the same 50-site panel and the default arcsine
+reporting scale. These checks confirm the expected row counts and
+scales:
 
 ``` r
 
@@ -236,20 +285,17 @@ stopifnot(identical(unique(est_rows$estimate_scale), "arcsine"))
 stopifnot(identical(unique(est_agg$estimate_scale), "arcsine"))
 ```
 
-## 8. What’s next?
+## Choose the next analysis
 
-- [A3 · Scenario A —
-  binomial](https://joonho112.github.io/sitemix/articles/a3-scenario-binomial.md)
-  — the Scenario A deep dive (boundary methods, VST choice, the
-  sufficient-counts identity from §6 made formal).
-- [A4 · Scenarios B / C — multivariate /
-  multinomial](https://joonho112.github.io/sitemix/articles/a4-multivariate-multinomial.md)
+- [Estimating proportions for a binary
+  indicator](https://joonho112.github.io/sitemix/articles/a3-scenario-binomial.md)
+  for transformations and proportions at 0 or 1.
+- [Analyzing overlapping indicators and mutually exclusive
+  categories](https://joonho112.github.io/sitemix/articles/a4-multivariate-multinomial.md)
   when your data have multiple indicators per site-year.
-- [A5 · Published aggregates D0 /
-  D1](https://joonho112.github.io/sitemix/articles/a5-published-aggregates.md)
-  for branch-3 deep dive including subgroup pivots.
-- [M1 · Statistical
-  foundations](https://joonho112.github.io/sitemix/articles/m1-statistical-foundations.md)
+- [Estimating proportions from published
+  aggregates](https://joonho112.github.io/sitemix/articles/a5-published-aggregates.md)
+  for published marginal counts, suppression, and subgroup tables.
+- [Sampling uncertainty in site-level
+  proportions](https://joonho112.github.io/sitemix/articles/m1-statistical-foundations.md)
   for the sampling-uncertainty framework underlying every input path.
-
-## References

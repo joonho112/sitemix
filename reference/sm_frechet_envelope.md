@@ -1,15 +1,11 @@
-# Compute D1 pairwise Fréchet intervals and projected stress scenarios
+# Explore dependence between published marginal proportions
 
-`sm_frechet_envelope()` preserves the raw pairwise Fréchet intervals for
-D1 marginal aggregate estimates as the formal result. It also assembles
-the pairwise negative- and positive-dependence corners and, for more
-than two indicators, PSD-projects those corners while preserving the
-raw-scale plug-in diagonal. The projected matrices are stress scenarios,
-not multivariate lower or upper bounds, and are not validated `sm_vcov`
-objects. Projection can change a pair's sign, move it outside its raw
-pairwise interval, or reverse the elementwise order of the two
-scenarios; those events are reported explicitly in
-`projection_diagnostics`.
+`sm_frechet_envelope()` calculates pairwise Fréchet intervals for
+published marginal proportions estimated through the D1 aggregate path.
+It also builds covariance matrices for exploring negative and positive
+dependence. Read `raw_pairwise_intervals` for the pairwise ranges and
+`projection_diagnostics` before using the matrices. The ranges have a
+formal interpretation only under the D1a conditions below.
 
 ## Usage
 
@@ -33,8 +29,9 @@ sm_frechet_envelope(
 - x:
 
   A D1 aggregate-path `sitemix_estimates` object. Both `vjt = FALSE` and
-  `vjt = TRUE` outputs are supported; formal D1a validation uses row and
-  matrix provenance when each is available.
+  `vjt = TRUE` outputs are supported; formal D1a validation uses the
+  recorded sampling and variance information in rows and, when present,
+  matrices.
 
 - indicator:
 
@@ -45,9 +42,8 @@ sm_frechet_envelope(
 - population_regime:
 
   Character scalar. Required regime label. One of `"d1a"` (formal
-  common-population) or `"d1b"` (subgroup-conditional heuristic). No
-  default; omission raises the stable required-regime condition
-  documented under *Errors*.
+  common-population) or `"d1b"` (subgroup-conditional heuristic). The
+  default `NULL` is rejected; supply a regime explicitly. See *Errors*.
 
 - subgroup_conditional_action:
 
@@ -61,7 +57,7 @@ sm_frechet_envelope(
   Logical scalar. If `TRUE`, return the raw pairwise Fréchet correlation
   endpoints as matrices in `pairwise_correlation_lower` and
   `pairwise_correlation_upper`. Defaults to `FALSE`; invalid values
-  raise the stable condition documented under *Errors*.
+  raise the condition documented under *Errors*.
 
 - psd_method:
 
@@ -86,18 +82,19 @@ sm_frechet_envelope(
 - shrink_alpha:
 
   Positive numeric scalar in \\(0, 1\]\\ or `NULL` (default `NULL`).
-  Fixed shrinkage weight used exactly for \\K \> 2\\ when
-  `psd_method = "shrink"`. `NULL` triggers a line search for the largest
-  PSD-feasible weight. Ignored only by the exact \\K \le 2\\ identity
-  policy.
+  Weight on the source corner when mixing it with the independence
+  diagonal. For \\K \> 2\\, a supplied value is used exactly; `NULL`
+  searches for the largest weight that yields a PSD matrix. With \\K \le
+  2\\, the corners are returned unchanged. A supplied weight requires
+  `psd_method = "shrink"` even in that case.
 
 - ...:
 
-  Supported deterministic arguments forwarded to
+  Additional arguments forwarded to
   [`Matrix::nearPD()`](https://rdrr.io/pkg/Matrix/man/nearPD.html) when
   `psd_method = "higham"`: `base.matrix`, `doSym`, `doDykstra`,
   `posd.tol`, and `conv.norm.type`. Arguments that conflict with the
-  package's diagonal, tolerance, iteration, symmetry, or output contract
+  required diagonal, tolerance, iteration, symmetry, or output settings
   are rejected.
 
 ## Value
@@ -137,13 +134,13 @@ An `sm_frechet_envelope` list object with the following fields:
 
 - `projection_diagnostics`:
 
-  Canonical long diagnostics with one row per site-year and stress
-  scenario. Rows record estimate and covariance scales; method, status,
-  attempted/converged state and iterations; relative and realized
-  absolute tolerances; before/after eigenvalue scales and minima;
-  requested/applied shrinkage; raw and projected norms and distances;
-  and diagonal, symmetry, PSD, sign-change, projected-order, and
-  raw-interval invariants.
+  A table with one row per site-year and stress scenario. Rows record
+  estimate and covariance scales; method, status, attempted/converged
+  state and iterations; relative and realized absolute tolerances;
+  before/after eigenvalue scales and minima; requested/applied
+  shrinkage; raw and projected norms and distances; and diagonal,
+  symmetry, PSD, sign changes, scenario ordering, and departures from
+  raw intervals.
 
 - `site_keys`:
 
@@ -165,7 +162,7 @@ An `sm_frechet_envelope` list object with the following fields:
 
 - `covariance_scale`, `projected_scenario_role`:
 
-  Canonical scale and role metadata.
+  The covariance scale and the interpretation of projected matrices.
 
 - `psd_method`, `psd_tol`, `psd_max_iter`, `shrink_alpha`,
   `projection_config`:
@@ -175,28 +172,28 @@ An `sm_frechet_envelope` list object with the following fields:
 - `V_lower_raw`, `V_upper_raw`, `V_lower_psd`, `V_upper_psd`, `R_lower`,
   `R_upper`:
 
-  Deprecated compatibility aliases for the canonical matrix fields
-  above. New code should not use these names because projected matrices
-  are not bounds.
+  Deprecated compatibility aliases for the matrix fields above. New code
+  should not use these names because projected matrices are not bounds.
 
 - `psd_diagnostics`:
 
   Deprecated one-row-per-site-year wide compatibility table. New code
-  should consume the canonical long `projection_diagnostics`.
+  should use `projection_diagnostics`.
 
 ## Details
 
-**Two interpretations: D1a and D1b.** The function supports two
-population regimes that the caller must explicitly choose between:
+Choose `population_regime` to describe how the published marginals
+relate to one another:
 
 - **D1a – formal common-population**:
 
   The published marginals refer to the same sampled units, use one
   finite denominator per site-year, and use the IID plug-in
-  raw-probability variance rule without FPC or `binomial_bc`. These
-  conditions must already be recorded by the D1 estimator. Under them,
-  each raw pairwise covariance interval is formal. A matching
-  denominator alone is not provenance.
+  raw-probability variance rule without FPC or `binomial_bc`, with
+  `anscombe = FALSE` so that `n_eff = n`. These conditions must already
+  be recorded by the D1 estimator. Under them, each raw pairwise
+  covariance interval is formal. Equal denominator values alone do not
+  establish that the marginals describe the same units.
 
 - **D1b – subgroup-conditional heuristic**:
 
@@ -204,20 +201,29 @@ population regimes that the caller must explicitly choose between:
   **heuristic stress test**, not a formal bound. Requires explicit
   acknowledgement via `subgroup_conditional_action = "allow"` (or
   proceeds with a warning under `"warn"`); `"error"` aborts the call.
+  The input must record `sampling_relation` as `"different_units"` or
+  `"unknown"`; a same-unit D1a input cannot be relabeled as D1b in this
+  call.
 
-**PSD stress scenarios.** The assembled corner matrices are not
-guaranteed to be PSD at the corners of the Fréchet box; the function
-applies PSD projection via `psd_method = "higham"` (Higham 2002
-nearest-PSD algorithm via
+The function assembles matrices from the lower and upper pairwise
+endpoints. For more than two indicators, those matrices need not be
+positive semidefinite (PSD), so they are adjusted with
+`psd_method = "higham"` (using
 [`Matrix::nearPD()`](https://rdrr.io/pkg/Matrix/man/nearPD.html)) or
-`"shrink"` (line search for the largest shrinkage weight that yields a
-PSD matrix). The working-independence diagonal is preserved through
-repair. For \\K \le 2\\, both projected fields are exact identities of
-their source corners and no iterative method is attempted. For \\K \>
-2\\, a fixed `shrink_alpha` is applied exactly even when the source
-corner is already PSD; an infeasible fixed value errors. Higham and
-automatic-shrink nonconvergence also error rather than returning a
-partially repaired matrix.
+`"shrink"` (toward the working-independence diagonal). Both methods
+preserve the raw-scale diagonal. The resulting matrices are dependence
+stress scenarios: they are not multivariate lower or upper bounds or
+validated `sm_vcov` objects. PSD alone does not establish that all
+pairwise entries can arise from a joint binary distribution. Projection
+can change a pair's sign, move it outside its raw pairwise interval, or
+reverse the elementwise order of the two scenarios.
+`projection_diagnostics` records these changes. For \\K \le 2\\, both
+projected fields are exact identities of their source corners and no
+iterative method is attempted. For \\K \> 2\\, a fixed `shrink_alpha` is
+applied exactly even when the source corner is already PSD; an
+infeasible fixed value errors. Higham and automatic-shrink
+nonconvergence also error rather than returning a partially repaired
+matrix.
 
 For the formal derivation see
 [`vignette("m7-frechet-envelope-theory", package = "sitemix")`](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md).
@@ -228,7 +234,7 @@ entry: formal pairwise intervals require complete identified marginals.
 
 Omitting `population_regime` raises
 `sitemix_error_population_regime_required`. Other invalid regime values
-raise the corresponding stable invalid-regime condition. Invalid
+raise `sitemix_error_invalid_population_regime`. Invalid
 `return_correlations` values raise
 `sitemix_error_invalid_return_correlations`.
 
@@ -255,7 +261,7 @@ doi:10.1093/imanum/22.3.329.
   for the D1 estimator producing the working-independence `V`.
 
 - [`sm_vcov()`](https://joonho112.github.io/sitemix/reference/sm_vcov.md)
-  for the matrix class spec and `vcov_scale` convention.
+  for covariance objects and their `vcov_scale` field.
 
 - [`vignette("a7-variance-smoothing-and-frechet")`](https://joonho112.github.io/sitemix/articles/a7-variance-smoothing-and-frechet.md)
   for the applied walkthrough.
@@ -303,7 +309,39 @@ est <- sm_estimate_from_aggregates(
 #> ℹ Fix: Use `sm_frechet_envelope()` once sensitivity diagnostics are available.
 env <- sm_frechet_envelope(est, population_regime = "d1a")
 class(env)
-#> [1] "sm_frechet_envelope" "list"               
+#> [1] "sm_frechet_envelope" "list"
 env$psd_method
 #> [1] "higham"
+head(env$raw_pairwise_intervals)
+#> # A tibble: 6 × 17
+#>   site_id  year site_key   indicator_1 indicator_2   p_1   p_2 n_common
+#>   <chr>   <int> <chr>      <chr>       <chr>       <dbl> <dbl>    <dbl>
+#> 1 S001     2024 S001::2024 frpm        snap        0.111 0.222        9
+#> 2 S002     2024 S002::2024 frpm        snap        0.8   0.7         10
+#> 3 S003     2024 S003::2024 frpm        snap        0.5   0.125        8
+#> 4 S004     2024 S004::2024 frpm        snap        0.429 0.286       14
+#> 5 S005     2024 S005::2024 frpm        snap        0.875 0.75         8
+#> 6 S006     2024 S006::2024 frpm        snap        0.364 0.182       11
+#> # ℹ 9 more variables: joint_probability_lower <dbl>,
+#> #   joint_probability_upper <dbl>, pairwise_correlation_lower <dbl>,
+#> #   pairwise_correlation_upper <dbl>, pairwise_covariance_lower <dbl>,
+#> #   pairwise_covariance_upper <dbl>, interval_scale <chr>,
+#> #   covariance_construction <chr>, interval_scope <chr>
+head(env$projection_diagnostics)
+#> # A tibble: 6 × 38
+#>   site_id  year site_key       K scenario              estimate_scale vcov_scale
+#>   <chr>   <int> <chr>      <int> <chr>                 <chr>          <chr>
+#> 1 S001     2024 S001::2024     2 negative_dependence_… raw_probabili… raw
+#> 2 S001     2024 S001::2024     2 positive_dependence_… raw_probabili… raw
+#> 3 S002     2024 S002::2024     2 negative_dependence_… raw_probabili… raw
+#> 4 S002     2024 S002::2024     2 positive_dependence_… raw_probabili… raw
+#> 5 S003     2024 S003::2024     2 negative_dependence_… raw_probabili… raw
+#> 6 S003     2024 S003::2024     2 positive_dependence_… raw_probabili… raw
+#> # ℹ 31 more variables: projection_method <chr>, projection_status <chr>,
+#> #   relative_tolerance <dbl>, absolute_tolerance_before <dbl>,
+#> #   absolute_tolerance_after <dbl>, eigen_scale_before <dbl>,
+#> #   eigen_scale_after <dbl>, min_eigen_before <dbl>, min_eigen_after <dbl>,
+#> #   raw_was_psd <lgl>, projection_attempted <lgl>, converged <lgl>,
+#> #   iterations <int>, max_iterations <int>, shrink_alpha_requested <dbl>,
+#> #   shrink_alpha_applied <dbl>, frobenius_independence <dbl>, …
 ```

@@ -1,12 +1,16 @@
-# Pivot subgroup aggregate rows into subgroup-as-indicator input (Framing Y)
+# Prepare subgroup rates as indicators within each site
 
-`sm_pivot_subgroups_to_indicators()` implements **Framing Y** for
-school-by-subgroup aggregate rows: each subgroup becomes a D1 marginal
-indicator while the original site remains the `site_id`. The [aggregate
-wrapper](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-consumes this D1 output. For the alternative framing where subgroups
-become composite sites, see the [Framing X
-helper](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_sites.md).
+`sm_pivot_subgroups_to_indicators()` prepares published subgroup counts
+for comparing subgroup rates within each site. It keeps the original
+`site_id` and uses each subgroup label as an `indicator`, preserving
+that subgroup's numerator and denominator. The documentation calls this
+**Framing Y**.
+
+Pass the result to
+[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+with `family = "multivariate"` for marginal aggregate estimates (D1).
+This helper reshapes the counts; it does not estimate rates, standard
+errors, or dependence between subgroups.
 
 ## Usage
 
@@ -34,62 +38,65 @@ sm_pivot_subgroups_to_indicators(
 
 - site_col:
 
-  Character scalar. Column name containing source site identifiers.
-  Defaults to `"site_id"`.
+  A single column name containing source site identifiers. Defaults to
+  `"site_id"`.
 
 - year_col:
 
-  Character scalar. Column name containing integer-like years. Defaults
-  to `"year"`.
+  A single column name containing integer-like years. Defaults to
+  `"year"`.
 
 - subgroup_col:
 
-  Character scalar. Column name containing subgroup labels. Required.
+  A single column name containing subgroup labels. Required.
 
 - numerator_col:
 
-  Character scalar. Column name containing aggregate numerators.
-  Required.
+  A single column name containing aggregate numerator counts. Required.
 
 - denominator_col:
 
-  Character scalar. Column name containing aggregate denominators.
+  A single column name containing aggregate denominator counts.
   Required.
 
 - indicator_set:
 
-  Character vector or `NULL` (default `NULL`). Optional subgroup labels
-  to retain and order in the output. When `NULL`, labels are taken from
-  first appearance in `subgroup_col`. Recognized total aliases in this
-  vector are normalized to canonical `"ALL"`; alias collisions are
-  rejected as duplicate indicators.
+  A character vector of at least two distinct subgroup labels to retain
+  in the specified order, or `NULL` (default). With `NULL`, labels
+  follow their first appearance in `subgroup_col`. Supplied labels must
+  occur in the data. Recognized total labels become `"ALL"`; labels that
+  then coincide are rejected as duplicate indicators.
 
 - na_action:
 
-  Character scalar. Missing/suppressed row handling. One of `"drop_row"`
-  (default; removes rows whose numerator or denominator is missing or
-  whose suppression flag is present) or `"keep_na"` (keeps/inserts NA
-  rows for downstream suppression handling).
+  A single string: `"drop_row"` (default) or `"keep_na"`. The default
+  removes the entire site-year group if any selected subgroup has a
+  missing numerator, missing denominator, or publisher suppression flag.
+  `"keep_na"` retains these groups and inserts `NA` rows for absent
+  subgroup indicators.
 
 - suppression_col:
 
-  Character scalar or `NULL` (default `NULL`). Optional publisher
-  suppression flag column.
+  A single column name, or `NULL` (default). Names the publisher
+  suppression flag column. With `NULL`, an existing `suppression_flag`
+  column is used if present. If neither source is available, source rows
+  receive `suppression_flag = FALSE`.
 
 - suppression_flag_value:
 
-  Value or vector of values marking publisher suppression in
-  `suppression_col`. Defaults to `""`.
+  Value or vector of values marking publisher suppression in the flag
+  column. Defaults to `""`.
 
 ## Value
 
-A tibble consumable by the [aggregate
-wrapper](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-with `family = "multivariate"` and `aggregate_case = "D1"`. Schema:
+A tibble with one row per retained site-year-subgroup, ordered by site,
+year, and `indicator_set`. It is structured for
+[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+with `family = "multivariate"` and `aggregate_case = "D1"`. It contains:
 
 - `site_id`:
 
-  Original source site identifier (preserved, not composite).
+  Original source site identifier.
 
 - `year`:
 
@@ -107,9 +114,10 @@ with `family = "multivariate"` and `aggregate_case = "D1"`. Schema:
 - `suppression_flag`:
 
   Always-present logical. It is `TRUE` for publisher-flagged rows and
-  otherwise `FALSE`. Without a source flag, observed rows are `FALSE`;
-  synthesized incomplete-grid rows created by `na_action = "keep_na"`
-  are `TRUE`.
+  otherwise `FALSE`. Flags come from `suppression_col`, or from an
+  existing `suppression_flag` column when that argument is `NULL`.
+  Without either source flag column, observed rows are `FALSE`; missing
+  subgroup rows inserted by `na_action = "keep_na"` are `TRUE`.
 
 - `framing`:
 
@@ -117,31 +125,71 @@ with `family = "multivariate"` and `aggregate_case = "D1"`. Schema:
 
 - `source_subgroup`:
 
-  Original publisher subgroup label for observed rows; synthesized
-  incomplete-grid rows carry `NA_character_`.
+  Original publisher subgroup label for observed rows; inserted
+  missing-subgroup rows carry `NA_character_`.
+
+The `indicator_set` attribute records the selected subgroup order. The
+`framing` and `na_action` attributes record how the table was prepared.
+An error is raised if no site-year groups remain or fewer than two
+indicators are retained per group.
 
 ## Details
 
-**Framing X vs Framing Y.** The two pivot helpers solve the same input
-problem but produce different schemas (see the [Framing X
-details](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_sites.md)
-for the side-by-side comparison). Pick Framing Y when the analyst's
-question is "what does each site's subgroup profile look like?" — each
-subgroup becomes a column-like marginal indicator and the downstream D1
-estimator computes per-marginal SEs with working-independence
-cross-marginal covariance. The fixed total-alias vocabulary documented
-for
+**Analysis unit and denominator.** Each returned site-year has several
+subgroup indicators. Their rates are conditional on membership in each
+subgroup, using that subgroup's own denominator. Equal counts or
+denominators do not show that the same observational units contributed
+to different indicators. For example, two disjoint subgroups can have
+the same number of students. Subgroups can also overlap; labels and
+marginal counts alone do not identify the joint counts.
+
+When estimating D1 rates, set `sampling_relation` in
+[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+from the source information: `"same_units"` only when the marginals
+describe the same observed units, `"different_units"` when they differ,
+or `"unknown"` when this is not known. The pivot does not determine this
+relationship. If covariance is requested, D1 uses working independence;
+its off-diagonal zeros are an assumption. See
+[`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)
+for the conditions on raw pairwise intervals and projected stress
+scenarios.
+
+Use
 [`sm_pivot_subgroups_to_sites()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_sites.md)
-is normalized to canonical `"ALL"` before duplicate and grid checks.
-Mixed-level routing is likewise unsupported and must be split upstream.
+with its default `partition_target = "none"` when each site-subgroup
+pair should instead have its own site identifier (Framing X). Both
+defaults preserve subgroup-specific numerators and denominators. If the
+question concerns subgroup shares of a common site total, use that
+function's explicit composition targets; merely representing subgroups
+as indicators does not create multinomial composition counts.
+
+**Subgroup selection and missing rows.** `indicator_set` selects and
+orders subgroup labels. Each retained site-year must have at least two
+indicators and the same selected indicator set. With
+`na_action = "drop_row"`, any missing count or publisher-suppressed
+indicator removes the entire site-year group. With `"keep_na"`, the
+function retains those groups and inserts missing subgroup rows with
+`NA` counts and `suppression_flag = TRUE`. These are missing values, not
+zero counts. Review the suppression and hidden-denominator settings in
+[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+before estimation.
+
+Recognized total labels, listed in
+[`sm_pivot_subgroups_to_sites()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_sites.md),
+become `"ALL"` before duplicate and indicator-set checks.
+`source_subgroup` retains the publisher's spelling for observed rows.
+Split files containing school, district, or state rows by reporting
+level before using either helper; these functions do not separate
+levels.
 
 ## See also
 
-- [Framing X
-  helper](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_sites.md).
+- [Subgroup-as-site and composition
+  counts](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_sites.md)
+  for the alternative analysis units and denominators.
 
 - [Aggregate
-  wrapper](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+  estimation](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
   for the D1 estimator.
 
 - [Fréchet
@@ -179,8 +227,8 @@ pivoted_y <- sm_pivot_subgroups_to_indicators(
 )
 head(pivoted_y)
 #> # A tibble: 6 × 8
-#>   site_id  year indicator source_subgroup  c_jt  n_jt suppression_flag framing  
-#>   <chr>   <int> <chr>     <chr>           <int> <int> <lgl>            <chr>    
+#>   site_id  year indicator source_subgroup  c_jt  n_jt suppression_flag framing
+#>   <chr>   <int> <chr>     <chr>           <int> <int> <lgl>            <chr>
 #> 1 S001     2024 frpm_yes  frpm_yes            8    12 FALSE            subgroup…
 #> 2 S001     2024 frpm_no   frpm_no             3     7 FALSE            subgroup…
 #> 3 S002     2024 frpm_yes  frpm_yes            4     6 FALSE            subgroup…

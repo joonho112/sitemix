@@ -1,11 +1,11 @@
 # Construct or inspect a within-site covariance object
 
-`sm_vcov()` is the constructor and validator for the `sm_vcov` S3 class
-— the per-site-year within-indicator covariance carrier that populates
-the optional `V` list-column of a `sitemix_estimates` tibble. Every
-`sitemix_estimates` row produced with `vjt = TRUE` carries one `sm_vcov`
-object; this function is the canonical home for the scale and method
-lexicons every downstream consumer reads.
+`sm_vcov()` creates a covariance matrix object with its site, year,
+indicator order, and calculation method. Estimation functions return
+these objects in the `V` list-column when `vjt = TRUE`. Use
+[`as.matrix()`](https://rdrr.io/r/base/matrix.html) to extract a matrix,
+and inspect `vcov_scale` before combining it with estimates or standard
+errors.
 
 ## Usage
 
@@ -42,18 +42,16 @@ sm_vcov(
 
 - matrix:
 
-  Symmetric PSD numeric matrix of dimension `K x K` with \\K \ge 1\\.
-  Rows and columns are indexed by `indicator_order`.
+  A symmetric positive semidefinite numeric matrix of dimension `K x K`
+  with \\K \ge 1\\. Rows and columns are indexed by `indicator_order`.
 
 - site_id:
 
-  Site identifier metadata; character or integer. Defaults to
-  `NA_character_`.
+  A character or integer site identifier. Defaults to `NA_character_`.
 
 - year:
 
-  Integer scalar. Year identifier stored as metadata. Defaults to
-  `NA_integer_`.
+  A single integer year. Defaults to `NA_integer_`.
 
 - indicator_order:
 
@@ -67,28 +65,28 @@ sm_vcov(
 
 - vcov_method:
 
-  Construction method; see *vcov_method convention*. Character scalar;
+  The calculation method; see *Covariance methods*. Character scalar;
   defaults to `NA_character_`, which is valid only for
   `family = "binomial"`. Multivariate and multinomial callers must
-  supply a compatible recorded method.
+  supply a compatible method.
 
 - estimate_scale:
 
-  Character scalar. The row-level `estimate_scale` of the producing
-  `sitemix_estimates` tibble. One of `"none"`, `"arcsine"`,
-  `"arcsine_anscombe"`, or `"logit"`; required.
+  Character scalar. The row-level `estimate_scale` of the corresponding
+  estimates. One of `"none"`, `"arcsine"`, `"arcsine_anscombe"`, or
+  `"logit"`; required.
 
 - vcov_scale:
 
   Character scalar. The scale of `matrix` entries; one of `"raw"`,
   `"arcsine_delta"`, `"logit_delta"`, or `"reference_raw"`. Required.
   **May differ from estimate_scale** under Scenarios B and C; see
-  *vcov_scale convention* below.
+  *Covariance scale* below.
 
 - matrix_boundary_rule:
 
-  Character scalar. Metadata recording how boundary cells were handled
-  during matrix construction. Defaults to `"none"`.
+  A single string recording how boundary cells were handled during
+  matrix construction. Defaults to `"none"`.
 
 - scalar_correction_rule:
 
@@ -98,16 +96,16 @@ sm_vcov(
 
 - psd_repair:
 
-  Character scalar. Metadata recording the PSD repair (if any) applied
+  A single string recording any positive-semidefinite repair applied
   during matrix construction. Defaults to `"none"`.
 
 - matrix_rank:
 
-  Integer scalar or `NULL` (default `NULL`). Rank metadata. For Scenario
-  C this is the analytic simplex rank `positive_support - 1`, including
-  when a census makes the realized sampling covariance exactly zero. For
-  other families it is the numerical matrix rank. When `NULL`, the
-  constructor computes the family-appropriate value.
+  Integer scalar or `NULL` (default `NULL`). For Scenario C this is the
+  analytic simplex rank `positive_support - 1`, including when a census
+  makes the realized sampling covariance exactly zero. For other
+  families it is the numerical matrix rank. When `NULL`, the constructor
+  computes the family-appropriate value.
 
 - positive_support:
 
@@ -117,12 +115,15 @@ sm_vcov(
 
 - n_jt:
 
-  Integer scalar. Cell size metadata. Defaults to `NA_integer_`.
+  A single integer denominator. Defaults to `NA_integer_`.
 
 - n_eff:
 
-  Numeric scalar. Effective sample size metadata. Defaults to
-  `NA_real_`.
+  A numeric denominator used for transformed standard errors. Package
+  estimates record `n + 1/2` for Anscombe or `n` otherwise, unchanged by
+  FPC. This differs from the `n + 3/4` denominator in the Anscombe point
+  transformation. Defaults to `NA_real_` for a directly constructed
+  object.
 
 - population_size:
 
@@ -166,8 +167,8 @@ sm_vcov(
 
 - diag_contract:
 
-  Character scalar documenting which row companion the covariance
-  diagonal matches. See *Diagonal contract*.
+  A single string identifying which scalar variance the covariance
+  diagonal matches. See *Diagonal and standard errors*.
 
 ## Value
 
@@ -175,42 +176,35 @@ An S3 object of class `sm_vcov` with fields `matrix`, `site_id`, `year`,
 `indicator_order`, `family`, `vcov_method`, `estimate_scale`,
 `vcov_scale`, `matrix_boundary_rule`, `scalar_correction_rule`,
 `psd_repair`, `matrix_rank`, `positive_support`, `n_jt`, `n_eff`, the
-finite-population provenance fields (`population_size`,
-`sampling_fraction`, `fpc_variance_multiplier`, `fpc_se_multiplier`,
+finite-population fields (`population_size`, `sampling_fraction`,
+`fpc_variance_multiplier`, `fpc_se_multiplier`,
 `variance_multiplier_applied`, `se_multiplier_applied`,
 `sampling_design`, `variance_rule`), and `diag_contract`.
 
 ## Details
 
-An `sm_vcov` object is a structured list carrying the covariance matrix
-and structured metadata documenting how it was constructed, on which
-scale, and over which site-year. The class enforces PSD-ness up to a
-numerical tolerance and validates the lexicon values listed below.
-
-**Scale and method lexicons.** The `vcov_scale` and `vcov_method` fields
-are the canonical home for sitemix's covariance vocabulary; every other
-function that touches a covariance matrix reads these fields rather than
-re-deriving the lexicon. See the named sections below for the locked
-vocabulary. `sm_vcov()` is the only exported constructor. Low-level
-construction and validation helpers remain internal implementation
-details; the registered
+An `sm_vcov` object is a list containing a matrix and fields that
+describe its calculation. The constructor checks dimensions, symmetry,
+positive semidefiniteness, and the supplied field values.
 [`format()`](https://rdrr.io/r/base/format.html),
 [`print()`](https://rdrr.io/r/base/print.html), and
-[`as.matrix()`](https://rdrr.io/r/base/matrix.html) methods revalidate
-an object before reading it so direct post-construction tampering fails
-with a classed covariance error. Matrix validity uses separate
-scale-aware tolerances for symmetry, positive-semidefiniteness, the
-multinomial simplex identity, and numerical rank. Each tolerance
-combines a matrix-scale-relative term with a machine-range absolute
-floor; numerical rank does not reuse the more permissive PSD-validity
-threshold. Multinomial rank remains the analytic support rank described
-below.
+[`as.matrix()`](https://rdrr.io/r/base/matrix.html) also check the
+object, so inconsistent changes to a matrix or its fields can cause an
+error when it is used.
 
-For the SUR derivation see
+Symmetry, positive semidefiniteness, the multinomial simplex identity,
+and numerical rank use separate tolerances. Each accounts for the
+matrix's scale and has a small absolute floor. The numerical-rank
+tolerance is stricter than the tolerance for positive semidefiniteness.
+For multinomial matrices, `matrix_rank` instead records the analytic
+support rank described below.
+
+For overlapping binary indicators, see
 [`vignette("m3-multivariate-sur-covariance")`](https://joonho112.github.io/sitemix/articles/m3-multivariate-sur-covariance.md);
-for the multinomial simplex covariance see
-[`vignette("m4-multinomial-simplex")`](https://joonho112.github.io/sitemix/articles/m4-multinomial-simplex.md);
-for the D1 working-independence rationale see
+for mutually exclusive categories, see
+[`vignette("m4-multinomial-simplex")`](https://joonho112.github.io/sitemix/articles/m4-multinomial-simplex.md).
+The working-independence assumption for published marginals is explained
+in
 [`vignette("m5-aggregate-engines")`](https://joonho112.github.io/sitemix/articles/m5-aggregate-engines.md).
 
 ## Scalar correction rules
@@ -224,34 +218,31 @@ for the D1 working-independence rationale see
 - `"agresti_coull_boundary_surrogate"`: Agresti–Coull boundary
   uncertainty.
 
-## vcov_scale convention
+## Covariance scale
 
-`vcov_scale` reports the scale on which the stored covariance is
-computed; it **may differ from a row's estimate_scale** under Scenarios
-B and C, where the row-level `theta_hat` is reported on the requested
-`vst` (e.g., arcsine) but the joint covariance is computed in
-raw-proportion space for numerical stability. Always read `vcov_scale`
-from this slot before consuming `matrix`.
+`vcov_scale` gives the scale of the stored matrix. In multivariate
+student-level and multinomial estimates (Scenarios B and C), the matrix
+stays on the raw-proportion scale even when `theta_hat` uses arcsine or
+logit. Check this field before using `matrix` in a model or combining it
+with the reported standard errors.
 
-## Scenario B whole-matrix contract
+## Multivariate student-level covariance (Scenario B)
 
 Let \\Q = \sum_i (y_i - \bar y)(y_i - \bar y)^\top\\ and \\q =
 (N-n)/(N-1)\\. Scenario B stores the raw-scale plug-in matrix \\Q/n^2\\;
-with a fixed SRSWOR population it stores \\qQ/n^2\\. When
-`bias_correction = "binomial_bc"`, the entire matrix—not only its
-diagonal—is replaced by \\Q/\[n(n-1)\]\\, or by \\(N-n)Q/\[Nn(n-1)\]\\
-under SRSWOR. Uniform whole-matrix scaling preserves correlations,
-symmetry, and positive semidefiniteness. A constant indicator has zero
-off-diagonals. Wilson boundary handling is an explicit positive
-scalar/diagonal surrogate; Agresti–Coull boundary handling is not legal
-when a Scenario B matrix is requested. When an `sm_vcov` is attached to
-package-produced Scenario B rows, `validate.sitemix_estimates()`
-cross-checks the SUR method, raw matrix scale, row-raw-SE diagonal
-contract, denominators, scalar rules, and boundary rule against those
-rows; direct stand-alone `sm_vcov()` construction remains available for
-explicitly user-defined covariance objects.
+with a fixed SRSWOR population it stores \\qQ/n^2\\. With
+`bias_correction = "binomial_bc"`, the matrix becomes \\Q/\[n(n-1)\]\\,
+or \\(N-n)Q/\[Nn(n-1)\]\\ under SRSWOR. Multiplying the matrix by a
+positive scalar preserves correlations where they are defined, symmetry,
+and positive semidefiniteness. A census gives a zero covariance matrix,
+whose correlations are undefined. A constant indicator has zero
+off-diagonals. Wilson boundary handling is a positive scalar and
+diagonal substitute; Agresti–Coull boundary handling is unavailable when
+requesting this matrix. Package estimates are checked for agreement
+between the matrix and its rows, including the method, scale, diagonal,
+denominators, and boundary corrections.
 
-## Scenario C whole-matrix contract
+## Multinomial covariance (Scenario C)
 
 For \\M = \mathrm{diag}(\hat\pi)-\hat\pi\hat\pi^\top\\, Scenario C
 stores \\M/n\\ without FPC and \\qM/n\\ under SRSWOR. With
@@ -259,16 +250,15 @@ stores \\M/n\\ without FPC and \\qM/n\\ under SRSWOR. With
 without FPC and \\(N-n)M/\[N(n-1)\]\\ under SRSWOR. These rules preserve
 PSD and \\V\mathbf 1=0\\. If \\S\\ categories have positive observed
 count, `matrix_rank` records the analytic simplex support rank \\S-1\\;
-this remains the metadata rank for a census even though its realized
+this remains the recorded rank for a census even though its realized
 sampling covariance is the zero matrix. The matrix-level `variance_rule`
 and applied multiplier are uniform over all coordinates. A zero-support
-coordinate keeps an exact zero matrix row and column, so its scalar
-plug-in or Wilson provenance may intentionally differ from the global
-design-corrected matrix rule. Package-output validation permits that
-mismatch only at an exact structural zero and retains the explicit
-Wilson boundary diagonal exception.
+coordinate keeps an exact zero matrix row and column. The scalar
+calculation for that category can therefore differ from the matrix's
+design-corrected rule. In particular, a positive Wilson boundary
+standard error does not replace the zero matrix diagonal.
 
-## Diagonal contract
+## Diagonal and standard errors
 
 `diag_contract = "row_se_squared"` means the matrix is on the row
 estimate scale and its diagonal equals `se^2`; this is used by A, D0,
@@ -280,11 +270,11 @@ boundary diagonal while the scalar Wilson surrogate remains positive.
 `"not_checked"` is reserved for user-constructed objects without a row
 companion.
 
-## vcov_method convention
+## Covariance methods
 
 - `NA_character_`:
 
-  No recorded method (e.g., user-constructed matrix).
+  No recorded method; valid only for `family = "binomial"`.
 
 - `"sur"`:
 
@@ -301,12 +291,11 @@ companion.
   Scenario D1; working-independence diagonal covariance when
   cross-marginal joints are unidentified.
 
-## var_method convention (row-level SE provenance)
+## Standard-error methods
 
-Although `var_method` is a column of `sitemix_estimates` rather than a
-field of `sm_vcov`, its locked lexicon is canonically defined here so
-all SE-provenance documentation has a single home. The implemented base
-values are grouped as follows:
+The `var_method` column in the estimates records how each standard error
+was calculated. It is separate from the matrix's `vcov_method`. Its base
+values are:
 
 - Arcsine values: `"arcsine_vst"` and `"arcsine_anscombe"`.
 
@@ -324,9 +313,9 @@ values are grouped as follows:
 
 Experimental GVF/log-variance smoothing records
 `" + gvf_smooth_loglinear"` or `" + gvf_smooth_gam"` in the alternative
-`var_method_smoothed` column; an allowed overwrite may copy that
-provenance to canonical `var_method`. Legacy `" + fh_smooth_*"` labels
-remain readable. Derivations are documented in:
+`var_method_smoothed` column; an allowed overwrite may copy that method
+label to `var_method`. Legacy `" + fh_smooth_*"` labels remain readable.
+Derivations are documented in:
 
 - [`vignette("m2-scalar-se-binomial")`](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
   for scalar binomial SEs.
@@ -344,11 +333,11 @@ American Statistical Association*, **57**(298), 348–368.
 ## See also
 
 - [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-  for the main dispatcher that produces `V` list-columns of `sm_vcov`
-  objects.
+  for the estimator that produces `V` list-columns of `sm_vcov` objects.
 
 - [`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)
-  for Scenario-D1 pairwise intervals and projected stress.
+  for pairwise intervals and dependence stress scenarios for D1
+  aggregates.
 
 - [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
   for the `level = "vcov"` diagnostic.
@@ -381,4 +370,8 @@ v1$vcov_method
 #> [1] "sur"
 dim(v1$matrix)
 #> [1] 2 2
+as.matrix(v1)
+#>              frpm         snap
+#> frpm  0.010973937 -0.002743484
+#> snap -0.002743484  0.019204390
 ```

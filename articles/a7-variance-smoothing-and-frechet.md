@@ -1,63 +1,40 @@
-# A7 · Variance smoothing and Fréchet stress scenarios
+# Variance smoothing and Fréchet sensitivity analysis
 
 Abstract
 
-For applied researchers conducting an opt-in experimental GVF
-sensitivity analysis
-([`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md))
-or evaluating D1 aggregate dependence with formal pairwise intervals and
-projected stress scenarios
-([`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)).
-Canonical SEs remain primary; neither small sample size nor an
-unusual-looking SE is by itself a trigger to smooth.
+Compare an optional model for standard errors with the original
+estimates, then explore unknown dependence between published
+proportions. The examples distinguish experimental smoothed SEs, formal
+pairwise Fréchet intervals, and covariance stress scenarios.
 
-## Overview
+[`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md)
+fits a model across rows to produce alternative standard errors.
+[`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)
+explores dependence that cannot be recovered from published marginal
+counts. These tools answer different questions: whether a fitted
+variance trend changes an analysis, and how unknown covariance between
+indicators might affect it. Neither tool estimates new site-level
+outcomes.
 
-### 1. Why you are here
+We use `prek_sim` and its companion count file, both fully simulated.
+The first example estimates FRPM at 50 sites in 2024. The second uses
+FRPM and SNAP marginals from those same students while withholding their
+joint counts. See [Getting started with site-level
+proportions](https://joonho112.github.io/sitemix/articles/a1-getting-started.md)
+for the estimate columns and [Estimating proportions from published
+aggregates](https://joonho112.github.io/sitemix/articles/a5-published-aggregates.md)
+for aggregate inputs.
 
-Tariq’s tibble passed
-[`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-but a methods reviewer pointed at the smallest sites and said “I don’t
-believe these SEs.” Dana’s D1 aggregate analysis (from A5) lacks
-publisher correlation info; her reviewer wants a sensitivity analysis of
-the unidentified cross-marginal covariance.
+## Compare a fitted variance trend with the original SEs
 
-Both readers are in this vignette because it presents two sensitivity
-tools: an experimental GVF alternative (available across scenarios) and
-Fréchet pairwise intervals with projected stress scenarios
-(D1-specific). The first half demonstrates the GVF alternative without
-recommending it; the second half covers Fréchet analysis.
+The optional generalized variance-function (GVF) model fits log
+variances across eligible rows. With `method = "loglinear"` and the
+default `scale = "se"`, the default formula is `log_var ~ log_n`, where
+`log_var = log(se^2)` and `log_n = log(n)`. The result is an
+experimental sensitivity alternative. Small sample size or an unusual SE
+alone does not justify replacing the original uncertainty calculation.
 
-### 2. What you will leave with
-
-By the end you will have:
-
-- A scale-specific experimental sensitivity column (`se_smoothed` or
-  `se_raw_smoothed`) that leaves the canonical SE primary.
-- Formal raw pairwise intervals plus explicitly non-bound projected
-  stress scenarios for the D1 sensitivity case.
-- Interpretation rules that keep non-identified or experimental
-  alternatives separate from canonical sampling uncertainty.
-
-**Prerequisites.** [A1 · Getting
-started](https://joonho112.github.io/sitemix/articles/a1-getting-started.md).
-
-> **About the example data.** All results here are computed live from
-> `prek_sim`, a fully simulated 50-site pre-kindergarten panel shipped
-> in the package (see
-> [`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)).
-> The smoothing section runs on a `sitemix_estimates` tibble produced
-> from that sample, and the Fréchet section uses its companion
-> `prek_sim_counts` count file. It describes no real children, sites, or
-> program, and must not be cited as empirical Pre-K results. Every code
-> block runs offline with a fixed random seed.
-
-## 3. Variance smoothing (`sm_smooth_variance()`)
-
-The following call demonstrates the experimental generalized
-variance-function (GVF) / log-variance sensitivity alternative. It is
-not a recommended response to small cells, and an unusual-looking SE is
-not evidence that the fitted alternative is better:
+Start with one indicator and one year:
 
 ``` r
 
@@ -79,47 +56,98 @@ head(est_s[, c("site_id", "n", "se", "se_smoothed")], 6)
 #> 6 S006       11 0.151       0.151
 ```
 
-`se_smoothed` is the cross-row trend-fitted SE on the same scale as
-`se`. By default, `est$se` is preserved untouched; pass
-`overwrite = TRUE` to replace it (with the original preserved as
-`se_pre_smoothing`). The alternative’s provenance is stored in
-`var_method_smoothed`, while canonical `var_method` also remains
-untouched under the default append-only path. The appended column is a
-sensitivity candidate only; canonical `se` remains the primary
-uncertainty input unless a separate, prespecified validation supports a
-different choice.
+The new `se_smoothed` column uses the same scale as `se`, here the
+arcsine scale. The original `se`, `var_method`, and point estimates are
+unchanged. `var_method_smoothed` labels the alternative, and
+`attr(est_s, "smoothing")` records the selected scale, formula, eligible
+rows, and fit status.
 
-This helper is not a Fay–Herriot area-level estimator: it does not
-smooth point estimates or fit a between-area outcome model. When a
-matching-scale `V` exists, overwrite is rejected because retaining that
-matrix would leave a stale diagonal. Append-only smoothing remains
-available, and an incompatible-scale `V` is retained with its
-relationship recorded in `attr(x, "smoothing")`.
+Here the two SE columns agree to numerical precision. With the default
+arcsine calculation and no extra corrections, `se = 1 / (2 * sqrt(n))`
+already lies on a straight line after squaring and taking logs.
+Agreement in this example is not evidence of improved performance on
+other data. The model does not smooth point estimates or fit a
+Fay–Herriot outcome model. Improved precision, interval coverage, or
+downstream weighting is not guaranteed; see [Experimental models for
+variance
+smoothing](https://joonho112.github.io/sitemix/articles/m6-variance-smoothing-theory.md)
+for the model assumptions and simulation findings.
 
-**How to interpret the optional sensitivity.** The smoother is a model
-on the log-variance scale; it assumes the bulk of rows lies on a common
-log-variance trend. If your data have a few sites that genuinely have a
-different variance regime (e.g., a heavily oversampled flagship site),
-the smoother will pull their SEs toward the bulk. Inspect
-`se_smoothed - se` for outliers before considering the alternative. A
-fixed-seed package audit over small/large denominators and
-near-boundary/interior rates did not find a candidate that met all
-predeclared variance-MSE, coverage, and inverse-weight criteria.
-Consequently smoothing remains experimental, append-only, and opt-in;
-the audit does not support replacing canonical SEs or treating the
-smoothed alternative as a generally improved default.
+## Check which rows can enter the model
 
-## 4. GAM smoothing (optional)
+`scope = "all"` means all eligible rows. A row must not be suppressed,
+with finite, strictly positive `n` and a finite, strictly positive SE on
+the selected scale. Thus a census row with zero sampling SE is retained
+in the output but excluded from the model. The added column copies the
+input SE for ineligible rows. Objects containing suppression-sensitivity
+rows are rejected.
 
-For non-linear log-variance trends, the GAM backend uses
-[`mgcv::gam`](https://rdrr.io/pkg/mgcv/man/gam.html) under a runtime
-guard:
+`scope = "tier2"` further restricts the model to `11 <= n <= 29`. This
+is a fixed interval; it does not follow `accountability_n` or the Tier 2
+classification in
+[`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md).
+`min_n` can impose an additional lower limit. All 50 rows in this
+example meet the basic eligibility conditions. Count those that also
+fall in the fixed interval:
+
+``` r
+
+sum(est$n >= 11L & est$n <= 29L)
+#> [1] 27
+```
+
+Only 27 rows qualify, below the default `min_rows = 50L` required to
+fit. Calling `sm_smooth_variance(est, scope = "tier2")` would therefore
+issue `sitemix_warning_smoother_skipped`, copy `se` to `se_smoothed`,
+and copy `var_method` to `var_method_smoothed`. There would be no fitted
+alternative. A skipped fit performs no overwrite, even if requested, and
+adds no new pre-smoothing snapshots, residuals, or model.
+
+If you combine years, the default pools eligible rows in one model.
+`by = "year"` adds year fixed effects to the default formula; it does
+not fit separate models. For separate fits, call the function on each
+year’s subset. `return_diagnostics = TRUE` adds residuals and the fitted
+model when a fit succeeds, so you can inspect departures from the trend.
+
+## Keep the selected scale and covariance matrix consistent
+
+The default adds an alternative SE column while preserving the original
+columns. `scale = "se_raw"` instead adds `se_raw_smoothed` on the raw
+probability scale. Its default model includes `offset(p_offset)` to
+account for the rate-dependent factor in the raw variance; the first
+raw-scale request after loading the package gives
+`sitemix_warning_raw_scale_smoothing`. In contrast, `scale = "se"` uses
+the reported scale, which is also raw when `estimate_scale = "none"`.
+
+With a successful fit, `overwrite = TRUE` replaces the selected SE for
+eligible rows and preserves its input values in `se_pre_smoothing` or
+`se_raw_pre_smoothing`. Overwriting `se_raw` also updates `se` for rows
+with `estimate_scale = "none"`, while transformed `se` values remain
+unchanged. Use the original SE as the primary input unless a separate
+validation supports replacing it.
+
+Smoothing does not update `V`. When an eligible row has a `V` on the
+selected scale, overwrite is rejected because the retained matrix would
+no longer have a diagonal consistent with the new SE. Adding a separate
+alternative column is still possible. A `V` on a different scale is
+retained unchanged. Inspect `attr(x, "smoothing")$v` on the returned
+object: `relation` records `"absent"`, `"matching"`, `"incompatible"`,
+or `"mixed"`, and `matrix_effect` records whether matrices are absent or
+unchanged. Do not pair a changed SE with a matrix merely because both
+are present in the output.
+
+## Fit a nonlinear trend with the optional GAM method
+
+`method = "gam"` uses
+[`mgcv::gam()`](https://rdrr.io/pkg/mgcv/man/gam.html) to fit a smooth
+function of `log_n`. Here the input uses raw output, so the fitted and
+original SEs are both on the proportion scale. This avoids fitting a
+spline to the exact arcsine relationship demonstrated above:
 
 ``` r
 
 if (requireNamespace("mgcv", quietly = TRUE)) {
-  # Use a raw-output fixture: the default arcsine SE is an exact function of n
-  # and can make a spline fit numerically degenerate on this example data.
+  # Raw output avoids the exact arcsine SE relationship in this example.
   est_gam_input <- sm_estimate(
     subset(prek_sim, year == 2024),
     family = "binomial", indicator = "frpm", vst = "none"
@@ -140,17 +168,28 @@ if (requireNamespace("mgcv", quietly = TRUE)) {
 #> 6 S006       11 0.145       0.134
 ```
 
-`mgcv` is a Suggests-only dependency. If it is not installed, fall back
-to `method = "loglinear"`. The raw-output fixture is deliberate:
-unexpected fitting warnings fail the reproducibility audit instead of
-being silently accepted as tutorial output.
+`mgcv` is optional; `method = "loglinear"` works without it. A visible
+change in this table means the fitted trend differs from the original SE
+calculation. It does not show which SE is more accurate. Inspect fit
+diagnostics and assess the alternative for the intended analysis.
 
-## 5. Fréchet pairwise intervals and stress scenarios (D1 only)
+## Explore dependence when only marginal counts are available
 
-For same-unit D1a inputs, Fréchet intervals formally constrain each raw
-pairwise covariance that is unidentified from publisher marginals alone.
-Build a D1 input and call
-[`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md):
+The aggregate example below retains FRPM and SNAP counts but leaves out
+their joint count. It therefore uses the D1 input path from [Estimating
+proportions from published
+aggregates](https://joonho112.github.io/sitemix/articles/a5-published-aggregates.md).
+Working independence supplies a starting covariance matrix; it is an
+assumption, not an observed lack of association between the indicators.
+
+Use `population_regime = "d1a"` for formal raw pairwise intervals only
+when the marginals describe the same sampled units and share one finite
+denominator per site-year. They must use the IID plug-in raw-probability
+variance rule, with no FPC, no `binomial_bc`, and `anscombe = FALSE` so
+that `n_eff = n`. These conditions must be recorded in the input
+estimates. Equal denominator values alone cannot establish same-unit
+sampling. Here the bundled count file was built from the same students,
+so `sampling_relation = "same_units"` describes its source:
 
 ``` r
 
@@ -189,27 +228,27 @@ env$psd_method
 #> [1] "higham"
 ```
 
-The formal result is `raw_pairwise_intervals`, which records the
-marginal probabilities, common denominator, joint-probability endpoints,
-correlation endpoints, and raw covariance endpoints. The two PSD
-matrices are projected stress scenarios sourced from the negative- and
-positive-dependence corners; they are not multivariate lower or upper
-bounds. Inspect site `S001`:
+The expected warning marks the working-independence assumption.
+`raw_pairwise_intervals` is the formal result: one row per site-year and
+indicator pair, with joint-probability, correlation, and raw covariance
+endpoints. All envelope matrices are on the raw probability scale, even
+though `est_d1` reports transformed estimates and SEs. For D1a,
+`V_independence` uses the IID plug-in raw diagonal.
+
+## Read the intervals and check the stress scenarios
+
+Inspect the first site, `S001`, in 2024:
 
 ``` r
 
-head(env$raw_pairwise_intervals, 3)
-#> # A tibble: 3 × 17
-#>   site_id  year site_key   indicator_1 indicator_2   p_1   p_2 n_common
-#>   <chr>   <int> <chr>      <chr>       <chr>       <dbl> <dbl>    <dbl>
-#> 1 S001     2024 S001::2024 frpm        snap        0.111 0.222        9
-#> 2 S002     2024 S002::2024 frpm        snap        0.8   0.7         10
-#> 3 S003     2024 S003::2024 frpm        snap        0.5   0.125        8
-#> # ℹ 9 more variables: joint_probability_lower <dbl>,
-#> #   joint_probability_upper <dbl>, pairwise_correlation_lower <dbl>,
-#> #   pairwise_correlation_upper <dbl>, pairwise_covariance_lower <dbl>,
-#> #   pairwise_covariance_upper <dbl>, interval_scale <chr>,
-#> #   covariance_construction <chr>, interval_scope <chr>
+interval_columns <- c(
+  "site_id", "n_common",
+  "pairwise_covariance_lower", "pairwise_covariance_upper"
+)
+print(as.data.frame(env$raw_pairwise_intervals[1L, interval_columns]),
+      row.names = FALSE)
+#>  site_id n_common pairwise_covariance_lower pairwise_covariance_upper
+#>     S001        9              -0.002743484               0.009602195
 V_negative_stress <- as.matrix(env$projected_negative_dependence_stress[[1L]])
 V_positive_stress <- as.matrix(env$projected_positive_dependence_stress[[1L]])
 round(V_negative_stress, 4)
@@ -220,44 +259,68 @@ round(V_positive_stress, 4)
 #>        frpm   snap
 #> frpm 0.0110 0.0096
 #> snap 0.0096 0.0192
-summary(env)[, c("site_key", "scenario", "projection_status",
-                 "sign_changes", "projected_order_reversals",
-                 "raw_interval_violations",
-                 "projection_distance_relative")]
-#> # A tibble: 100 × 7
-#>    site_key   scenario     projection_status sign_changes projected_order_reve…¹
-#>    <chr>      <chr>        <chr>                    <int>                  <int>
-#>  1 S001::2024 negative_de… identity_k_le_2              0                      0
-#>  2 S001::2024 positive_de… identity_k_le_2              0                      0
-#>  3 S002::2024 negative_de… identity_k_le_2              0                      0
-#>  4 S002::2024 positive_de… identity_k_le_2              0                      0
-#>  5 S003::2024 negative_de… identity_k_le_2              0                      0
-#>  6 S003::2024 positive_de… identity_k_le_2              0                      0
-#>  7 S004::2024 negative_de… identity_k_le_2              0                      0
-#>  8 S004::2024 positive_de… identity_k_le_2              0                      0
-#>  9 S005::2024 negative_de… identity_k_le_2              0                      0
-#> 10 S005::2024 positive_de… identity_k_le_2              0                      0
-#> # ℹ 90 more rows
-#> # ℹ abbreviated name: ¹​projected_order_reversals
-#> # ℹ 2 more variables: raw_interval_violations <int>,
-#> #   projection_distance_relative <dbl>
+projection_check <- summary(env)
+print(as.data.frame(head(projection_check[, c(
+  "scenario", "projection_status", "projection_distance_relative"
+)], 2)), row.names = FALSE)
+#>                    scenario projection_status projection_distance_relative
+#>  negative_dependence_stress   identity_k_le_2                            0
+#>  positive_dependence_stress   identity_k_le_2                            0
 ```
 
-Before projection, each off-diagonal is a raw pairwise interval
-endpoint. For `K > 2`, PSD projection may change signs, reverse the
-elementwise order of the two source corners, or leave a raw pairwise
-interval. The diagnostics report those events directly. Treat the
-projected matrices only as stress scenarios, never as bounds or as one
-identified sampling covariance matrix.
+The site’s raw pairwise covariance interval is approximately
+`[-0.0027435, 0.0096022]`. Each endpoint constrains one pair under the
+D1a conditions. The two matrices put the negative and positive endpoint
+in their off-diagonal entries. With two indicators, these matrices are
+returned unchanged: `projection_status = "identity_k_le_2"` and
+projection distance is zero. Although `psd_method` records `"higham"`,
+no iterative projection is needed here.
 
-**D1a vs D1b.** Pass `population_regime = "d1a"` when the marginals
-refer to the same sampled units, have one common finite denominator, and
-use the IID plug-in rule without FPC or bias correction (formal raw
-pairwise intervals). Pass `"d1b"` when the marginals are subgroup-
-conditional (heuristic stress test). D1b requires explicit
-acknowledgement via `subgroup_conditional_action = "allow"`.
+With more than two indicators, assembling all pairwise endpoints can
+produce a matrix that is not positive semidefinite (PSD). The function
+then adjusts the matrices using the selected method while preserving the
+raw diagonal. The resulting matrices are covariance stress scenarios,
+not multivariate lower and upper bounds. PSD alone does not show that
+the entries are jointly attainable by binary indicators.
 
-## 6. Audit
+Projection may change signs, reverse the elementwise order of the two
+scenarios, or move entries outside their raw pairwise intervals. Check
+those changes in `projection_diagnostics`, also returned by
+[`summary()`](https://rdrr.io/r/base/summary.html):
+
+``` r
+
+colSums(projection_check[, c(
+  "sign_changes", "projected_order_reversals", "raw_interval_violations"
+)])
+#>              sign_changes projected_order_reversals   raw_interval_violations
+#>                         0                         0                         0
+```
+
+These totals are zero in this two-indicator example. A larger example
+may require closer inspection of each site’s projection status,
+distance, and interval departures. Neither matrix identifies the unknown
+sampling covariance or supplies a general bound for a later multivariate
+analysis.
+
+If the marginals are subgroup-conditional, the input must instead record
+`sampling_relation = "different_units"` or `"unknown"`.
+`population_regime = "d1b"` then gives a heuristic stress test, not
+formal pairwise bounds. `subgroup_conditional_action = "allow"`
+acknowledges that use silently; the default `"warn"` proceeds with a
+warning, and `"error"` rejects it. A same-unit D1a input cannot be
+relabeled as D1b at this step. Both regimes reject suppressed-missing
+and suppression-sensitivity rows; see [Pairwise Fréchet bounds and
+projected dependence
+scenarios](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md)
+for the conditions and derivations.
+
+## Check these example results
+
+The following checks confirm the original SEs were retained and the
+Fréchet result has the intended scope. They do not test whether
+smoothing improves an estimator or whether the stress scenarios are a
+suitable model for the unknown dependence.
 
 ``` r
 
@@ -268,20 +331,18 @@ stopifnot(inherits(env, "sm_frechet_envelope"))
 stopifnot(length(env$projected_negative_dependence_stress) == nrow(d1))
 stopifnot(all(env$raw_pairwise_intervals$interval_scope ==
               "formal_raw_pairwise_interval"))
+stopifnot(attr(est_s, "smoothing")$n_eligible == nrow(est))
+stopifnot(sum(est$n >= 11L & est$n <= 29L) == 27L)
+stopifnot(all(!projection_check$projection_attempted))
 ```
 
-## 7. What’s next?
-
-- [A6 · Diagnostics and
-  suppression](https://joonho112.github.io/sitemix/articles/a6-diagnostics-and-suppression.md)
-  if you have not yet audited the tibble.
-- [A8 · Downstream
-  workflows](https://joonho112.github.io/sitemix/articles/a8-downstream-workflows.md)
-  once smoothing / Fréchet are settled.
-- [M6 · Variance smoothing
-  theory](https://joonho112.github.io/sitemix/articles/m6-variance-smoothing-theory.md)
-  and [M7 · Fréchet envelope
-  theory](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md)
-  for the formal derivations and the D1a / D1b distinction.
+Use [Checking estimates and handling suppressed
+data](https://joonho112.github.io/sitemix/articles/a6-diagnostics-and-suppression.md)
+to inspect estimate and covariance problems before an optional
+sensitivity analysis. [Using estimates and covariance matrices in
+further
+analyses](https://joonho112.github.io/sitemix/articles/a8-downstream-workflows.md)
+shows how to keep estimates, SEs, and matrices consistent in later
+calculations.
 
 ## References

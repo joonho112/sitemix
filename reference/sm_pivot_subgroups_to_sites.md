@@ -1,17 +1,19 @@
-# Pivot subgroup aggregate rows into subgroup-as-site input (Framing X)
+# Prepare published counts for subgroup rates or compositions
 
-`sm_pivot_subgroups_to_sites()` implements **Framing X** for
-school-by-subgroup aggregate rows: each `(site, subgroup)` pair becomes
-its own aggregate site with a composite `site_id`. The output is
-consumable by
+`sm_pivot_subgroups_to_sites()` reshapes published subgroup counts for
+estimation. By default, each site-subgroup pair receives a combined
+`site_id`, keeping its own numerator and denominator. Pass this table to
 [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-(default) or, with an explicit composition `partition_target`, by
+to estimate a rate within each subgroup. The documentation calls this
+**Framing X**.
+
+A composition `partition_target` instead prepares category counts with a
+common denominator for
 [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
-as Scenario C multinomial count input. Use this when subgroup × site is
-the unit of analysis; for the alternative framing where subgroups become
-indicators of the original site, see
-[`sm_pivot_subgroups_to_indicators()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_indicators.md)
-(Framing Y).
+with `family = "multinomial"` (Scenario C). These counts describe each
+subgroup's share of a site total, rather than its within-subgroup rate.
+The function reshapes counts; it does not estimate rates or standard
+errors.
 
 ## Usage
 
@@ -43,79 +45,78 @@ sm_pivot_subgroups_to_sites(
 
 - site_col:
 
-  Character scalar. Column name containing source site identifiers.
-  Defaults to `"site_id"`.
+  A single column name containing source site identifiers. Defaults to
+  `"site_id"`.
 
 - year_col:
 
-  Character scalar. Column name containing integer-like years. Defaults
-  to `"year"`.
+  A single column name containing integer-like years. Defaults to
+  `"year"`.
 
 - subgroup_col:
 
-  Character scalar. Column name containing subgroup labels. Required.
+  A single column name containing subgroup labels. Required.
 
 - numerator_col:
 
-  Character scalar. Column name containing aggregate numerators.
-  Required.
+  A single column name containing aggregate numerator counts. Required.
 
 - denominator_col:
 
-  Character scalar. Column name containing aggregate denominators.
+  A single column name containing aggregate denominator counts.
   Required.
 
 - indicator:
 
-  Character scalar. Single indicator label to place in the output
+  A single string giving the indicator label to place in the output
   `indicator` column. Defaults to `"subgroup_rate"`.
 
 - separator:
 
-  Character scalar. Separator used to construct composite
-  subgroup-as-site IDs. Defaults to `"_"`.
+  A single non-empty string used to join the source site and subgroup
+  labels. Defaults to `"_"`.
 
 - level_override:
 
-  Must be `NULL` (default). Mixed-level override semantics are
-  intentionally unsupported and any other value raises
+  Must be `NULL` (default). Other values raise
   `sitemix_error_invalid_level_override`.
 
 - rtype_col:
 
-  Must be `NULL` (default). Declaring a publisher row- type column
-  raises the same stable invalid-level condition as `level_override`;
-  split the source into one homogeneous reporting level first.
+  Must be `NULL` (default). Other values raise
+  `sitemix_error_invalid_level_override`; split the source by reporting
+  level before using this function.
 
 - partition_target:
 
-  Character scalar. Explicit partition estimand. One of `"none"`
-  (default; D0 conditional-rate rows), `"denominator_composition"`, or
+  A single string selecting the counts to prepare: `"none"` (default; D0
+  conditional-rate rows), `"denominator_composition"`, or
   `"case_composition"` (both return Scenario C count input).
 
 - partition_tolerance:
 
-  Non-negative numeric scalar. Absolute tolerance for composition
-  partition checks against the required `ALL` row. Defaults to `0.5`.
+  A single finite, non-negative number. Absolute tolerance for
+  composition partition checks against the required `ALL` row. Defaults
+  to `0.5`.
 
 - suppression_col:
 
-  Character scalar or `NULL` (default `NULL`). Optional publisher
-  suppression flag column.
+  A single column name, or `NULL` (default). Names the publisher
+  suppression flag column. With `NULL`, an existing `suppression_flag`
+  column is used if present. If neither source is available, source rows
+  receive `suppression_flag = FALSE`.
 
 - suppression_flag_value:
 
-  Value or vector of values marking publisher suppression in
-  `suppression_col`. Defaults to `""`.
+  Value or vector of values marking publisher suppression in the flag
+  column. Defaults to `""`.
 
 ## Value
 
-A tibble consumable by
-[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-when `partition_target = "none"`, or by
-[`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
-with `family = "multinomial"` when a composition target is requested.
-Schema for the default case:
+With `partition_target = "none"`, a tibble with one row per
+site-year-subgroup for
+[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md).
+It contains:
 
 - `site_id`:
 
@@ -124,7 +125,7 @@ Schema for the default case:
 
 - `year`:
 
-  Integer year (copied verbatim).
+  The source year, stored as an integer.
 
 - `indicator`:
 
@@ -138,8 +139,9 @@ Schema for the default case:
 - `suppression_flag`:
 
   Always-present logical. It is `TRUE` for rows flagged by the publisher
-  and otherwise `FALSE`; when no `suppression_col` is supplied, all rows
-  are `FALSE`.
+  and otherwise `FALSE`. Flags come from `suppression_col`, or from an
+  existing `suppression_flag` column when that argument is `NULL`. If
+  neither source flag column is available, all rows receive `FALSE`.
 
 - `framing`:
 
@@ -148,50 +150,77 @@ Schema for the default case:
 - `source_site_id`, `source_subgroup`:
 
   The original site and publisher subgroup labels, preserved for
-  traceback. A recognized total alias is canonicalized only in the
-  composite `site_id`; `source_subgroup` keeps its source spelling.
+  reference. A recognized total label becomes `"ALL"` only in the
+  combined `site_id`; `source_subgroup` keeps its source spelling.
+
+With a composition target, a tibble with one row per original site-year,
+containing `site_id`, `year`, a common `n_jt`, and one `c_jt_<category>`
+column per non-total subgroup. The common `n_jt` is the sum of these
+category counts; the `ALL` row supplies the comparison total and is not
+a category. The `partition_categories` and `indicator_order` attributes
+record category order. Use this order as `indicators` in
+[`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
+with `family = "multinomial"`.
 
 ## Details
 
-**Framing X vs Framing Y.** The two pivot helpers solve the same input
-problem (publisher files where each row is a school-by-subgroup
-observation) but produce different schemas:
+**Rates and compositions.** Choose `partition_target` according to the
+quantity you want to estimate:
 
-- **Framing X (this function)**:
+- `"none"` (default):
 
-  Each subgroup becomes its own site. The composite `site_id` is
-  constructed by concatenating the source site identifier and the
-  subgroup label with `separator`. Downstream estimation treats subgroup
-  × site as the keyed pair. Use when the analyst's question is "what is
-  each subgroup's rate within each site?"
+  Retains each subgroup's numerator and denominator for a conditional
+  rate: cases within that subgroup divided by its own denominator. The
+  combined `site_id` joins the source site and subgroup label with
+  `separator`. This is binomial aggregate input (D0).
 
-- **Framing Y (sister function)**:
+- `"denominator_composition"`:
 
-  Each subgroup becomes a marginal indicator of the original site. The
-  site_id is preserved; the indicator column carries the subgroup label.
-  Use when the analyst's question is "what does each site's subgroup
-  profile look like?" See the [Framing Y
-  helper](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_indicators.md).
+  Uses subgroup denominator counts as category counts. The common
+  denominator is their sum, checked against the `ALL` denominator. The
+  resulting proportions describe each subgroup's share of the site's
+  denominator total.
 
-**Partition targets.** Pass `partition_target = "none"` (default) for
-D0-ready conditional-rate output. Pass `"denominator_composition"` or
-`"case_composition"` to emit Scenario C multinomial count input; both
-partition targets require one complete, identical category grid per
-site-year and one explicit total row in `subgroup_col`. Total labels are
-normalized to canonical `"ALL"` from the fixed publisher vocabulary
-`"ALL"`, `"ALL STUDENT"`, `"ALL STUDENTS"`, `"TOTAL"`, and `"OVERALL"`;
-matching ignores case, surrounding whitespace, and punctuation between
-words. Two labels that collapse to `"ALL"` in the same site-year are
-duplicates and fail closed. Composition sums are checked against the
-canonical total within `partition_tolerance`; a missing category row is
-never inferred to be a structural zero.
+- `"case_composition"`:
 
-**Mixed-level scope.** Mixed school/district/state routing is not
-identified by the current public arguments. Any non-`NULL`
-`level_override` or `rtype_col` therefore fails closed with the stable
-invalid-level condition documented for `level_override`. Split
-mixed-level publisher files into homogeneous tables before calling
-either pivot helper.
+  Uses subgroup numerator counts as category counts. The common
+  denominator is their sum, checked against the `ALL` numerator. The
+  resulting proportions describe how the site's cases are distributed
+  across subgroups.
+
+For a composition, the subgroups must represent mutually exclusive
+categories covering the population or cases being counted. Both targets
+require at least two categories, the same complete category set in every
+site-year, and exactly one total row. A missing category row is an
+error; supply an explicit zero for a category with no observations.
+Category counts must sum to the relevant total within
+`partition_tolerance`, and that total must be positive. These count
+checks do not establish whether the source categories overlap.
+
+Denominator composition requires observed denominators for every
+category and the total, but permits suppressed numerators. For case
+composition, every category and the total must have an observed
+numerator that is not suppressed.
+
+To keep subgroups as marginal indicators of the original site instead of
+assigning combined site identifiers, use
+[`sm_pivot_subgroups_to_indicators()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_indicators.md)
+(Framing Y). That alternative retains each subgroup's own numerator and
+denominator.
+
+**Total labels.** The function recognizes the publisher labels `"ALL"`,
+`"ALL STUDENT"`, `"ALL STUDENTS"`, `"TOTAL"`, and `"OVERALL"` as
+`"ALL"`. Matching ignores case, surrounding whitespace, and punctuation
+between words. Two recognized total labels in the same site-year become
+duplicate `"ALL"` rows and raise an error. With the default target, the
+combined `site_id` uses `"ALL"`, while `source_subgroup` preserves the
+publisher's spelling.
+
+**Reporting levels.** Split files that mix school, district, or state
+rows into separate tables for each reporting level before calling either
+subgroup helper. The functions do not separate these levels. Supplying
+`level_override` or `rtype_col` raises
+`sitemix_error_invalid_level_override`; both must remain `NULL`.
 
 ## See also
 
@@ -199,11 +228,11 @@ either pivot helper.
   helper](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_indicators.md).
 
 - [Aggregate
-  wrapper](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+  estimation](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
   for the default output.
 
-- [Counts
-  wrapper](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
+- [Estimation from
+  counts](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
   for composition targets.
 
 - [Suppression
@@ -239,12 +268,12 @@ pivoted <- sm_pivot_subgroups_to_sites(
 head(pivoted)
 #> # A tibble: 6 × 9
 #>   site_id     year indicator  c_jt  n_jt suppression_flag framing source_site_id
-#>   <chr>      <int> <chr>     <int> <int> <lgl>            <chr>   <chr>         
-#> 1 S001_frpm…  2024 frpm_tak…     3     7 FALSE            subgro… S001          
-#> 2 S001_frpm…  2024 frpm_tak…     8    12 FALSE            subgro… S001          
-#> 3 S002_frpm…  2024 frpm_tak…    10    15 FALSE            subgro… S002          
-#> 4 S002_frpm…  2024 frpm_tak…     4     6 FALSE            subgro… S002          
-#> 5 S003_frpm…  2024 frpm_tak…     6    10 FALSE            subgro… S003          
-#> 6 S003_frpm…  2024 frpm_tak…     7    11 FALSE            subgro… S003          
+#>   <chr>      <int> <chr>     <int> <int> <lgl>            <chr>   <chr>
+#> 1 S001_frpm…  2024 frpm_tak…     3     7 FALSE            subgro… S001
+#> 2 S001_frpm…  2024 frpm_tak…     8    12 FALSE            subgro… S001
+#> 3 S002_frpm…  2024 frpm_tak…    10    15 FALSE            subgro… S002
+#> 4 S002_frpm…  2024 frpm_tak…     4     6 FALSE            subgro… S002
+#> 5 S003_frpm…  2024 frpm_tak…     6    10 FALSE            subgro… S003
+#> 6 S003_frpm…  2024 frpm_tak…     7    11 FALSE            subgro… S003
 #> # ℹ 1 more variable: source_subgroup <chr>
 ```

@@ -1,202 +1,240 @@
-# M3 · Multivariate SUR covariance
+# Covariance for overlapping binary indicators
 
 Abstract
 
-For methodologists working on Scenario B (overlapping binary indicators
-with SUR-style covariance). Derives the cross-indicator covariance
-matrix, locks the `sm_vcov` class spec, and runs the PSD invariant on
-`prek_sim`.
+Derives the covariance of binary proportions measured on the same
+students and explains how sitemix estimates it from marginal and joint
+counts. Distinguishes the raw-scale matrix from scalar transformed
+estimates, with finite-population corrections and matrix checks
+illustrated on simulated data.
 
-## Overview
+## Joint uncertainty for binary proportions
 
-This article is written for **methodologists** working on Scenario B —
-overlapping binary indicators whose within-site cross-covariance is
-non-zero — who need the exact covariance matrix `sitemix` assembles and
-*why* it takes this form. We cover, in order:
+Scenario B estimates several binary proportions for each site-year, such
+as participation in FRPM, SNAP, WIC, and TANF. A student can contribute
+to more than one indicator. Joint counts describe how the indicators
+vary together and determine the off-diagonal entries of their estimated
+covariance matrix.
 
-1.  the joint within-site structure an analyst sees and what `sitemix`
-    encodes;
-2.  the local notation this derivation adds;
-3.  the SUR cross-covariance derivation and its finite-population
-    corrections;
-4.  the `sm_vcov` class spec;
-5.  PSD validation of the assembled matrix;
-6.  the implementation invariants.
+With `family = "multivariate"` and `vjt = TRUE`,
+[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
+returns this matrix in the `V` list-column. Each indicator row for the
+same site-year carries the same K \times K `sm_vcov` object. The
+derivation below first assumes independent observations across students;
+sampling without replacement from a fixed population is considered
+afterward.
 
-**Established vs. novel.** *Established:* the
-seemingly-unrelated-regression cross-covariance structure (Zellner,
-1962) and design-based finite-population corrections under SRSWOR. *This
-package:* the `sm_vcov` object contract — scale/method provenance, PSD
-validation, and the diagonal exceptions — that packages these results
-for site-year panels.
+The example uses `prek_sim`, a simulated 50-site pre-kindergarten panel
+included in the package (see
+[`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)).
+Its results describe the simulation, not real children, sites, or
+programs. Code runs offline with a fixed random seed.
 
-| Result                                     | Attribution                    |
-|:-------------------------------------------|:-------------------------------|
-| SUR cross-covariance structure             | Zellner (1962)                 |
-| SRSWOR finite-population correction        | standard design-based sampling |
-| `sm_vcov` object contract & PSD validation | this package (sitemix)         |
+## 1. The observations and assumptions
 
-> **About the example data.** All results here are computed live from
-> `prek_sim`, a fully simulated 50-site pre-kindergarten panel shipped
-> in the package (see
-> [`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)).
-> It describes no real children, sites, or program, and must not be
-> cited as empirical Pre-K results. Every code block runs offline with a
-> fixed random seed.
+Within one site-year, let y_i=(X\_{i1},\ldots,X\_{i K})^\top record the
+K binary indicators for student i. Assume the n=n\_{jt} student vectors
+are independent and identically distributed. Indicators within a vector
+may be dependent. Neither measuring them on the same students nor
+observing students positive on both indicators guarantees nonzero
+covariance.
 
-## 1. What an analyst sees, what `sitemix` encodes
+Marginal counts and joint counts must refer to the same retained
+students. A joint count C\_{jt,kk'} counts students positive on both k
+and k'. Knowing only the two marginal counts does not determine that
+joint count; equal denominators alone do not establish that the
+observations were paired. The independent-marginal aggregate calculation
+is discussed in [Sampling uncertainty from published
+aggregates](https://joonho112.github.io/sitemix/articles/m5-aggregate-engines.md).
 
-For Scenario B with $`K`$ overlapping binary indicators (e.g., FRPM,
-SNAP, WIC, TANF), the within-site joint distribution is *not* a simple
-product of binomials — students can be in multiple indicators
-simultaneously, so the per-row covariance across indicators is non-zero.
-`sm_estimate(family = "multivariate", vjt = TRUE)` returns a `V`
-list-column whose $`j`$-th element is a $`K \times K`$`sm_vcov` object.
+## 2. Covariance of the sample proportions
 
-## 2. Notation map (extends M2)
+The site-year subscripts are suppressed below except where they identify
+the sample size or counts.
 
-| Symbol | Meaning | Code | Range |
-|:---|:---|:---|:---|
-| $`K`$ | Indicator-component count | `length(indicators)` | $`\ge 2`$ |
-| $`C_{jt,kk'}`$ | Joint count (both $`k`$ and $`k'`$ positive) | (intermediate) | $`\ge 0`$ |
-| $`p_{xy}`$ | Joint proportion estimate | (intermediate) | $`[0, \min(p_x, p_y)]`$ |
-| $`\sigma_{kk'}`$ | Cross-covariance element | `V[[i]]$matrix[k,k']` | symmetric |
-| $`\Sigma_{jt}`$ | Assembled $`K \times K`$ matrix | `V[[i]]$matrix` | PSD up to `1e-12` |
+| Symbol | Meaning |
+|:---|:---|
+| K | Number of binary indicators, `length(indicators)` |
+| \pi_k, \pi\_{kk'} | Population probabilities of indicator k and of both k and k' |
+| \hat\pi_k | Sample proportion, returned as `theta_raw` |
+| \hat\pi\_{kk'}=C\_{jt,kk'}/n | Sample joint proportion; `p_xy` in the example |
+| Q | Sum of centered student-vector cross-products |
+| \widehat V=\Sigma\_{jt} | Estimated covariance matrix of the sample proportions, `V[[i]]$matrix` |
 
-## 3. The SUR cross-covariance derivation
+For a single student, X\_{i k}X\_{i k'} is one exactly when both
+indicators are positive, so its expectation is \pi\_{kk'}. Independence
+across students eliminates cross-student covariance terms in the
+covariance of the sample means. Thus,
 
-**Theorem 1 (population SUR cross-covariance).** *For two overlapping
-binary indicators $`X_k`$ and $`X_{k'}`$ measured on the same $`n`$ IID
-students per site-year,*
+\boxed{ \operatorname{Cov}(\hat\pi_k,\hat\pi\_{k'}) \\=\\
+\frac{\pi\_{kk'} - \pi_k\pi\_{k'}}{n\_{jt}}, } \tag{M3.1}
 
-``` math
-\boxed{
-\operatorname{Cov}(\hat\pi_k,\hat\pi_{k'})
-\;=\; \frac{\pi_{kk'} - \pi_k\pi_{k'}}{n_{jt}},
-}
-\tag{M3.1}
-```
+The covariance is positive, zero, or negative according to whether
+\pi\_{kk'} is above, equal to, or below \pi_k\pi\_{k'}. For example,
+\pi_k=\pi\_{k'}=1/2 and \pi\_{kk'}=1/4 give zero covariance even though
+some students are positive on both indicators. Taking k=k' recovers the
+familiar variance \pi_k(1-\pi_k)/n of a binomial proportion.
 
-*where $`\pi_k=\Pr(X_k=1)`$, $`\pi_{k'}=\Pr(X_{k'}=1)`$, and
-$`\pi_{kk'}=\Pr(X_k=1,X_{k'}=1)`$ are population probabilities.*
+## 3. Estimating the matrix and its relation to SUR
 
-**Proof sketch.** Treat each student as a Bernoulli trial in
-$`2^K`$-cell multinomial space. The sample covariance of the two binary
-marginals reduces to $`\mathrm{Cov}(X_k, X_{k'})/n`$, which simplifies
-as above. $`\square`$
+The seemingly unrelated regressions (SUR) method of Zellner uses
+generalized least squares to estimate a system of regression equations,
+allowing dependence between their disturbances (Zellner, 1962). Here
+each outcome can be viewed as an equation with an intercept alone, and
+the estimated intercepts are the sample proportions. Equation (M3.1)
+follows directly from the covariance of those sample means. This
+connection explains the package’s `vcov_method = "sur"` label; the
+following formulas specify the particular covariance estimates used by
+`sitemix`.
 
-**Attribution.** Standard SUR result; see Zellner (1962).
+Replacing the unknown probabilities in (M3.1) with empirical proportions
+gives
 
-The package does not observe the population probabilities in (M3.1). It
-substitutes the empirical proportions. If
-$`Q=\sum_i(y_i-\bar y)(y_i-\bar y)^\top`$, the default no-FPC matrix is
-the plug-in estimate $`\widehat V_{\mathrm{plugin}}=Q/n^2`$; the
-`binomial_bc` alternative is $`Q/[n(n-1)]`$. Its diagonal therefore
-recovers the corresponding estimated Scenario A raw-scale variance, not
-the unknown population variance itself. This raw-scale matrix convention
-is the one used for Scenario B in `sitemix` (Lee, 2026).
+\widehat V\_{\mathrm{plugin},kk'}
+=\frac{\hat\pi\_{kk'}-\hat\pi_k\hat\pi\_{k'}}{n}, \qquad \widehat
+V\_{\mathrm{plugin}}=\frac{Q}{n^2}, \qquad Q=\sum\_{i=1}^{n}(y_i-\bar
+y)(y_i-\bar y)^\top.
 
-For a fixed population of size $`N`$ sampled without replacement, define
+This is the default matrix before a finite-population correction or
+boundary adjustment. It uses n to estimate the covariance of an
+individual student vector, then divides by n again to estimate the
+covariance of the sample proportions. It is a plug-in estimate, with
+expectation (n-1)/n times the population covariance in (M3.1).
 
-``` math
-q=\begin{cases}
-0, & N=n,\\
-(N-n)/(N-1), & N>n.
-\end{cases}
-```
+For n\>1, `bias_correction = "binomial_bc"` instead gives \widehat
+V\_{\mathrm{bc}}=Q/\[n(n-1)\]. In this intercept-only setting, Q/(n-1)
+is the unbiased residual covariance estimate, and another division by n
+estimates the covariance of the sample means. The degrees-of-freedom
+argument here concerns an estimated mean in each equation; a general SUR
+regression can have additional, differing regressors. The name SUR alone
+does not specify the package’s denominator.
 
-The first branch includes the exact one-unit census $`N=n=1`$. The
-approved SRSWOR whole-matrix rules are
+These formulas apply to the empirical covariance before the Wilson
+boundary surrogate. That option can replace a constant indicator’s zero
+diagonal, as described below. The returned Scenario B matrix is on the
+raw proportion scale, with `vcov_scale = "raw"`, and its diagonal
+matches `se_raw^2`. The row’s `theta_hat` and `se` use the selected
+scalar transformation, which is arcsine by default. Matrix entries
+therefore describe uncertainty in `theta_raw`, rather than in those
+transformed estimates (Lee, 2026).
 
-``` math
-\widehat V_{\mathrm{plugin}}=qQ/n^2,\qquad
-\widehat V_{\mathrm{design}}=
-\begin{cases}
-0_{K\times K}, & N=n,\\
-(N-n)Q/[Nn(n-1)], & N>n\text{ and }n>1.
-\end{cases}
-\tag{M3.2}
-```
+## 4. Sampling without replacement
 
-These are standard without-replacement sampling corrections (Cochran,
-1977).
+Supplying `fpc = N` assumes a simple random sample without replacement
+(SRSWOR) of the same n students for all indicators from a fixed
+population of size N\ge n. The population size must refer to that
+site-year and sampling frame. Define
 
-The second rule is selected by **bias_correction = “binomial_bc”**. Both
-scale the entire matrix rather than replacing only its diagonal, so
-symmetry, PSD, and correlation structure are preserved. **N = n** is a
-valid census and produces a zero matrix. A Wilson boundary surrogate
-remains a named scalar/diagonal regularizer and carries the conventional
-$`q`$ multiplier.
+q=\begin{cases} 0, & N=n,\\ (N-n)/(N-1), & N\>n. \end{cases}
 
-The four implemented interior-cell cases are therefore:
+For a binary count, the hypergeometric variance uses this factor
+relative to the binomial population variance; see the Details section of
+[R’s hypergeometric
+documentation](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/Hypergeometric.html).
+The corresponding factor applies to cross-covariances when the indicator
+vectors are sampled jointly. Substituting sample proportions gives the
+plug-in matrix. Using the sample covariance Q/(n-1) instead gives the
+design-unbiased estimate for n\>1. Before boundary replacement, the
+implemented matrices are
 
-| Variance rule | Infinite-population / no supplied $`N`$ | Fixed-population SRSWOR |
-|:---|:---|:---|
-| plug-in | $`Q/n^2`$ | $`qQ/n^2`$ |
-| `binomial_bc` | $`Q/[n(n-1)]`$ | $`(N-n)Q/[Nn(n-1)]`$ |
+\widehat V\_{\mathrm{plugin}}=qQ/n^2,\qquad \widehat
+V\_{\mathrm{design}}= \begin{cases} 0\_{K\times K}, & N=n,\\
+(N-n)Q/\[Nn(n-1)\], & N\>n\text{ and }n\>1. \end{cases} \tag{M3.2}
 
-The same multiplier applies to every matrix entry. A diagonal-only
-correction would change correlations and is not the implemented
-estimand. For a constant indicator, empirical cross-covariances are
-exactly zero. `boundary_method = "wilson_floor"` may replace that
-indicator’s zero diagonal with a positive, explicitly named
-scalar/diagonal surrogate, but it never creates off-diagonal covariance.
-Agresti–Coull boundary regularization is illegal with `vjt = TRUE`.
+The second rule is selected by `bias_correction = "binomial_bc"`.
+Relative to each rule’s no-FPC matrix, the applied variance multipliers
+are q for the plug-in rule and 1-n/N for `binomial_bc`. Thus multiplying
+the bias-corrected no-FPC matrix by q would give a different result.
+[Sampling uncertainty in site-level
+proportions](https://joonho112.github.io/sitemix/articles/m1-statistical-foundations.md)
+develops the distinction for a single binary indicator.
 
-## 4. The `sm_vcov` class spec (canonical home)
+Each multiplier applies to the whole empirical matrix, including the
+off-diagonal entries. A nonnegative multiplier preserves symmetry and
+positive semidefiniteness. A positive multiplier also preserves
+correlations wherever both variances are positive. At the census N=n,
+all matrix entries and standard errors are zero, and correlations are
+undefined. The explicit census branch includes N=n=1; otherwise the
+`binomial_bc` matrix requires n\>1.
 
-This vignette is the method location for the `sm_vcov` class spec. The
-primary fields used by Scenario B are:
+For a constant observed indicator, empirical cross-covariances and the
+empirical diagonal are zero. The default
+`boundary_method = "wilson_floor"` can replace that diagonal with a
+positive Wilson surrogate, multiplied by q when FPC is supplied. Even if
+`binomial_bc` is requested, a boundary surrogate uses q, while interior
+entries use the selected matrix rule. At a census, q=0 makes this
+surrogate zero as well. Off-diagonal entries remain zero for a constant
+indicator. These substituted diagonals are regularized uncertainty
+estimates, so the design-unbiased interpretation of the empirical
+formula does not extend to them. Agresti–Coull boundary uncertainty is
+not supported with `vjt = TRUE`.
 
-- **`matrix`** — the $`K \times K`$ symmetric PSD numeric matrix.
-- **`vcov_scale`** — one of `"raw"`, `"arcsine_delta"`, `"logit_delta"`,
-  or reserved `"reference_raw"`. Under Scenario B’s SUR construction,
-  `vcov_scale = "raw"` regardless of the row’s `estimate_scale` (the SUR
-  formula is numerically stable in raw space).
-- **`vcov_method`** — set to `"sur"` for Scenario B output.
-- **`indicator_order`** and **`matrix_rank`** — record the component
-  order and numerical rank.
-- **Finite-population provenance** — population size, coordinate-aligned
-  sampling fraction, conventional FPC, actually applied multiplier,
-  sampling design, and variance rule. These fields do not alter n_eff.
-- **Diagonal contract** — “row_se_raw_squared” for Scenario B, making
-  explicit that the raw matrix diagonal matches se_raw squared, not
-  transformed se squared.
+## 5. Joint information and feasible matrices
 
-For a package-produced Scenario B `sitemix_estimates` object, validation
-cross-checks those matrix fields against every row, including the
-site-year, estimate scale, common denominator, scalar correction rule,
-and boundary rule. Repeating the same tampered `V` over all group rows
-therefore cannot bypass the contract. A stand-alone user-constructed
-`sm_vcov` remains a more general carrier until it is attached to package
-output.
+Scenario B needs at least two binary indicators. With student rows,
+`sitemix` obtains the marginal and pairwise counts from the retained
+jointly observed vectors. With `from_counts = TRUE`, supply `n_jt`, one
+`c_jt_<indicator>` column per indicator, and every pairwise
+`c_jt_<first>_<second>` column in the order specified by `indicators`.
+Those columns are required even for `vjt = FALSE`.
 
-The full lexicons are documented at
-[`?sm_vcov`](https://joonho112.github.io/sitemix/reference/sm_vcov.md):
-`vcov_method` is `NA`, `"sur"`, `"multinomial"`, or
-`"working_independence"`; `vcov_scale` is `"raw"`, `"arcsine_delta"`,
-`"logit_delta"`, or `"reference_raw"`.
+For two indicators, the pairwise count must satisfy
 
-## 5. PSD validation
+\max(0,C_k+C\_{k'}-n)\le C\_{kk'}\le\min(C_k,C\_{k'}).
 
-The assembled $`\Sigma_{jt}`$ is PSD by construction for non-degenerate
-joint counts. Numerical roundoff can produce a smallest eigenvalue
-slightly below zero; the constructor validates PSD-ness up to the
-documented tolerance. The Scenario B path records `psd_repair = "none"`
-because no repair is applied.
+For three indicators, these pairwise bounds alone are insufficient. The
+package also checks that some integer count positive on all three
+indicators could produce the supplied marginals and pairs. Passing a
+positive-semidefinite check alone does not establish the existence of
+such a joint table.
 
-## 6. Implementation invariants
+| Input | Covariance support |
+|:---|:---|
+| Jointly observed student rows | Two or more indicators |
+| Marginal and pairwise counts, K=2 or K=3 | Supported after the count-feasibility checks |
+| Marginal and pairwise counts, K\ge4 | Accepted for scalar output with `vjt = FALSE`; covariance output requires student rows |
 
-| ID | Layer | Claim |
-|:---|:---|:---|
-| SUR1 | engine-multivariate | (M3.1) holds exactly for two indicators sharing the same $`n`$. |
-| SUR2 | sm_vcov | Every assembled `V[[i]]$matrix` satisfies the documented scale-aware PSD tolerance. |
-| SUR3 | sm_vcov | `vcov_method = "sur"` and `vcov_scale = "raw"` for Scenario B. |
-| SUR4 | correction | Plug-in and `binomial_bc` scale the whole matrix, including off-diagonals. |
-| SUR5 | diagonal contract | `diag(V) = se_raw^2`; transformed row `se^2` is intentionally different. |
-| SUR6 | boundary | Constant-indicator off-diagonals are zero; Wilson is a named diagonal surrogate. |
+For K\ge4, the package does not verify full joint feasibility from
+pairwise counts alone and rejects that input when `vjt = TRUE` with
+`sitemix_error_input_indicator_count`. The counts may be feasible; the
+error describes the limit of the available verification.
 
-Verify on `prek_sim`:
+For observed vectors, Q is a sum of outer products and is positive
+semidefinite (PSD), meaning a^\top Q a\ge0 for every vector a. Feasible
+joint counts yield the same construction. Degenerate data can give a
+singular matrix and remain valid. Nonnegative whole-matrix scaling and
+the nonnegative Wilson diagonal addition preserve PSD. Numerical
+roundoff is checked with a tolerance proportional to matrix scale, plus
+a machine-range term. Scenario B records `psd_repair = "none"` because
+it does not project or otherwise repair the matrix.
+
+## 6. Reading and checking the returned covariance
+
+Use `as.matrix(V[[i]])` to obtain the numeric matrix and
+`V[[i]]$indicator_order` to align its rows and columns with the
+estimates. For Scenario B, `vcov_method = "sur"`, `vcov_scale = "raw"`,
+and `diag_contract = "row_se_raw_squared"`. The numerical rank is
+recorded in `matrix_rank`; singularity alone does not make the matrix
+invalid.
+
+When FPC is supplied, `population_size`, `sampling_fraction`, and
+`sampling_design` describe the sampling assumption.
+`fpc_variance_multiplier` records the conventional q;
+`variance_multiplier_applied` records the factor used for the
+coordinate’s rule. The latter can differ between an interior indicator
+and a Wilson boundary indicator. These FPC fields do not change `n_eff`.
+
+The `sitemix_estimates` validator checks the matrix and its recorded
+settings against all rows in the site-year group, including the common
+denominator, indicator order, scalar corrections, and boundary rules.
+For the full list of `sm_vcov` fields, including methods used by other
+scenarios, see
+[`?sm_vcov`](https://joonho112.github.io/sitemix/reference/sm_vcov.md).
+
+The following example reconstructs the estimated cross-covariance for
+the first site’s 2024 data. Its `p_xy`, `p_x`, and `p_y` are empirical
+proportions, so the comparison checks the plug-in estimate of M3.1. The
+subsequent checks examine PSD and the recorded output settings.
 
 ``` r
 
@@ -209,7 +247,7 @@ est <- sm_estimate(
 )
 V1 <- as.matrix(est$V[[1L]])
 
-# SUR1: closed form cross-covariance
+# Reconstruct the empirical plug-in cross-covariance
 slice <- subset(prek_sim, year == 2024 & site_id == est$site_id[1L])
 n <- nrow(slice)
 p_x <- mean(slice$frpm)
@@ -218,13 +256,13 @@ p_xy <- mean(slice$frpm * slice$snap)
 manual_sigma <- (p_xy - p_x * p_y) / n
 stopifnot(all.equal(V1[1, 2], manual_sigma, tolerance = 1e-10))
 
-# SUR2: PSD
+# Check PSD using the matrix-scale tolerance
 eig_V1 <- eigen(V1, symmetric = TRUE, only.values = TRUE)$values
 tol_V1 <- 64 * nrow(V1) * .Machine$double.eps * max(abs(eig_V1)) +
   64 * nrow(V1) * .Machine$double.xmin
 stopifnot(min(eig_V1) >= -tol_V1)
 
-# SUR3: lexicon
+# Check the method, scales, and diagonal relation recorded in the output
 stopifnot(est$V[[1L]]$vcov_method == "sur")
 stopifnot(est$V[[1L]]$vcov_scale == "raw")
 stopifnot(est$V[[1L]]$diag_contract == "row_se_raw_squared")
@@ -232,29 +270,103 @@ stopifnot(est$estimate_scale[[1L]] == "arcsine")
 stopifnot(est$V[[1L]]$psd_repair == "none")
 ```
 
-The three checked invariants (SUR1–SUR3) hold (algebraic tolerance
-`1e-10`; PSD uses the scale-aware relative plus machine-range rule
-above). SUR4–SUR6 in the table above are stated but not checked in this
-chunk.
+The first check compares two ways to calculate the same sample estimate,
+with tolerance `1e-10`. It does not compare the estimate with unknown
+population probabilities. The PSD check permits only the small negative
+eigenvalues allowed by the matrix-scale tolerance. The final checks
+confirm that the matrix describes raw proportions even though the scalar
+output uses the default arcsine transformation.
+
+``` r
+
+first_site <- subset(est, site_id == est$site_id[1L])
+first_site <- first_site[match(est$V[[1L]]$indicator_order,
+                             first_site$indicator), ]
+stopifnot(all.equal(unname(diag(V1)), first_site$se_raw^2,
+                    tolerance = 1e-10))
+data.frame(
+  indicator = first_site$indicator,
+  matrix_variance_raw = unname(diag(V1)),
+  scalar_variance_raw = first_site$se_raw^2,
+  scalar_variance_arcsine = first_site$se^2
+)
+#>   indicator matrix_variance_raw scalar_variance_raw scalar_variance_arcsine
+#> 1      frpm          0.01097394          0.01097394              0.02777778
+#> 2      snap          0.01920439          0.01920439              0.02777778
+```
+
+The two raw-variance columns match, including any boundary surrogate
+used by Scenario B. The arcsine variances describe uncertainty on a
+different scale and should not be substituted for the raw diagonal.
+
+### Check both finite-population rules
+
+For a numerical comparison, suppose the same first-site sample was drawn
+without replacement from a population twice its sample size. This
+population size is an example assumption, not information in `prek_sim`.
+Both observed proportions in this slice are interior, so no boundary
+diagonal is replaced.
+
+``` r
+
+N <- 2 * n
+finite_plugin <- sm_estimate(
+  slice, family = "multivariate", indicators = c("frpm", "snap"),
+  fpc = N, vjt = TRUE
+)
+finite_bc <- sm_estimate(
+  slice, family = "multivariate", indicators = c("frpm", "snap"),
+  bias_correction = "binomial_bc", fpc = N, vjt = TRUE
+)
+q <- (N - n) / (N - 1)
+expected_bc <- V1 * n / (n - 1) * (1 - n / N)
+stopifnot(all.equal(as.matrix(finite_plugin$V[[1L]]), V1 * q,
+                    tolerance = 1e-10))
+stopifnot(all.equal(as.matrix(finite_bc$V[[1L]]), expected_bc,
+                    tolerance = 1e-10))
+data.frame(
+  rule = c("plugin", "binomial_bc"),
+  fpc_variance_multiplier = c(
+    finite_plugin$V[[1L]]$fpc_variance_multiplier[1L],
+    finite_bc$V[[1L]]$fpc_variance_multiplier[1L]
+  ),
+  variance_multiplier_applied = c(
+    finite_plugin$V[[1L]]$variance_multiplier_applied[1L],
+    finite_bc$V[[1L]]$variance_multiplier_applied[1L]
+  )
+)
+#>          rule fpc_variance_multiplier variance_multiplier_applied
+#> 1      plugin               0.5294118                   0.5294118
+#> 2 binomial_bc               0.5294118                   0.5000000
+
+census <- sm_estimate(
+  slice, family = "multivariate", indicators = c("frpm", "snap"),
+  fpc = n, vjt = TRUE
+)
+stopifnot(all(as.matrix(census$V[[1L]]) == 0),
+          all(census$se_raw == 0), all(census$se == 0))
+```
+
+The matrix comparisons include every off-diagonal entry. The displayed
+FPC fields distinguish the conventional factor from the factor actually
+used with `binomial_bc`. The final call treats the observed students as
+the entire population and returns zero sampling uncertainty for that
+population mean.
 
 ## 7. Where to go next
 
-- [M4 · Multinomial
-  simplex](https://joonho112.github.io/sitemix/articles/m4-multinomial-simplex.md)
-  — the sister derivation for Scenario C (mutually exclusive
-  categories).
-- [M5 · Aggregate engines D0 /
-  D1](https://joonho112.github.io/sitemix/articles/m5-aggregate-engines.md)
-  for the D1 working-independence variant of $`V`$.
-- [A4 · Scenarios B / C — multivariate /
-  multinomial](https://joonho112.github.io/sitemix/articles/a4-multivariate-multinomial.md)
-  for the applied face of (M3.1) and the `vcov_scale = "raw"`
-  convention.
+- [Covariance for multinomial
+  proportions](https://joonho112.github.io/sitemix/articles/m4-multinomial-simplex.md)
+  — covariance for mutually exclusive, exhaustive categories.
+- [Sampling uncertainty from published
+  aggregates](https://joonho112.github.io/sitemix/articles/m5-aggregate-engines.md)
+  for the D1 working-independence variant of V.
+- [Analyzing overlapping indicators and mutually exclusive
+  categories](https://joonho112.github.io/sitemix/articles/a4-multivariate-multinomial.md)
+  for examples of reading binary and categorical estimates together with
+  their covariance matrices.
 
 ## References
-
-Cochran, W. G. (1977). *Sampling techniques* (3rd ed.). John Wiley &
-Sons.
 
 Lee, J. (2026). *sitemix: Site- and group-level proportions, rates, and
 sampling uncertainty*. <https://joonho112.github.io/sitemix/>

@@ -1,188 +1,199 @@
-# M5 · Aggregate engines D0 / D1
+# Sampling uncertainty from published aggregates
 
 Abstract
 
-For methodologists working from publisher-aggregate inputs. Formalizes
-the D0 (single-indicator binomial pass-through) and D1 (multi-marginal
-working-independence) engines, proves the non-identification of
-cross-marginal covariance from marginals alone, and notes that publisher
-suppression is an operational concept handled outside the formal model.
+Explain what published numerator and denominator counts identify. The
+single-indicator calculation reuses binomial standard errors; multiple
+marginals require an assumption about their covariance. Suppressed
+values and unknown joint counts have different consequences.
 
-## Overview
+A published table can preserve enough information to estimate individual
+proportions while omitting the joint observations needed for their
+covariance. The D0 and D1 aggregate calculations address these two
+cases. The equations below describe observed, identified counts;
+suppression handling is discussed separately. Examples use counts
+derived from the fully simulated `prek_sim` data and do not describe
+real children or programs.
 
-This article is written for **methodologists** working from
-publisher-aggregate inputs — per-site-year counts already aggregated by
-the publisher — who need the exact engines `sitemix` dispatches for the
-D0 and D1 cases and *why* they take this form. We cover, in order:
+## Information in the input
 
-1.  the aggregate inputs an analyst sees and what `sitemix` encodes;
-2.  the local notation this derivation adds;
-3.  the D0 single-indicator binomial pass-through engine;
-4.  the D1 multi-marginal working-independence engine and its regime
-    mapping;
-5.  suppression as an operational (non-statistical) layer;
-6.  the implementation invariants.
+D0 contains one numerator and denominator per site-year for one
+indicator. D1 contains several marginal numerators and denominators,
+with no joint counts supplied to the estimator. Each D1 marginal can
+have its own n\_{jt,k}. A common denominator value does not establish
+common sampled units.
 
-**Established vs. novel.** *Established:* the Fréchet–Hoeffding
-non-identification result for aggregate marginals (Fréchet, 1951;
-Hoeffding, 1994). *This package:* the D0 pass-through and D1
-working-independence conventions, the formal-D1a vs heuristic-D1b regime
-mapping, and suppression as an operational (non-statistical) layer.
+In long form, `indicator` labels the marginal and `c_jt`, `n_jt` contain
+its counts. Wide form uses `c_jt_<indicator>` and either a shared `n_jt`
+or `n_jt_<indicator>` columns. Both forms describe the same quantities:
 
-| Result | Attribution |
-|:---|:---|
-| Fréchet–Hoeffding non-identification | Fréchet (1951), Hoeffding (1940) |
-| D0/D1 engines + regime mapping + suppression layer | this package (sitemix) |
+| Symbol | Meaning | Input or output |
+|:---|:---|:---|
+| C\_{jt}^{\mathrm{agg}} | D0 numerator, 0\le C\le n | input numerator |
+| n\_{jt}^{\mathrm{agg}} | D0 positive integer denominator | input denominator |
+| C\_{jt,k} | D1 marginal numerator | input numerator for indicator k |
+| n\_{jt,k} | D1 marginal denominator | input denominator for indicator k |
+| \Sigma\_{jt}^{\mathrm{D1}} | Working covariance on the reported scale | `V[[i]]$matrix` |
 
-> **About the example data.** All results here are computed live from
-> `prek_sim`, a fully simulated 50-site pre-kindergarten panel shipped
-> in the package (see
-> [`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)).
-> It describes no real children, sites, or program, and must not be
-> cited as empirical Pre-K results. Every code block runs offline with a
-> fixed random seed.
+## One observed proportion (D0)
 
-## 1. What an analyst sees, what `sitemix` encodes
+D0 uses the same scalar binomial calculations as Scenario A counts. For
+valid, non-suppressed counts that agree exactly, with matching
+estimation options, the numerical outputs agree up to floating-point
+rounding:
 
-Aggregate inputs differ from student-row inputs in what they hand the
-estimator: not a per-student table, but per-site-year counts already
-aggregated by the publisher. `sitemix` supports two cases:
+\hat\pi\_{jt}^{D0} \\=\\ C\_{jt}^{\mathrm{agg}} /
+n\_{jt}^{\mathrm{agg}}, \qquad s\_{jt}^{D0} = s\_{jt}^{A}. \tag{M5.1}
 
-- **D0** — one numerator and denominator per site-year for a single
-  indicator.
-- **D1** — multiple aggregate marginals per site-year; the
-  cross-marginal joints are not in the file.
+This is an implementation equivalence for `theta_raw`, `theta_hat`,
+`se_raw`, `se`, and `n`. Information about the input path, aggregate
+case, suppression, and object attributes can differ. The input paths
+also have different validation rules, so an error from one path need not
+be identical to an error from the other.
 
-The two engines share the aggregate-input parsing pipeline but differ in
-covariance assembly.
+The same counts produce the same formula, but the way a publisher
+collected them determines whether its assumptions are appropriate. Under
+the IID binomial model, `C/n` estimates a common probability within a
+site-year. Under a specified finite-population SRSWOR design, the
+sampling variance uses the corresponding finite-population rule. See
+[Sampling uncertainty in site-level
+proportions](https://joonho112.github.io/sitemix/articles/m1-statistical-foundations.md)
+for the distinction and [Binomial standard errors and
+transformations](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
+for transformations, corrections, and boundary handling. The aggregate
+file format alone establishes neither design.
 
-## 2. Notation map
+## Several marginal proportions (D1)
 
-| Symbol | Meaning | Code | Range |
-|:---|:---|:---|:---|
-| $`C_{jt}^{\mathrm{agg}}`$ | D0 numerator | `c_jt` | $`\ge 0`$ |
-| $`n_{jt}^{\mathrm{agg}}`$ | D0 denominator | `n_jt` | $`> 0`$ |
-| $`C_{jt,k}`$ (D1) | Marginal-$`k`$ numerator | `c_jt_k` | $`\ge 0`$ |
-| $`n_{jt,k}`$ (D1) | Marginal-$`k`$ denominator | `n_jt_k` | $`> 0`$ |
-| $`\Sigma_{jt}^{\mathrm{D1}}`$ | D1 covariance | `V[[i]]$matrix` | diagonal |
+D1 does not receive the joint observations needed to estimate dependence
+between indicators. When `vjt = TRUE`, it constructs a
+working-independence matrix on the reported row scale:
 
-## 3. D0 engine — binomial pass-through
-
-**Proposition 1 (D0 reuses Scenario A).** *The D0 engine applied to
-$`(C_{jt}^{\mathrm{agg}}, n_{jt}^{\mathrm{agg}})`$ and the Scenario A
-counts engine produce identical canonical numerical fields when counts
-are valid, non-suppressed and integer-identical and all estimator
-options match. Formally, for every such row,*
-
-``` math
-\hat\pi_{jt}^{D0} \;=\; C_{jt}^{\mathrm{agg}} / n_{jt}^{\mathrm{agg}},
-\qquad
-s_{jt}^{D0} = s_{jt}^{A},
-\tag{M5.1}
-```
-
-*to numerical tolerance.*
-
-The invariant covers `theta_raw`, `theta_hat`, `se_raw`, `se`, and `n`.
-Input-path provenance, aggregate-case metadata, suppression state,
-object attributes, and path-specific validation errors can differ and
-are not part of the identity.
-
-**Attribution.** Standard pass-through; the binomial sampling model
-(M1.1) is invariant to whether $`C`$ arrives as a sum of student rows or
-a publisher-aggregated count.
-
-## 4. D1 engine — working independence
-
-For multiple aggregate marginals per site-year, the cross- marginal
-covariance $`\sigma_{kk'}`$ requires the *joint* count $`C_{jt,kk'}`$,
-which the publisher did not provide. The D1 engine therefore emits a
-**working-independence diagonal**:
-
-``` math
-\boxed{
-\Sigma_{jt}^{D1} \;=\; \mathrm{diag}\bigl(s_{jt,1}^2, \ldots, s_{jt,K}^2\bigr).
-}
-\tag{M5.2}
-```
+\boxed{ \Sigma\_{jt}^{D1} \\=\\ \mathrm{diag}\bigl(s\_{jt,1}^2, \ldots,
+s\_{jt,K}^2\bigr). } \tag{M5.2}
 
 The off-diagonals are set to zero as an explicit working assumption;
 they are not identified zeros. `vcov_method = "working_independence"`
 records this choice.
 
 With a keyed site-year population size **fpc = N**, each D1 diagonal
-uses its own marginal denominator $`n_k`$. Plug-in rows use
+uses its own marginal denominator n_k. Plug-in rows use
 
-``` math
-q_k=\begin{cases}
-0, & N=n_k,\\
-(N-n_k)/(N-1), & N>n_k,
-\end{cases}
-```
+q_k=\begin{cases} 0, & N=n_k,\\ (N-n_k)/(N-1), & N\>n_k, \end{cases}
 
-including $`N=n_k=1`$(Cochran, 1977); binomial_bc rows use the design
-multiplier $`(N-n_k)/N`$. The single covariance object stores one
-population size plus coordinate-aligned sampling fractions and
-multipliers. Thus varying denominators remain visible, while n_jt and
-n_eff stay missing at matrix level when there is no honest common
-scalar. The diagonal contract “row_se_squared” verifies that every
-working-independence diagonal equals its row’s scale-specific squared
-SE.
+including the package’s explicit census case N=n_k=1. The SRSWOR setting
+is discussed by Cochran (1977). Interior rows using `binomial_bc` use
+the design multiplier (N-n_k)/N; boundary surrogates retain the plug-in
+multiplier. The single covariance object stores one population size plus
+coordinate-aligned sampling fractions and multipliers. With varying
+denominators, the matrix’s `n_jt` and `n_eff` are missing because no one
+value describes the group; the row denominators remain available.
+`diag_contract = "row_se_squared"` records that the matrix diagonal
+matches row `se^2`. The supplied population size must be appropriate for
+every marginal; subgroup labels do not provide that information.
 
-Sampling-unit provenance is a separate fact from denominator shape. The
-D1 API accepts `sampling_relation = "same_units"`, `"different_units"`,
-or `"unknown"` (the default), mapping to `d1_regime = "D1a"`, `"D1b"`,
-or `"unknown"`. Equal denominators alone never establish that the
-marginals were observed on the same units. `denominator_pattern` records
-`"common"` or `"varying"` independently, and `d1_regime_by_group`
-preserves both facts for every site-year. Every D1 group must contain
-the same ordered indicator set.
+Which units were sampled is a separate question from whether denominator
+values match. The D1 API accepts `sampling_relation = "same_units"`,
+`"different_units"`, or `"unknown"` (the default), mapping to
+`d1_regime = "D1a"`, `"D1b"`, or `"unknown"`. Equal denominators alone
+never establish that the marginals were observed on the same units.
+`denominator_pattern` records `"common"` or `"varying"` independently,
+and `d1_regime_by_group` preserves both facts for every site-year. Every
+D1 group must contain the same ordered indicator set.
 
-**Proposition 2 (Non-identification).** *Without $`C_{jt,kk'}`$, the
-cross-marginal covariance is unidentified from the marginals. Any value
-in the pairwise Fréchet-Hoeffding interval is feasible pairwise.*
+### Why the marginals leave covariance unknown
 
-**Proof sketch.** Construct two joint distributions on $`\{0,1\}^K`$
-that share marginals but differ in cross-covariance. The
-Fréchet-Hoeffding bounds give the pairwise range (Fréchet, 1951;
-Hoeffding, 1994). For $`K > 2`$, pairwise feasible choices need not
-define a globally compatible joint distribution or PSD covariance
-matrix; that is why M7 preserves the formal raw pairwise intervals but
-labels PSD-projected corners only as stress scenarios. $`\square`$
+For two Bernoulli variables on common units, write their probabilities
+as p and q, and their joint success probability as r. The four joint
+cell probabilities are
 
-**Attribution.** Standard copula-theory result; see M7 and (Nelsen,
-2006).
+|       | Y_2=1 | Y_2=0   |
+|:------|:------|:--------|
+| Y_1=1 | r     | p-r     |
+| Y_1=0 | q-r   | 1-p-q+r |
 
-## 5. Suppression as an operational layer
+Requiring each cell to be nonnegative gives \max(0,p+q-1)\le
+r\le\min(p,q). This direct derivation gives the classical pairwise
+Fréchet–Hoeffding range (Fréchet, 1951; Hoeffding, 1994; Nelsen, 2006).
+The covariance of individual outcomes is r-p\\q. Under a common IID
+sample of size n, the covariance of their sample proportions is
+(r-p\\q)/n.
 
-Tier 1 (publisher-suppressed), Tier 2 (observed below accountability),
-and Tier 3 (observed and publishable) are **operational, not
-statistical** concepts. They live in the
-[`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md)
-audit, not in the statistical model derived here. `suppression = "drop"`
-retains an unavailable audit row with canonical point and SE fields
-missing. The legacy `"upper_bound"` label is available only as an
-explicitly acknowledged, separated worst-case variance sensitivity; it
-does not create an identified point, ordinary covariance, or formal
-Fréchet input. A hidden denominator cannot support a numeric variance
-claim. The formal model in §3–§4 uses identified rows only.
+For example, p=.25 and q=.5 permit both r=0 and r=.25. The marginal
+rates are identical, while the individual-outcome covariance is
+respectively -.125 and .125. Marginals therefore do not usually identify
+covariance. Degenerate margins are exceptions: if a variable is
+constant, its covariance is fixed at zero.
 
-## 6. Implementation invariants
+With more than two indicators, separate feasible choices for every pair
+need not describe a jointly attainable binary distribution. A PSD matrix
+alone is also insufficient for that purpose. [Pairwise Fréchet bounds
+and projected dependence
+scenarios](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md)
+distinguishes raw pairwise intervals from projected dependence
+scenarios. Those intervals condition on the supplied marginal
+proportions; they are not confidence intervals for the unknown
+population covariance. The common-unit IID derivation does not establish
+formal covariance bounds for marginals sampled from different or unknown
+sets of units.
 
-| ID | Layer | Claim |
+### Record the assumptions separately
+
+| Input information | Package treatment | Interpretation |
 |:---|:---|:---|
-| AG1 | engine-aggregate-d0 | (M5.1) — qualified canonical numerical fields agree to tolerance; path provenance may differ. |
-| AG2 | engine-aggregate-d1 | (M5.2) — D1 `V` off-diagonals are exactly zero. |
-| AG3 | engine-aggregate-d1 | `vcov_method = "working_independence"` and diagonal equals row `se^2`. |
+| Complete marginal counts, joints absent | D1 estimates each rate; optional diagonal `V` | Off-diagonal zeros are a working assumption |
+| Same units established by the source | `sampling_relation = "same_units"`, regime D1a | Formal Fréchet use still needs common n, IID plug-in, no FPC/bias correction, and `anscombe = FALSE` |
+| Different units established | `sampling_relation = "different_units"`, regime D1b | Fréchet analysis is an acknowledged heuristic |
+| Unit relationship unknown | Keep `sampling_relation = "unknown"` | Equal denominators do not establish same units |
 
-Verify on `prek_sim`:
+## What suppression leaves unidentified
+
+A publisher’s suppression rule describes which values are withheld. It
+has statistical consequences because a hidden numerator does not
+identify an observed proportion. Do not conflate this missing marginal
+value with the missing joint information of an otherwise observed D1
+input.
+
+[`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md)
+counts suppressed rows (Tier 1), observed rows below `accountability_n`
+(Tier 2), and observed rows at or above that threshold (Tier 3). These
+categories do not themselves establish a permission to publish or a
+probability model for the hidden values. With `suppression = "drop"`,
+the estimator retains unavailable rows with missing point estimates and
+SEs.
+
+An explicitly acknowledged `"upper_bound"` analysis stores a separate
+Bernoulli variance-sensitivity value at p=.5 when the denominator is
+known. It requires default arcsine output with `anscombe = FALSE`; it
+does not replace the missing estimate. With the default
+`suppressed_n_strategy = "observed_n"`, the sensitivity denominator is
+the observed count. Selecting `"worst_case_bound"` instead uses
+`suppressed_n_bound` as the recorded `n` and, for an
+observed-denominator row, as `sensitivity_n` in that calculation.
+Inspect `sensitivity_n` and the original input together. A hidden
+denominator supplies no numeric sensitivity variance, even when a
+denominator upper bound is recorded. Suppressed rows cannot enter
+ordinary `V` or formal Fréchet calculations, and aggregate FPC currently
+requires completely observed counts.
+
+The formulas above apply to identified rows under their stated
+assumptions. See [the applied suppression
+example](https://joonho112.github.io/sitemix/articles/a6-diagnostics-and-suppression.md)
+for input detection and the returned fields.
+
+## Compare the calculations on simulated counts
+
+The example checks matching D0/count estimates and, for D1, the zero
+off-diagonals, recorded assumptions, and agreement between the diagonal
+and row `se^2`. The D1 call captures its one expected
+working-independence warning:
 
 ``` r
 
 counts <- readRDS(system.file("extdata", "prek_sim_counts.rds",
                               package = "sitemix"))
 
-# AG1: D0 = Scenario A
+# Compare D0 with the same binomial counts
 d0 <- counts[counts$year == 2024, c("site_id", "year", "n_jt", "c_jt_frpm")]
 d0$indicator <- "frpm"
 d0$c_jt <- d0$c_jt_frpm
@@ -195,13 +206,13 @@ est_a <- sm_estimate_from_counts(
 est_d0 <- sm_estimate_from_aggregates(
   d0, family = "binomial", indicator = "frpm"
 )
-canonical_numeric <- c("theta_raw", "theta_hat", "se_raw", "se", "n")
-stopifnot(all(vapply(canonical_numeric, function(field) {
+numeric_fields <- c("theta_raw", "theta_hat", "se_raw", "se", "n")
+stopifnot(all(vapply(numeric_fields, function(field) {
   isTRUE(all.equal(est_a[[field]], est_d0[[field]], tolerance = 1e-10))
 }, logical(1))))
 stopifnot(!identical(est_a$input_mode, est_d0$input_mode))
 
-# AG2 + AG3: D1 working independence
+# Check D1 working independence and the recorded unit relationship
 d1_long <- rbind(
   data.frame(site_id = d0$site_id, year = d0$year,
              indicator = "frpm",
@@ -233,24 +244,27 @@ stopifnot(attr(est_d1, "d1_regime") == "D1a")
 stopifnot(all.equal(unname(diag(V1)), unname(grp$se^2), tolerance = 1e-12))
 ```
 
-All three invariants hold.
+The checks pass for these complete simulated counts. They verify the
+implemented calculations and recorded assumptions, not the
+appropriateness of working independence for a particular publisher’s
+data.
 
-## 7. Where to go next
+## Related methods and examples
 
-- [M7 · Fréchet envelope
-  theory](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md)
+- [Pairwise Fréchet bounds and projected dependence
+  scenarios](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md)
   for formal raw pairwise intervals and the separate K \> 2 projected
-  stress-scenario semantics.
-- [A5 · Published aggregates D0 /
-  D1](https://joonho112.github.io/sitemix/articles/a5-published-aggregates.md)
+  dependence scenarios.
+- [Estimating proportions from published
+  aggregates](https://joonho112.github.io/sitemix/articles/a5-published-aggregates.md)
   for the applied walkthrough.
-- [M2 · Scalar SE —
-  binomial](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
+- [Binomial standard errors and
+  transformations](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
   for the row-level SE derivation reused by D0.
-- [M6 · Variance smoothing
-  theory](https://joonho112.github.io/sitemix/articles/m6-variance-smoothing-theory.md)
-  for the experimental append-only log-variance smoother that can be
-  applied to the same row-level SEs.
+- [Experimental models for variance
+  smoothing](https://joonho112.github.io/sitemix/articles/m6-variance-smoothing-theory.md)
+  for the experimental log-variance smoother that can be applied to the
+  same row-level SEs.
 
 ## References
 

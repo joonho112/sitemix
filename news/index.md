@@ -2,6 +2,16 @@
 
 ## sitemix 0.3.0 (development)
 
+### Documentation
+
+- Reorganized help, examples, and method articles around inputs,
+  returned estimates, and interpretation. Clarified scales, boundary
+  calculations, finite-population corrections, suppression, smoothing,
+  and Fréchet results.
+- Updated article titles and navigation while preserving article URLs.
+  Package calculations, public arguments, and example data are
+  unchanged.
+
 ### Example data is now fully simulated
 
 - **`alprek_subset` is replaced by `prek_sim`.** The example panel
@@ -154,7 +164,7 @@ data-contract hardening in v0.2.0; applied readers can skim them.*
   summary, row, and covariance levels before conversion; align complete
   tuple groups by `indicator_order`; use `theta_hat` only with a
   compatible reported-scale matrix or explicitly pair `theta_raw` with a
-  validated raw matrix; and evaluate named contrasts with $`a^\top V a`$
+  validated raw matrix; and evaluate named contrasts with a^\top V a
   without assuming invertibility. Stale matrices, invalid smoothing
   provenance, suppression, and sensitivity coordinates fail closed.
   Fréchet projected matrices remain separately labeled stress scenarios,

@@ -1,55 +1,82 @@
-# A3 · Scenario A — binomial estimates
+# Estimating proportions for a binary indicator
 
 Abstract
 
-For applied researchers running Scenario A (one binary indicator per
-site-year, the modal sitemix call) who want to understand the
-boundary-method, reporting-transform, and accountability-threshold
-knobs. This vignette walks through the knobs with worked examples on
-`prek_sim`.
+Estimate a binary indicator at each site using simulated
+pre-kindergarten data. Compare reporting scales, inspect proportions at
+0 or 1, and apply sample-size flags without changing the estimates.
 
-## Overview
+This example estimates one binary indicator at each site. We use FRPM in
+2024 to compare reporting scales and TANF in 2021 to examine sites with
+no observed participants. Both come from `prek_sim`, a fully simulated
+panel of 50 pre-kindergarten sites. The results illustrate calculations
+and do not describe real children or programs.
 
-### 1. Why you are here
+For a first introduction to the returned columns, see [Getting started
+with site-level
+proportions](https://joonho112.github.io/sitemix/articles/a1-getting-started.md).
 
-Asha (back from A1) noticed that some of her sites are tiny: only one or
-two students were enrolled in 2024, and the resulting raw proportions
-are 0/1 or 1/1. Her colleague asked: “Is the standard error meaningful
-at a zero-cell row? And why is the default arcsine instead of the raw
-proportion?” She came here for the knobs that answer these questions.
+## Choose the reporting scale
 
-### 2. What you will leave with
+Select the year, set `family = "binomial"`, and name the binary column
+in `indicator`. The denominator is the number of students with a
+non-missing value for that indicator at each site. `theta_raw` always
+retains the observed proportion for these complete student records.
 
-By the end you will have:
+`vst` sets the scale of the pair `theta_hat` and `se`. The following
+calls use the same students and differ only in that choice:
 
-- Comfort with the three boundary methods (`"wilson_floor"`,
-  `"agresti_coull"`, `"none"`) and when to pick which.
-- A clear picture of the three reporting transforms (`"arcsine"`,
-  `"logit"`, `"none"`) — only `"arcsine"` is variance-stabilizing.
-- The role of `accountability_n` and how the `flag_below_accountability`
-  flag supports reporting decisions.
-- A side-by-side count vs student-row demonstration that confirms the
-  T2.5 identity numerically.
+``` r
 
-**Prerequisites.** [A1 · Getting
-started](https://joonho112.github.io/sitemix/articles/a1-getting-started.md).
+arc <- sm_estimate(subset(prek_sim, year == 2024),
+                   family = "binomial", indicator = "frpm",
+                   vst = "arcsine")
+lgt <- sm_estimate(subset(prek_sim, year == 2024),
+                   family = "binomial", indicator = "frpm",
+                   vst = "logit")
+raw <- sm_estimate(subset(prek_sim, year == 2024),
+                   family = "binomial", indicator = "frpm",
+                   vst = "none")
 
-> **About the example data.** All results here are computed live from
-> `prek_sim`, a fully simulated 50-site pre-kindergarten panel shipped
-> in the package (see
-> [`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)).
-> It describes no real children, sites, or program, and must not be
-> cited as empirical Pre-K results. Every code block runs offline with a
-> fixed random seed.
+scale_comparison <- data.frame(
+  site_id = raw$site_id[1],
+  n = raw$n[1],
+  estimate_scale = c("none", "arcsine", "logit"),
+  theta_raw = raw$theta_raw[1],
+  theta_hat = c(raw$theta_hat[1], arc$theta_hat[1], lgt$theta_hat[1]),
+  se = c(raw$se[1], arc$se[1], lgt$se[1])
+)
+print(scale_comparison, row.names = FALSE)
+#>  site_id n estimate_scale theta_raw  theta_hat        se
+#>     S001 9           none 0.1111111  0.1111111 0.1047566
+#>     S001 9        arcsine 0.1111111  0.3398369 0.1666667
+#>     S001 9          logit 0.1111111 -2.0794415 1.0606602
+```
 
-## 3. The boundary methods
+These three rows describe the same site and observed proportion. With
+`vst = "none"`, `theta_hat` is the proportion and `se` is on the same
+scale. With `"arcsine"`, the estimate is `asin(sqrt(theta_raw))`; with
+`"logit"`, it is the log-odds. Keep `theta_hat` with the `se` on its own
+scale rather than mixing a raw estimate with a transformed SE. Use
+`theta_raw` and `se_raw` when you need the raw-scale pair.
 
-Boundary cells are rows where `theta_raw` is exactly 0 or 1 (the
-numerator equals 0 or the denominator). Boundary policy matters most on
-raw-scale output; under the default arcsine VST, the row-level `se`
-remains the closed-form arcsine SE while `se_raw` records the
-boundary-safe raw fallback. The example below uses `vst = "none"` so the
-`var_method` labels are visible.
+The default arcsine square-root transform stabilizes the first-order
+binomial variance. In these calls, without finite-population or bias
+correction and with `anscombe = FALSE`, the implemented arcsine SE is
+`1 / (2 * sqrt(n))`. This is a delta-method calculation, not an exact
+finite-sample variance for the transformed random variable. Logit is a
+reporting transform for log-odds and requires an observed proportion
+strictly between 0 and 1. The FRPM rows above meet that condition; logit
+calls at a boundary are rejected. See [Binomial standard errors and
+transformations](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
+for the formulas and the additional correction options.
+
+## Inspect proportions at 0 or 1
+
+A boundary proportion occurs when no students, or all students, have the
+indicator. TANF is rare in the simulated panel, so the 2021 slice
+provides examples with zero observed counts. Use raw-scale output to
+compare the three `boundary_method` options:
 
 ``` r
 
@@ -68,88 +95,68 @@ ac <- sm_estimate(
   vst             = "none",
   boundary_method = "agresti_coull"
 )
+
+unadjusted <- sm_estimate(
+  subset(prek_sim, year == 2021),
+  family          = "binomial",
+  indicator       = "tanf",
+  vst             = "none",
+  boundary_method = "none"
+)
 ```
 
-Inspect a few sites and look at the `var_method` column:
+The estimates remain the observed proportions. The boundary methods
+change the uncertainty assigned to the zero-count rows:
 
 ``` r
 
 side_by_side <- data.frame(
-  site_id      = wf$site_id,
-  n            = wf$n,
-  theta_raw    = wf$theta_raw,
-  wilson_se    = wf$se,
-  wilson_meth  = wf$var_method,
-  agresti_se   = ac$se,
-  agresti_meth = ac$var_method
+  site_id    = wf$site_id,
+  n          = wf$n,
+  theta_raw  = wf$theta_raw,
+  wilson_se  = wf$se,
+  agresti_se = ac$se,
+  plugin_se  = unadjusted$se
 )
 print(as.data.frame(head(side_by_side, 6)), row.names = FALSE)
-#>  site_id  n  theta_raw  wilson_se               wilson_meth agresti_se
-#>     S001  8 0.00000000 0.08275855 wilson_boundary_surrogate 0.10712654
-#>     S002  7 0.00000000 0.09039208 wilson_boundary_surrogate 0.11595826
-#>     S003  9 0.00000000 0.07631391 wilson_boundary_surrogate 0.09952619
-#>     S004  8 0.00000000 0.08275855 wilson_boundary_surrogate 0.10712654
-#>     S005 11 0.09090909 0.08667842                  binomial 0.08667842
-#>     S006 11 0.00000000 0.06603003 wilson_boundary_surrogate 0.08712880
-#>                      agresti_meth
-#>  agresti_coull_boundary_surrogate
-#>  agresti_coull_boundary_surrogate
-#>  agresti_coull_boundary_surrogate
-#>  agresti_coull_boundary_surrogate
-#>                          binomial
-#>  agresti_coull_boundary_surrogate
+#>  site_id  n  theta_raw  wilson_se agresti_se  plugin_se
+#>     S001  8 0.00000000 0.08275855 0.10712654 0.00000000
+#>     S002  7 0.00000000 0.09039208 0.11595826 0.00000000
+#>     S003  9 0.00000000 0.07631391 0.09952619 0.00000000
+#>     S004  8 0.00000000 0.08275855 0.10712654 0.00000000
+#>     S005 11 0.09090909 0.08667842 0.08667842 0.08667842
+#>     S006 11 0.00000000 0.06603003 0.08712880 0.00000000
 ```
 
-When raw-scale `theta_raw` is `0` or `1`, the Wilson method records
-`"wilson_boundary_surrogate"` and the Agresti-Coull method records
-`"agresti_coull_boundary_surrogate"`. Interior rows record `"binomial"`
-under raw output.
+At 0 or 1, the default `"wilson_floor"` records
+`var_method = "wilson_boundary_surrogate"`; `"agresti_coull"` records
+`"agresti_coull_boundary_surrogate"`. These are the package’s positive
+raw-scale uncertainty surrogates based on the Wilson and Agresti–Coull
+constructions (Agresti & Coull, 1998; Wilson, 1927). Both retain
+`theta_raw = C/n`; on raw output, `theta_hat` also stays at that
+observed value. These substitutes for the plug-in variance do not make
+the data less sparse or guarantee accurate small-sample inference.
 
-**When to pick which.** Use `"wilson_floor"` (the default, (Wilson,
-1927)) for accountability-style reports: it floors the SE at a small
-positive number without shifting `theta_raw`. Use `"agresti_coull"`
-(Agresti & Coull, 1998) for the standard z-general adjusted-Wald
-boundary uncertainty surrogate. Both methods retain the observed
-`theta_raw = C/n`; neither replaces the point estimate. Use `"none"`
-only for diagnostic comparisons (zero-cell SEs collapse).
+With `boundary_method = "none"`, the raw plug-in SE is zero at 0 or 1. A
+zero from this calculation does not establish that the population
+proportion is known. Interior rows use the ordinary binomial calculation
+and record `var_method = "binomial"` in all three calls.
 
-## 4. The reporting transforms
+With the default arcsine output and no additional corrections, `se`
+continues to use `1 / (2 * sqrt(n))` at boundaries, while `se_raw`
+records the selected raw-scale boundary calculation. Inspect the scale
+and method together when interpreting a standard error.
 
-`vst` selects the reporting scale of `theta_hat` and `se` via three
-choices:
+## Flag small denominators
 
-``` r
+`min_n` and `accountability_n` describe different sample-size flags. The
+default `min_n = 10L` marks `flag_small_n = TRUE` when `n < 10`. The
+default `accountability_n = 30L` marks
+`flag_below_accountability = TRUE` when `n < 30`. These flags retain the
+rows and do not change estimates or standard errors.
 
-arc <- sm_estimate(subset(prek_sim, year == 2024),
-                   family = "binomial", indicator = "frpm",
-                   vst = "arcsine")
-lgt <- sm_estimate(subset(prek_sim, year == 2024),
-                   family = "binomial", indicator = "frpm",
-                   vst = "logit")
-raw <- sm_estimate(subset(prek_sim, year == 2024),
-                   family = "binomial", indicator = "frpm",
-                   vst = "none")
-unique(arc$estimate_scale)
-#> [1] "arcsine"
-unique(lgt$estimate_scale)
-#> [1] "logit"
-unique(raw$estimate_scale)
-#> [1] "none"
-```
-
-The `estimate_scale` column records the chosen scale. The default
-`"arcsine"` is the only variance-stabilizing choice; `"logit"` is a
-reporting transform useful when downstream models expect log-odds; and
-`"none"` retains the raw proportion scale for inspection or direct
-reporting (see
-[M2](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)).
-
-## 5. The accountability threshold
-
-`accountability_n` is the row-level denominator below which a row is
-flagged `flag_below_accountability = TRUE`. The default is 30. Smaller
-sites are estimated but flagged so an analyst can apply the project’s
-publication or modeling policy explicitly.
+Set a reporting threshold from your project’s rules. Here, 50 is an
+illustrative threshold:
 
 ``` r
 
@@ -160,19 +167,45 @@ strict <- sm_estimate(
   accountability_n = 50L
 )
 table(strict$flag_below_accountability)
-#> 
-#> FALSE  TRUE 
+#>
+#> FALSE  TRUE
 #>     7    43
 ```
 
-Setting `accountability_n = 50L` flags rows with fewer than 50
-observations. Use a higher threshold when your project’s rules treat
-sites below 50 as not publishable.
+Rows below 50 observations are flagged, and all 50 sites are still
+present. The package does not decide which rows your report or model
+should use. A sample-size flag also differs from publisher suppression:
+it does not conceal or replace an observed value. Small denominators
+warrant attention to the uncertainty approximation as well as the
+project’s reporting threshold.
 
-## 6. Sufficient-counts identity (T2.5 preview)
+## If the sample comes from a known finite population
 
-Demonstrate that the student-row path and the counts path agree on the
-same underlying data:
+The calls above leave `fpc = NULL`. Supply `fpc` only when a fixed
+site-year population of size `N` is sampled by simple random sampling
+without replacement. The argument takes the population size, not a
+correction multiplier. Every retained group requires `N >= n`; a
+non-scalar vector must align with the input rows and be constant within
+each site-year.
+
+When `N = n`, the complete finite population has been observed, and the
+package returns zero sampling SE. This census result differs from the
+zero plug-in SE at a boundary without a declared sampling design.
+Finite-population correction preserves the point estimates and `n_eff`;
+its variance multiplier depends on the chosen variance rule. See
+[Binomial standard errors and
+transformations](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
+for the plug-in and bias-corrected formulas, and [Using estimates and
+covariance matrices in further
+analyses](https://joonho112.github.io/sitemix/articles/a8-downstream-workflows.md)
+for handling zero-SE rows in later analyses. A census SE describes
+sampling uncertainty under that design; it does not account for
+measurement error or other sources of uncertainty.
+
+## Use counts from the same students
+
+The bundled count table was computed from `prek_sim`. Select the same
+year and indicator to compare the two input types:
 
 ``` r
 
@@ -189,13 +222,26 @@ snap_cnts <- sm_estimate_from_counts(
 )
 stopifnot(all.equal(snap_rows$theta_hat, snap_cnts$theta_hat, tolerance = 1e-10))
 stopifnot(all.equal(snap_rows$se, snap_cnts$se, tolerance = 1e-10))
+c(
+  max_estimate_difference = max(abs(snap_rows$theta_hat - snap_cnts$theta_hat)),
+  max_se_difference = max(abs(snap_rows$se - snap_cnts$se))
+)
+#> max_estimate_difference       max_se_difference
+#>                       0                       0
 ```
 
-The two pathways agree to `1e-10`. This is the T2.5 invariant; the
-formal derivation lives in [M2 · Scalar SE —
-binomial](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md).
+Both differences are zero for this example. The comparison requires
+counts from the same retained observations, including the same
+missing-value exclusions, with matching indicator order and estimation
+options. `input_mode` still distinguishes `"student_level"` from
+`"counts_full_suff"`. The tolerance in the checks is a numerical test
+for this example, not a guarantee for arbitrary input tables.
 
-## 7. Audit
+## Check these example results
+
+These checks apply to the calls above, which use no FPC. In particular,
+positive SEs in the arcsine example are not a rule that excludes valid
+census outputs.
 
 ``` r
 
@@ -207,19 +253,18 @@ stopifnot(all(wf$var_method[wf$theta_raw %in% c(0, 1)] ==
                     "wilson_boundary_surrogate"))
 stopifnot(all(ac$var_method[ac$theta_raw %in% c(0, 1)] ==
                     "agresti_coull_boundary_surrogate"))
+stopifnot(identical(strict$theta_hat, arc$theta_hat))
+stopifnot(identical(strict$se, arc$se))
 ```
 
-## 8. What’s next?
-
-- [A4 · Scenarios B / C — multivariate /
-  multinomial](https://joonho112.github.io/sitemix/articles/a4-multivariate-multinomial.md)
-  if your project has multiple indicators per site-year.
-- [A6 · Diagnostics and
-  suppression](https://joonho112.github.io/sitemix/articles/a6-diagnostics-and-suppression.md)
-  for the per-row audit and the accountability flag tour.
-- [M2 · Scalar SE —
-  binomial](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
-  for the formal delta-method derivation of every SE in this vignette.
+For several indicators at each site, continue to [Analyzing overlapping
+indicators and mutually exclusive
+categories](https://joonho112.github.io/sitemix/articles/a4-multivariate-multinomial.md).
+[Checking estimates and handling suppressed
+data](https://joonho112.github.io/sitemix/articles/a6-diagnostics-and-suppression.md)
+explains how to inspect flagged rows, and [Binomial standard errors and
+transformations](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
+gives the sampling assumptions and calculations used here.
 
 ## References
 

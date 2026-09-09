@@ -1,22 +1,10 @@
-# Estimate site-year rates from sufficient counts
+# Estimate site-year proportions from sufficient counts
 
-`sm_estimate_from_counts()` is the sufficient-counts wrapper around
+`sm_estimate_from_counts()` estimates proportions and standard errors
+from one row of counts per site and year. It calls
 [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-for sites that have already aggregated their student rows into complete
-per-site-year sufficient statistics. It locks `from_counts = TRUE` in
-the underlying dispatch; otherwise the contract – arguments, output
-schema, scale conventions – is identical to
-[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md).
-The sufficient-counts identity guarantees agreement with
-[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-applied to the original student rows to within `1e-10`; see
-[`vignette("m2-scalar-se-binomial", package = "sitemix")`](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
-for the T2.5 invariant.
-
-This wrapper is the recommended public entry point for sufficient
-counts. Its v0.2 formals are frozen, and no argument is deprecated.
-Direct `sm_estimate(..., from_counts = TRUE)` calls remain supported for
-compatibility and produce the same result.
+with `from_counts = TRUE`, so you do not need to set the input type. You
+can also use `sm_estimate(..., from_counts = TRUE)` directly.
 
 ## Usage
 
@@ -36,47 +24,44 @@ sm_estimate_from_counts(
 
 - data:
 
-  A data frame or tibble. Required columns depend on the dispatched
-  Scenario: `(site_id, year, indicator)` for Scenario A from student
-  rows; `(site_id, year, indicators)` for Scenario B;
-  `(site_id, year, indicator)` as a factor or character column for
-  Scenario C from student rows. Sufficient counts require `n_jt` plus
-  family-specific `c_jt_*` columns. Published aggregates use numerator
-  and denominator columns named by `numerator_col` and
-  `denominator_col`.
+  A data frame or tibble containing site and year columns named by
+  `id_cols`. Student rows need the column named by `indicator`, or the
+  binary columns named by `indicators`. Counts input needs `n_jt` and
+  family-specific `c_jt_*` columns. Published aggregates may use the
+  standard aggregate column names or the column mappings below; see
+  [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md).
 
 - family:
 
-  Character scalar. Estimation family selecting the dispatched engine.
-  One of `"binomial"`, `"multivariate"`, or `"multinomial"`. No default;
-  omission raises `sitemix_error_invalid_family`.
+  A single string: `"binomial"`, `"multivariate"`, or `"multinomial"`.
+  Required; omitting it raises `sitemix_error_invalid_family`. Published
+  aggregate input supports only `"binomial"` and `"multivariate"`.
 
 - indicator:
 
-  Character scalar or `NULL` (default `NULL`). Name of the single
-  indicator column in `data`. Required for Scenarios A, C, and D0. For
-  Scenario A the column must be logical or 0/1 numeric; for Scenario C
-  the column must be a factor or character.
+  A single column name, or `NULL` (default). Required for
+  single-indicator student/count input (A) and categorical student input
+  (C). Binary columns must be logical or numeric 0/1; categorical
+  columns must be factors or character vectors. For long-form aggregate
+  input, this argument supplies or replaces the indicator label; `NULL`
+  keeps the labels already in the data.
 
 - indicators:
 
-  Character vector or `NULL` (default `NULL`). For Scenario B, the
-  column names of overlapping binary indicators whose joint moments are
-  estimated. For Scenario C with `from_counts = TRUE` (including
-  `sm_estimate_from_counts`), the explicit category order applied to the
-  supplied `c_jt_*` count columns. For Scenario D1, the marginal column
-  names.
+  A character vector, or `NULL` (default). Names of overlapping binary
+  indicators for B. For multinomial counts (C), gives the category order
+  of the `c_jt_*` columns. For wide-form D1 aggregates, gives the
+  marginal indicator names.
 
 - id_cols:
 
-  Character vector of length two. Column names identifying site and
-  year, in that order. Defaults to `c("site_id", "year")`.
+  A character vector of length two, giving the site and year column
+  names in that order. Defaults to `c("site_id", "year")`.
 
 - accountability_n:
 
-  Positive integer scalar. Threshold for the `flag_below_accountability`
-  output column; rows with \\n\_{jt} \<\\ `accountability_n` are
-  flagged. Defaults to `30L`.
+  A positive whole number. Rows with `n < accountability_n` receive
+  `flag_below_accountability = TRUE`. Defaults to `30L`.
 
 - ...:
 
@@ -85,49 +70,75 @@ sm_estimate_from_counts(
 
 ## Value
 
-A `sitemix_estimates` tibble with the same column structure as
+A `sitemix_estimates` tibble with one row per site-year-indicator. It
+has the same columns and scale information as
 [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md);
-see that function's *Return* section for the canonical column glossary
-and object metadata.
+see that function's *Value* section for the estimates, standard errors,
+optional covariance, and object attributes.
 
 ## Details
 
-The input `data` is one row per site-year with an `n_jt` denominator and
-family-specific `c_jt_*` columns. Scenario A requires one named marginal
-count. Scenario B requires two or more ordered marginal counts plus
-every ordered pairwise co-occurrence count; joint feasibility is
-verified for \\K = 2\\ and \\K = 3\\, while \\K \ge 4\\ count input
-fails closed. Scenario C requires at least two category counts whose row
-sum equals `n_jt`; the category order can be set explicitly by
-`indicators`.
+Each row needs the site and year columns named by `id_cols`, an `n_jt`
+denominator, and count columns for the chosen `family`:
 
-This wrapper raises `sitemix_error_invalid_from_counts` if the caller
-passes `from_counts` explicitly; call
+- `"binomial"` (A):
+
+  One marginal count named `c_jt_<indicator>`, with its label supplied
+  in `indicator`.
+
+- `"multivariate"` (B):
+
+  At least two marginal counts named `c_jt_<indicator>`, plus a
+  co-occurrence count for every pair. Pair names follow the order in
+  `indicators`: for example, `indicators = c("frpm", "snap")` requires
+  `c_jt_frpm`, `c_jt_snap`, and `c_jt_frpm_snap`.
+
+- `"multinomial"` (C):
+
+  At least two category counts in `c_jt_*` columns, summing to `n_jt` in
+  each row. Use `indicators` to set the category order explicitly.
+
+For overlapping indicators, `vjt = TRUE` requests covariance and checks
+whether the counts can come from a common sample. This check supports
+two or three indicators. Counts with four or more indicators are
+accepted when `vjt = FALSE`; requesting covariance for them raises
+`sitemix_error_input_indicator_count`. Use student rows with
 [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-directly if you need to override the wrapper's lock. See the Scenario
-dispatch table in
+if covariance is needed for four or more indicators.
+
+Counts constructed from the same retained student rows, including the
+same missing-value exclusions, give the same estimates and standard
+errors up to numerical rounding when the family, indicator order, and
+estimation options match. Covariance values also agree for supported
+requests. The `input_mode` column distinguishes the two input types.
+
+Do not pass `from_counts` to this function: it is set internally, and
+supplying it raises `sitemix_error_invalid_from_counts`. Use
 [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-for which family / indicator combinations apply.
+to set the input type yourself, or
+[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+for published aggregate rows.
 
 ## See also
 
 - [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-  for the main dispatcher and canonical column glossary.
+  for estimation options and returned columns.
 
 - [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-  for the published-aggregates sister wrapper.
+  for published aggregate rows.
 
 - [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-  for output uncertainty auditing.
+  for checking estimates and their uncertainty.
 
 - [`vignette("a2-input-formats")`](https://joonho112.github.io/sitemix/articles/a2-input-formats.md)
-  for the input-mode decision tree.
+  for choosing an input format.
 
 - [`vignette("a3-scenario-binomial")`](https://joonho112.github.io/sitemix/articles/a3-scenario-binomial.md)
-  for the Scenario A counts pathway.
+  for a binomial example using counts.
 
 - [`vignette("m2-scalar-se-binomial")`](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
-  for the T2.5 sufficient-counts identity.
+  for why sufficient counts reproduce the binomial calculations from
+  student rows.
 
 Other estimation:
 [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md),
@@ -142,7 +153,7 @@ counts_path <- system.file(
 )
 counts <- readRDS(counts_path)
 
-# Build a one-indicator sufficient-counts slice for Scenario A:
+# Estimate SNAP proportions for 2024 from sufficient counts:
 snap_counts <- counts[
   counts$year == 2024,
   c("site_id", "year", "n_jt", "c_jt_snap")

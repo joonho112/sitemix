@@ -1,75 +1,68 @@
 # Package index
 
-## Package
+## Package overview
 
 - [`sitemix`](https://joonho112.github.io/sitemix/reference/sitemix-package.md)
   [`sitemix-package`](https://joonho112.github.io/sitemix/reference/sitemix-package.md)
   : sitemix: Site- and group-level proportions, rates, and sampling
   uncertainty
 
-## Estimate site-year rates
+## Estimate proportions
 
-Main entry points: student rows, sufficient counts, and published
-aggregates. Use
-[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-for the unified dispatcher; the wrappers preconfigure subsets of the
-same signature.
+Estimate site-year proportions from student records, counts, or
+published aggregates. The count and aggregate wrappers select the
+corresponding input path.
 
 - [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
   : Estimate site-year rates and standard errors
 - [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
-  : Estimate site-year rates from sufficient counts
+  : Estimate site-year proportions from sufficient counts
 - [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
   : Estimate site-year rates from published aggregate rows
 
-## Audit uncertainty outputs
+## Check estimates and suppression
 
-Diagnose scalar and covariance uncertainty and audit publisher-side
-suppression before downstream use.
+Examine returned estimates and covariance, or summarize suppression and
+denominator thresholds in a publisher’s input table.
 
 - [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
   : Diagnose uncertainty in a sitemix_estimates tibble
 - [`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md)
-  : Audit aggregate-input suppression and accountability tiers
+  : Summarize suppression and reporting thresholds in aggregate data
 
-## Inspect and stress-test covariance
+## Covariance and dependence
 
-Work with `sm_vcov` matrices directly; compute formal raw pairwise
-Fréchet intervals and separate projected stress scenarios for
-unidentified D1 aggregate dependence.
+Inspect covariance matrices and explore dependence when only marginal
+counts are available. Fréchet results separate pairwise intervals from
+projected dependence scenarios.
 
 - [`sm_vcov()`](https://joonho112.github.io/sitemix/reference/sm_vcov.md)
   : Construct or inspect a within-site covariance object
 - [`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)
-  : Compute D1 pairwise Fréchet intervals and projected stress scenarios
+  : Explore dependence between published marginal proportions
 
-## Smooth standard errors (experimental)
+## Experimental variance smoothing
 
-Opt-in generalized variance-function/log-variance sensitivity
-alternatives. A fixed-seed audit found no evidence for default
-promotion; append-only output preserves canonical SE columns and does
-not guarantee improvement.
+Fit a log-variance model to eligible rows. The function adds alternative
+standard errors by default; improved performance is not guaranteed.
 
 - [`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md)
-  : Smooth standard errors with an experimental GVF model
+  : Smooth standard errors with an experimental variance model
 
-## Reshape published aggregates
+## Reshape subgroup data
 
-Pivot subgroup files into the schema expected by
-[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md).
-Framing X turns subgroups into sites; Framing Y turns them into
-indicators.
+Prepare subgroup tables for estimation. Treat subgroups as separate
+sites or as indicators within a site, according to the analysis.
 
 - [`sm_pivot_subgroups_to_sites()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_sites.md)
-  : Pivot subgroup aggregate rows into subgroup-as-site input (Framing
-  X)
+  : Prepare published counts for subgroup rates or compositions
 - [`sm_pivot_subgroups_to_indicators()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_indicators.md)
-  : Pivot subgroup aggregate rows into subgroup-as-indicator input
-  (Framing Y)
+  : Prepare subgroup rates as indicators within each site
 
-## Data
+## Simulated example data
 
-Bundled example data for documentation, examples, and tests.
+A simulated pre-kindergarten panel for learning and checking the
+methods.
 
 - [`prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)
   : Simulated pre-kindergarten site panel

@@ -1,114 +1,101 @@
 # sitemix: Site- and group-level proportions, rates, and sampling uncertainty
 
-`sitemix` produces site- and group-level point estimates, standard
-errors, and optional covariance matrices from student rows, sufficient
-counts, or published aggregates. The package covers five estimation
-scenarios and ships diagnostics, publisher-side suppression auditing,
-optional variance smoothing, and raw pairwise Fréchet intervals with
-projected stress scenarios for unidentified D1 covariance.
+`sitemix` estimates site- and group-level proportions and their sampling
+uncertainty. Use
+[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
+for student rows,
+[`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
+for sufficient counts, or
+[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+for published summaries. The results include point estimates, standard
+errors, and optional within-site covariance matrices.
 
-## Scenarios
+[`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
+checks the returned estimates and uncertainty at the summary, row, or
+covariance level. Before estimating from published data,
+[`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md)
+summarizes suppressed rows and sample-size reporting thresholds.
 
-Five estimation scenarios are dispatched by
-[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md):
+## Estimation families and aggregate inputs
+
+The package supports the following cases. Covariance matrices are
+included when `vjt = TRUE`; see
+[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
+for supported options and input requirements.
 
 - **Scenario A — binomial**:
 
-  One binary indicator per site-year. Input is student rows via
-  [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-  or sufficient counts via
-  [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md).
-  Covariance matrix is \\1 \times 1\\.
+  One binary indicator per site-year, supplied as student rows or
+  sufficient counts. The covariance matrix is \\1 \times 1\\.
 
 - **Scenario B — multivariate**:
 
-  Overlapping binary indicators per site-year with SUR-style covariance.
-  Input is student rows or complete sufficient counts containing
-  marginal and pairwise co-occurrence counts. Covariance is \\K \times
-  K\\.
+  Overlapping binary indicators per site-year with seemingly unrelated
+  regression (SUR) covariance. Input is student rows or complete
+  sufficient counts containing marginal and pairwise co-occurrence
+  counts. The covariance is \\K \times K\\, where \\K\\ is the number of
+  indicators.
 
 - **Scenario C — multinomial**:
 
-  Mutually exclusive categories summing to the denominator. Simplex
-  covariance with analytic rank \\S - 1\\, where \\S\\ is positive
-  observed support. Input is student rows or complete category counts,
-  not published D1 marginals.
+  Mutually exclusive categories whose counts sum to the denominator. The
+  covariance has simplex structure and analytic support rank \\S - 1\\,
+  where \\S\\ is the number of categories with positive observed counts.
+  Input is student rows or complete category counts, not published D1
+  marginals.
 
 - **Scenario D0 — aggregate binomial**:
 
-  Published numerator/denominator per site-year. Dispatch via
-  [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md).
+  Published numerator and denominator for one indicator per site-year.
 
 - **Scenario D1 — aggregate marginal**:
 
-  Multiple published marginals per site-year with working-independence
-  covariance. Dispatch via
-  [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md).
-  Use
+  Multiple published marginal rates per site-year. Marginals alone do
+  not identify cross-indicator covariance; the optional matrix assumes
+  working independence. See
   [`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)
-  for sensitivity.
+  for pairwise intervals and projected dependence scenarios.
 
-## Entry points
+## Examples and methods
 
-- [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md):
-
-  Main dispatcher for student rows, counts, and aggregates.
-
-- [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md):
-
-  Sufficient-counts wrapper.
-
-- [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md):
-
-  Published-aggregates wrapper with D0 / D1 dispatch.
-
-- [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md):
-
-  Uncertainty audit at three levels (summary / row / vcov).
-
-- [`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md):
-
-  Publisher-side three-tier suppression audit.
-
-## Vignettes
-
-**Applied track** (a1 — a9) walks through workflows for student rows,
-sufficient counts, published aggregates, diagnostics, smoothing,
-downstream workflows, and a real-data case study. Start with
+The applied vignettes (a1 to a9) show how to prepare inputs, estimate
+proportions, check uncertainty, and use the results in further analyses.
+Start with
 [`vignette("a1-getting-started", package = "sitemix")`](https://joonho112.github.io/sitemix/articles/a1-getting-started.md).
-
-**Method track** (m1 — m8) covers the formal specifications: scalar SE
-pipelines, SUR and multinomial covariance, aggregate engines, variance
-smoothing theory, Fréchet pairwise/stress semantics, and the output
-contract. Start with
+The methods vignettes (m1 to m8) explain the sampling assumptions,
+standard-error and covariance calculations, and sensitivity analyses.
+Start with
 [`vignette("m1-statistical-foundations", package = "sitemix")`](https://joonho112.github.io/sitemix/articles/m1-statistical-foundations.md).
 
-## Bundled data
-
-[prek_sim](https://joonho112.github.io/sitemix/reference/prek_sim.md) is
-a fully simulated 50-site pre-kindergarten panel used throughout the
-documentation and tests. The package also ships
-`inst/extdata/prek_sim_counts.rds` for sufficient-counts examples.
+The examples draw on
+[prek_sim](https://joonho112.github.io/sitemix/reference/prek_sim.md), a
+fully simulated panel of 50 pre-kindergarten sites; the complete case
+study uses this simulated panel. A corresponding count table is
+available in `inst/extdata/prek_sim_counts.rds`; see
+[prek_sim](https://joonho112.github.io/sitemix/reference/prek_sim.md)
+for the data description and file access examples.
 
 ## See also
 
 - [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-  for the main dispatcher.
+  for estimation options and returned columns.
 
 - [`sm_vcov()`](https://joonho112.github.io/sitemix/reference/sm_vcov.md)
-  for the covariance-object contract.
+  for covariance matrices and their scale information.
 
 - [`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)
-  for D1 dependence sensitivity.
+  for D1 pairwise intervals and projected stress scenarios, whose
+  interpretation depends on the sampling regime.
 
 - [`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md)
-  for optional smoothing alternatives.
+  for experimental variance smoothing that appends alternative standard
+  errors by default.
 
 Repository: <https://github.com/joonho112/sitemix>; Issues:
 <https://github.com/joonho112/sitemix/issues>.
 
 ## Author
 
-**Maintainer**: JoonHo Lee <jlee296@ua.edu> (ORCID:
+**Author and maintainer**: JoonHo Lee <jlee296@ua.edu> (ORCID:
 [0009-0006-4019-8703](https://orcid.org/0009-0006-4019-8703)), Assistant
 Professor, The University of Alabama.

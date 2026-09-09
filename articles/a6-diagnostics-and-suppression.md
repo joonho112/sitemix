@@ -1,53 +1,23 @@
-# A6 · Diagnostics and suppression
+# Checking estimates and handling suppressed data
 
 Abstract
 
-For applied researchers who have a `sitemix_estimates` tibble and need
-to audit its uncertainty before downstream use. This vignette walks
-through all three
-[`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-levels (summary, row, vcov) and the three-tier
-[`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md)
-framework.
+Check site estimates, standard errors, and covariance matrices with
+[`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md).
+Examine suppression and denominator thresholds in published input data
+with
+[`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md).
 
-## Overview
-
-### 1. Why you are here
-
-Asha (from A1) and Dana (from A5) both arrive here with the same
-question: “My tibble exists; how do I confirm its estimates and
-uncertainty are coherent?” The answer is the same two-function audit:
-[`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-(post-estimation row/vcov audit) and
-[`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md)
-(publisher-side audit applicable to D0 / D1 inputs).
-
-### 2. What you will leave with
-
-By the end you will have:
-
-- Comfort with all three
-  [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-  levels.
-- A reading of the four canonical flag columns (`flag_small_n`,
-  `flag_below_accountability`, `flag_zero_cell`, `flag_suppressed`).
-- A three-tier suppression report and a red-flags checklist you can
-  paste into a methods appendix.
-
-**Prerequisites.** [A1 · Getting
+We check estimates of free and reduced-price meal participation (FRPM)
+at each site in 2024. The `prek_sim` data describe 50 simulated
+pre-kindergarten sites; the results illustrate calculations rather than
+findings about real children or programs. For the first estimation call,
+see [Getting
 started](https://joonho112.github.io/sitemix/articles/a1-getting-started.md).
 
-> **About the example data.** All results here are computed live from
-> `prek_sim`, a fully simulated 50-site pre-kindergarten panel shipped
-> in the package (see
-> [`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)).
-> The diagnostics run on a `sitemix_estimates` tibble produced from that
-> sample, and the suppression section uses its companion
-> `prek_sim_counts` count file. It describes no real children, sites, or
-> program, and must not be cited as empirical Pre-K results. Every code
-> block runs offline with a fixed random seed.
+## Check the estimates as a group
 
-## 3. Set up an estimates tibble
+First estimate each site’s proportion and standard error:
 
 ``` r
 
@@ -58,113 +28,104 @@ est <- sm_estimate(
 )
 ```
 
-## 4. `sm_diagnose(level = "summary")` — one row per object
-
-The default `level = "summary"` returns one row summarizing the object,
-with denominator percentiles, tier counts, and intrinsic uncertainty
-facts.
+The default
+[`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
+call returns one row describing the entire result. Start with the number
+of estimates, their standard errors, and the counts flagged by the
+denominator thresholds:
 
 ``` r
 
 diag_s <- sm_diagnose(est, verbose = FALSE)
 class(diag_s)
-#> [1] "sitemix_diagnostics_summary" "tbl_df"                     
+#> [1] "sitemix_diagnostics_summary" "tbl_df"
 #> [3] "tbl"                         "data.frame"
-print(as.data.frame(diag_s), row.names = FALSE)
-#>    family        sitemix_role n_cells n_groups n_sites n_years n_indicators
-#>  binomial summary_uncertainty      50       50      50       1            1
-#>  n_flag_small_n n_flag_zero_cell n_flag_both n_flag_suppressed
-#>               4                0           0                 0
-#>  n_flag_below_accountability n_identified n_suppressed_missing
-#>                           33           50                    0
-#>  n_suppression_sensitivity n_zero_uncertainty_census min_n median_n max_n
-#>                          0                         0     8     23.5   103
-#>  estimate_scale v_present k_present n_psd_repair_fired
-#>         arcsine     FALSE     FALSE                 NA
-#>  scalar_uncertainty_finite scalar_se_positive scalar_se_nonpositive_unexplained
-#>                       TRUE               TRUE                             FALSE
-#>  indicator_scale_consistent v_valid estimate_vcov_scale_compatible
-#>                        TRUE      NA                             NA
-#>  suppression_sensitivity_present suppression_sensitivity_role
-#>                            FALSE                         none
-#>  sensitivity_numeric_variance_available sensitivity_acknowledged
-#>                                      NA                       NA
-#>  smoothing_present smoothing_provenance_valid smoothing_v_relation v_stale
-#>              FALSE                         NA                 <NA>   FALSE
-#>  diag_severity                    diag_notes n_var_method_arcsine_vst
-#>           note small_n; below_accountability                       50
+print(as.data.frame(diag_s)[, c(
+  "n_cells", "n_flag_small_n", "n_flag_below_accountability",
+  "scalar_uncertainty_finite", "scalar_se_positive",
+  "indicator_scale_consistent", "diag_severity"
+)], row.names = FALSE)
+#>  n_cells n_flag_small_n n_flag_below_accountability scalar_uncertainty_finite
+#>       50              4                          33                      TRUE
+#>  scalar_se_positive indicator_scale_consistent diag_severity
+#>                TRUE                       TRUE          note
 ```
 
-Key columns:
+Here `n_cells` is 50: one estimate per site. `scalar_uncertainty_finite`
+checks identified estimates and standard errors; intentionally missing
+suppression results are counted separately. `indicator_scale_consistent`
+checks that each indicator uses one estimate scale. Passing these checks
+does not establish that a particular subsequent model is appropriate.
 
-- `n_cells` — total rows.
-- `n_flag_small_n` — rows below `min_n`.
-- `n_flag_below_accountability` — rows below `accountability_n`.
-- `scalar_uncertainty_finite` — retained estimates and SEs are finite.
-- `scalar_se_positive` — retained scalar SEs are strictly positive. An
-  exact SRSWOR census has zero uncertainty by design; it sets this fact
-  to `FALSE` but is classified as the note `zero_uncertainty_census`.
-- `indicator_scale_consistent` — each indicator uses one estimate scale.
-- `v_valid` and `estimate_vcov_scale_compatible` — validity and scale
-  compatibility when a `V` list-column is present.
-- `suppression_sensitivity_role` — either `none` or the explicit
-  `nonidentified_variance_sensitivity` role.
-- `smoothing_v_relation` and `v_stale` — whether an experimental scalar
-  smoothing result is absent, matching, incompatible, or mixed relative
-  to `V`, and whether a matching-scale matrix was left stale.
+`scalar_se_positive` is `FALSE` for an exact census under simple random
+sampling without replacement (SRSWOR), because its sampling standard
+error is zero. Such rows receive a `zero_uncertainty_census` note. Keep
+them distinguishable from unexplained zero standard errors, and do not
+give zero-SE rows ordinary inverse-variance weights.
 
-The same severity priority is used at every level:
+## Find rows that need attention
 
-| Severity | Intrinsic meaning | Representative facts |
-|----|----|----|
-| `error` | Invalid or internally incoherent uncertainty | unexplained nonpositive SE, mixed scale within one indicator, invalid smoothing provenance, stale matching-scale `V` |
-| `warning` | Valid object that needs an explicit analytical decision | suppressed-missing row, non-identified variance sensitivity, estimate/`V` scale mismatch, mixed smoothing-to-`V` relation |
-| `note` | Descriptive fact, not invalidity | small denominator, zero cell, accountability threshold, exact SRSWOR census |
-| `ok` | None of the preceding facts applies | coherent identified uncertainty without flagged context |
-
-[`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-calls ordinary `sitemix_estimates` validation first. It summarizes a
-validated object; it is not a substitute for validation.
-
-## 5. `sm_diagnose(level = "row")` — one row per site-year-indicator
-
-Use the row level when a reviewer asks “show me every flag for every
-site”:
+Use `level = "row"` to locate the estimates behind the summary counts.
+It returns one row per site-year-indicator, retaining the estimates and
+adding diagnostic columns:
 
 ``` r
 
 diag_r <- sm_diagnose(est, level = "row", verbose = FALSE)
 class(diag_r)
-#> [1] "sitemix_diagnostics_row" "tbl_df"                 
+#> [1] "sitemix_diagnostics_row" "tbl_df"
 #> [3] "tbl"                     "data.frame"
-head(diag_r, 5)
-#> sitemix_diagnostics_row: 5 rows | ok=0 note=5 warning=0 error=0
-#> # A tibble: 5 × 34
-#>   site_id  year indicator theta_raw theta_hat se_raw    se     n n_eff
-#>   <chr>   <int> <chr>         <dbl>     <dbl>  <dbl> <dbl> <int> <dbl>
-#> 1 S001     2024 frpm          0.111     0.340  0.105 0.167     9     9
-#> 2 S002     2024 frpm          0.8       1.11   0.126 0.158    10    10
-#> 3 S003     2024 frpm          0.5       0.785  0.177 0.177     8     8
-#> 4 S004     2024 frpm          0.429     0.714  0.132 0.134    14    14
-#> 5 S005     2024 frpm          0.875     1.21   0.117 0.177     8     8
-#> # ℹ 25 more variables: estimate_scale <chr>, transform <chr>, var_method <chr>,
-#> #   flag_small_n <lgl>, flag_zero_cell <lgl>, input_mode <chr>,
-#> #   flag_suppressed <lgl>, framing <chr>, flag_below_accountability <lgl>,
-#> #   scalar_uncertainty_finite <lgl>, scalar_se_positive <lgl>,
-#> #   scalar_se_nonpositive_unexplained <lgl>, zero_uncertainty_census <lgl>,
-#> #   v_present <lgl>, v_valid <lgl>, estimate_vcov_scale_compatible <lgl>,
-#> #   suppression_sensitivity_role <chr>, …
+head(as.data.frame(diag_r)[, c(
+  "site_id", "n", "flag_small_n", "flag_below_accountability",
+  "flag_zero_cell", "flag_suppressed", "diag_severity", "diag_notes"
+)], 5)
+#>   site_id  n flag_small_n flag_below_accountability flag_zero_cell
+#> 1    S001  9         TRUE                      TRUE          FALSE
+#> 2    S002 10        FALSE                      TRUE          FALSE
+#> 3    S003  8         TRUE                      TRUE          FALSE
+#> 4    S004 14        FALSE                      TRUE          FALSE
+#> 5    S005  8         TRUE                      TRUE          FALSE
+#>   flag_suppressed diag_severity                    diag_notes
+#> 1           FALSE          note small_n; below_accountability
+#> 2           FALSE          note          below_accountability
+#> 3           FALSE          note small_n; below_accountability
+#> 4           FALSE          note          below_accountability
+#> 5           FALSE          note small_n; below_accountability
 ```
 
-The row-level diagnostic includes the severity tier and every flag
-column for every row.
+The flags identify different reasons to inspect a row:
 
-## 6. `sm_diagnose(level = "vcov")` — covariance audit (Scenarios B/C/D1)
+| Flag | Meaning |
+|----|----|
+| `flag_small_n` | The denominator is below the estimation call’s `min_n` (default 10). |
+| `flag_below_accountability` | The denominator is below `accountability_n` (default 30). |
+| `flag_zero_cell` | The observed numerator is zero or equals the denominator. It is `NA` when suppression hides the numerator. |
+| `flag_suppressed` | The published input row was identified as suppressed; individual-student input has no such rows. |
 
-When the tibble was produced with `vjt = TRUE`, the `vcov` level reports
-the minimum eigenvalue, its scale-aware PSD tolerance, matrix validity,
-estimate/`V` scale compatibility, and smoothing/stale-`V` facts per
-site-year:
+Read `diag_notes` alongside `diag_severity`. The severity uses the
+following priority; the first applicable level is reported:
+
+| Severity | Examples of the conditions recorded |
+|----|----|
+| `error` | Unexplained nonpositive SE, mixed scales within an indicator, inconsistent smoothing information, or a matrix no longer matching same-scale SEs. |
+| `warning` | Suppressed-missing or variance-sensitivity rows, an estimate/covariance scale mismatch, or mixed smoothing-to-matrix scale relations. |
+| `note` | Small denominators, boundary proportions, reporting thresholds, or an exact SRSWOR census. |
+| `ok` | None of the preceding conditions applies. |
+
+These values are returned data. A `diag_severity` value of `"warning"`
+does not mean that the call emitted an R warning. Similarly,
+`diag_warnings` and `diag_errors` contain diagnostic labels rather than
+conditions raised by the call.
+[`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
+validates the input first, so an invalid object may stop the call before
+any table is returned. `verbose = FALSE` suppresses the printed summary,
+not validation errors.
+
+## Check covariance matrices and their scales
+
+When estimates include `V` (`vjt = TRUE`), `level = "vcov"` returns one
+row per site-year covariance matrix. For overlapping FRPM and SNAP
+indicators, request the matrices during estimation:
 
 ``` r
 
@@ -176,38 +137,50 @@ est_b <- sm_estimate(
 )
 diag_v <- sm_diagnose(est_b, level = "vcov", verbose = FALSE)
 class(diag_v)
-#> [1] "sitemix_diagnostics_vcov" "tbl_df"                  
+#> [1] "sitemix_diagnostics_vcov" "tbl_df"
 #> [3] "tbl"                      "data.frame"
-head(diag_v, 5)
-#> sitemix_diagnostics_vcov: 5 matrices | PSD ok=5/5 | PSD repairs=0 | scale=raw | note=0 | warning=5 error=0
-#> # A tibble: 5 × 29
-#>   site_id  year family     K indicator_order matrix_rank min_eigenvalue  psd_tol
-#>   <chr>   <int> <chr>  <int> <list>                <int>          <dbl>    <dbl>
-#> 1 S001     2024 multi…     2 <chr [2]>                 2        0.0101  5.69e-16
-#> 2 S002     2024 multi…     2 <chr [2]>                 2        0.0138  6.60e-16
-#> 3 S003     2024 multi…     2 <chr [2]>                 2        0.0107  9.73e-16
-#> 4 S004     2024 multi…     2 <chr [2]>                 2        0.00932 6.47e-16
-#> 5 S005     2024 multi…     2 <chr [2]>                 2        0.00586 8.88e-16
-#> # ℹ 21 more variables: psd_ok <lgl>, v_valid <lgl>, psd_repair <chr>,
-#> #   vcov_method <chr>, vcov_scale <chr>, estimate_scale <chr>,
-#> #   matrix_boundary_rule <chr>, scalar_correction_rule <list>,
-#> #   positive_support <int>, n_jt <int>, n_eff <dbl>, simplex_residual <dbl>,
-#> #   row_sum_zero_ok <lgl>, repeated_v_equal <lgl>,
-#> #   zero_uncertainty_census <lgl>, estimate_vcov_scale_compatible <lgl>,
-#> #   smoothing_provenance_valid <lgl>, smoothing_v_relation <chr>, …
+head(as.data.frame(diag_v)[, c(
+  "site_id", "K", "min_eigenvalue", "psd_tol", "v_valid",
+  "estimate_scale", "vcov_scale", "estimate_vcov_scale_compatible",
+  "diag_severity"
+)], 5)
+#>   site_id K min_eigenvalue      psd_tol v_valid estimate_scale vcov_scale
+#> 1    S001 2    0.010143277 5.694304e-16    TRUE        arcsine        raw
+#> 2    S002 2    0.013783009 6.598666e-16    TRUE        arcsine        raw
+#> 3    S003 2    0.010701568 9.725996e-16    TRUE        arcsine        raw
+#> 4    S004 2    0.009315201 6.467295e-16    TRUE        arcsine        raw
+#> 5    S005 2    0.005859375 8.881784e-16    TRUE        arcsine        raw
+#>   estimate_vcov_scale_compatible diag_severity
+#> 1                          FALSE       warning
+#> 2                          FALSE       warning
+#> 3                          FALSE       warning
+#> 4                          FALSE       warning
+#> 5                          FALSE       warning
 ```
 
-If any row has `min_eigenvalue < -psd_tol`, the matrix is not PSD and
-ordinary object validation fails before diagnostics can summarize it.
-For a validated audit, require `v_valid == TRUE`; then interpret
-`estimate_vcov_scale_compatible`, `smoothing_v_relation`, and `v_stale`
-separately.
+Here `v_valid` is `TRUE`, but `estimate_vcov_scale_compatible` is
+`FALSE`: the default estimates use the arcsine scale, while these
+multivariate matrices stay on the raw probability scale. The diagnostic
+records this as a warning. Use estimates and a covariance matrix on
+compatible scales for a joint analysis; a valid matrix alone is not
+enough.
 
-## 7. Suppression report (D0 / D1 only)
+`min_eigenvalue` and `psd_tol` describe the positive-semidefinite check.
+A matrix with `min_eigenvalue < -psd_tol` fails input validation before
+diagnostics can summarize it. If smoothing has been used, also inspect
+`smoothing_v_relation` and `v_stale` to distinguish scale differences
+from a matrix that no longer matches the standard errors on its own
+scale. See [Understanding the returned
+estimates](https://joonho112.github.io/sitemix/articles/m8-output-contract.md)
+for the scalar and matrix scale conventions.
 
+## Examine suppression in published input
+
+Before estimating published numerator/denominator pairs, use
 [`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md)
-audits the publisher’s three-tier denominator regime before estimation.
-Build a D0 slice with a subgroup column:
+to count suppressed rows and compare observed denominators with a
+reporting threshold. This example uses the companion counts from the
+simulated data, grouped by subgroup and year:
 
 ``` r
 
@@ -230,89 +203,65 @@ report <- sm_suppression_report(
   indicator_col   = "indicator",
   subgroup_col    = "subgroup"
 )
-print(as.data.frame(report), row.names = FALSE)
-#>  subgroup year n_rows n_tier1 n_tier2 n_tier3 n_suppressed_hidden_denominator
-#>       all 2021     50       0      32      18                               0
-#>       all 2022     50       0      31      19                               0
-#>       all 2023     50       0      33      17                               0
-#>       all 2024     50       0      33      17                               0
-#>       all 2025     50       0      33      17                               0
-#>  n_denominator_missing pct_suppressed pct_below_accountability
-#>                      0              0                     0.64
-#>                      0              0                     0.62
-#>                      0              0                     0.66
-#>                      0              0                     0.66
-#>                      0              0                     0.66
-#>  median_n_suppressed denominator_observed_on_suppressed suppression_sources
-#>                   NA                               TRUE                    
-#>                   NA                               TRUE                    
-#>                   NA                               TRUE                    
-#>                   NA                               TRUE                    
-#>                   NA                               TRUE                    
-#>       recommended_action sensitivity_role
-#>  no_suppression_detected             none
-#>  no_suppression_detected             none
-#>  no_suppression_detected             none
-#>  no_suppression_detected             none
-#>  no_suppression_detected             none
-#>  sensitivity_numeric_variance_available sensitivity_requires_acknowledgement
-#>                                   FALSE                                FALSE
-#>                                   FALSE                                FALSE
-#>                                   FALSE                                FALSE
-#>                                   FALSE                                FALSE
-#>                                   FALSE                                FALSE
-#>  upper_bound_role upper_bound_numeric_variance_available
-#>    not_applicable                                  FALSE
-#>    not_applicable                                  FALSE
-#>    not_applicable                                  FALSE
-#>    not_applicable                                  FALSE
-#>    not_applicable                                  FALSE
-#>  upper_bound_requires_acknowledgement
-#>                                 FALSE
-#>                                 FALSE
-#>                                 FALSE
-#>                                 FALSE
-#>                                 FALSE
+print(as.data.frame(report)[, c(
+  "subgroup", "year", "n_rows", "n_tier1", "n_tier2", "n_tier3",
+  "n_denominator_missing"
+)], row.names = FALSE)
+#>  subgroup year n_rows n_tier1 n_tier2 n_tier3 n_denominator_missing
+#>       all 2021     50       0      32      18                     0
+#>       all 2022     50       0      31      19                     0
+#>       all 2023     50       0      33      17                     0
+#>       all 2024     50       0      33      17                     0
+#>       all 2025     50       0      33      17                     0
 ```
 
-Three-tier interpretation:
+The report’s three tiers use suppression status and `accountability_n`
+(30 by default):
 
-- **Tier 1** — publisher-suppressed. `n_tier1` rows.
-- **Tier 2** — observed below `accountability_n`. Estimable but not
-  publishable.
-- **Tier 3** — observed and meets threshold. The publishable population.
+| Report column | Rows counted |
+|----|----|
+| `n_tier1` | Publisher-suppressed rows. |
+| `n_tier2` | Rows that are not suppressed and have an observed denominator below the threshold. |
+| `n_tier3` | Rows that are not suppressed and have an observed denominator at or above the threshold. |
 
-The canonical `sensitivity_role`,
+These are counts of input rows, not children. Meeting the threshold
+alone does not establish that an estimate is suitable for publication or
+further analysis. Missing denominators are also counted separately.
+
+The report’s `min_n` argument is stored as an attribute; changing it
+does not change the tier counts. This differs from
+`sm_estimate(min_n = ...)`, which sets `flag_small_n`. It also differs
+from `sm_smooth_variance(scope = "tier2")`, which uses the fixed
+denominator range 11–29 among otherwise eligible rows, irrespective of
+`accountability_n`.
+
+For published data, supply a suppression flag column or use an existing
+`suppression_flag` column. A missing numerator with an observed positive
+denominator also identifies suppression. A missing denominator alone
+does not; a `suppression_when` predicate replaces the usual detection
+rules. The report describes these inputs and does not fill in hidden
+values.
+
+When Tier 1 rows are present, inspect `sensitivity_role`,
 `sensitivity_numeric_variance_available`, and
-`sensitivity_requires_acknowledgement` fields make the post-audit
-decision explicit. The `upper_bound_*` names remain legacy compatibility
-fields. `suppression = "drop"` retains a canonical missing audit row.
-The legacy `"upper_bound"` option is an acknowledged, non-identified
-variance sensitivity stored only in `sensitivity_*` fields. It cannot be
-used to construct ordinary `V` or a formal Fréchet input; a hidden
-denominator yields no numeric variance claim.
+`sensitivity_requires_acknowledgement` before estimation. The older
+`upper_bound_*` columns remain available, but use the `sensitivity_*`
+names when reading the report. In the estimator:
 
-## 8. Red-flags checklist (paste into methods appendix)
+- `suppression = "drop"` retains the row with missing estimates and SEs.
+- `suppression = "upper_bound"` requires
+  `suppression_sensitivity_acknowledge = TRUE`, `vst = "arcsine"`, and
+  `anscombe = FALSE` when suppressed rows are present. It leaves
+  estimates and SEs missing and records a separate variance-sensitivity
+  scenario in `sensitivity_*` fields. With a hidden denominator it
+  provides no numeric sensitivity variance.
 
-Use the following short checklist when reviewing a tibble before
-publishing:
+Suppressed rows cannot enter ordinary `V` matrices or Fréchet
+calculations; use `vjt = FALSE` when retaining them. For worked
+estimation examples, see [Published
+aggregates](https://joonho112.github.io/sitemix/articles/a5-published-aggregates.md).
 
-1.  `scalar_uncertainty_finite == TRUE` and
-    `indicator_scale_consistent == TRUE`; require
-    `scalar_se_positive == TRUE` except for a documented
-    `zero_uncertainty_census` note.
-2.  `n_flag_zero_cell == 0` (or boundary-method handling documented).
-3.  `n_flag_below_accountability` reported and either small or
-    explicitly accepted.
-4.  For Scenarios B/C/D1: `v_valid == TRUE`,
-    `min_eigenvalue >= -psd_tol`, and `v_stale == FALSE` on every
-    matrix.
-5.  Record any estimate/`V` scale mismatch as an intentional downstream
-    scale decision; do not call it consumer readiness.
-6.  For D0/D1: report Tier 1 alongside Tier 3 and label any sensitivity
-    as non-identified.
-
-## 9. Audit
+## Check the example results
 
 ``` r
 
@@ -326,18 +275,17 @@ stopifnot(diag_s$scalar_se_positive == TRUE)
 stopifnot(diag_s$indicator_scale_consistent == TRUE)
 ```
 
-## 10. What’s next?
+## Using the results
 
-- [A7 · Variance smoothing and
-  Fréchet](https://joonho112.github.io/sitemix/articles/a7-variance-smoothing-and-frechet.md)
-  to inspect an opt-in experimental GVF sensitivity alternative; a high
-  `flag_small_n` count alone is not a reason to replace canonical SEs.
-- [A8 · Downstream
-  workflows](https://joonho112.github.io/sitemix/articles/a8-downstream-workflows.md)
-  when the audit passes.
-- [M1 · Statistical
-  foundations](https://joonho112.github.io/sitemix/articles/m1-statistical-foundations.md)
-  for the formal `sitemix_estimates` schema invariants the diagnostics
-  check.
+Keep reporting flags and suppression status with the estimates when
+selecting rows for another analysis. [Downstream
+workflows](https://joonho112.github.io/sitemix/articles/a8-downstream-workflows.md)
+shows how to carry the estimates, SEs, and scales together. [Variance
+smoothing and
+Fréchet](https://joonho112.github.io/sitemix/articles/a7-variance-smoothing-and-frechet.md)
+explores optional sensitivity analyses; a high `flag_small_n` count
+alone is not a reason to replace the original standard errors. For the
+sampling assumptions behind the diagnostics, see [Statistical
+foundations](https://joonho112.github.io/sitemix/articles/m1-statistical-foundations.md).
 
 ## References

@@ -1,212 +1,277 @@
-# M6 · Variance smoothing theory
+# Experimental models for variance smoothing
 
 Abstract
 
-For methodologists evaluating the experimental generalized
-variance-function/log-variance smoother in
-[`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md).
-Derives the log-linear smoother, documents the Wilson-centered offset,
-and locks its provenance and validation conditions.
-
-## Overview
-
-This article is written for **methodologists** evaluating the
-experimental generalized-variance-function/log-variance smoother in
 [`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md)
-who need its exact specification and *why* it stays opt-in and
-append-only. We cover, in order:
+fits a relationship between supplied variance estimates and their
+denominators. This article describes the log-linear and additive models,
+the raw-scale offset, and the assumptions behind transforming fitted
+log-variances back to standard errors.
 
-1.  what an analyst sees and what `sitemix` encodes;
-2.  the local notation this derivation adds;
-3.  the default log-linear log-variance smoother;
-4.  the Wilson-centered raw-scale offset;
-5.  the GAM extension;
-6.  the conditions and classed-warning failure policy;
-7.  the implementation invariants;
-8.  the fixed-seed simulation gate.
-
-**Established vs. novel.** *Established:* generalized-additive-model
-smoothing (Wood, 2017) and the Fay–Herriot area-level model as a
-contrast (Fay & Herriot, 1979). *This package:* the opt-in, append-only
-generalized-variance-function smoother (explicitly NOT a Fay–Herriot
-estimator), the Wilson-centered log-variance offset, and the
-classed-warning failure policy.
-
-| Result                                             | Attribution            |
-|:---------------------------------------------------|:-----------------------|
-| GAM smoothing                                      | Wood (2017)            |
-| Fay–Herriot area-level model (contrast only)       | Fay & Herriot (1979)   |
-| append-only GVF smoother + offset + warning policy | this package (sitemix) |
-
-> **About the example data.** All results here are computed live from
-> `prek_sim`, a fully simulated 50-site pre-kindergarten panel shipped
-> in the package (see
-> [`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)).
-> It describes no real children, sites, or program, and must not be
-> cited as empirical Pre-K results. Every code block runs offline with a
-> fixed random seed.
-
-## 1. What an analyst sees, what `sitemix` encodes
-
-In the small-cell regime, the arcsine transformed-scale SE
-$`s_{jt} = 1/(2\sqrt{n_{jt}})`$ is larger by construction: a site with
-$`n = 5`$ has an SE of `0.224`, while a site with $`n = 100`$ has
-`0.050`. This denominator-driven difference is canonical sampling
-uncertainty, not evidence that either SE is defective. A generalized
-variance function (GVF) can fit a cross-row trend on the log-variance
-scale as an optional experimental sensitivity, but the fixed-seed
-simulation audit did not support default promotion or a general
-improvement claim.
+## 1. What the smoother estimates
 
 [`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md)
-is the experimental sitemix implementation. It is not a Fay–Herriot
-area-level estimator: it does not model the underlying point estimates
-or produce small-area posterior means. By default it appends
-`se_smoothed` for `scale = "se"` or `se_raw_smoothed` for
-`scale = "se_raw"`, plus `var_method_smoothed`, while preserving
-canonical uncertainty columns.
+models the logarithm of the variance estimates already present in a
+`sitemix_estimates` object. It fits a relationship across eligible rows
+and converts the fitted values to alternative SEs. This generalized
+variance function (GVF) is experimental and must be requested
+explicitly. By default, it adds `se_smoothed` or `se_raw_smoothed`,
+together with `var_method_smoothed`, and preserves the original SEs.
 
-## 2. Notation map
+A smaller denominator can itself explain a larger SE. For example, the
+uncorrected arcsine working SE without a finite-population correction is
+s\_{jt} = 1/(2\sqrt{n\_{jt}}): it is about `0.224` at n = 5 and `0.050`
+at n = 100. Fitting this denominator relationship does not establish
+that the original uncertainty needs correction.
 
-| Symbol | Meaning | Code | Range |
-|:---|:---|:---|:---|
-| $`v_{jt}`$ | Row variance ($`s_{jt}^2`$) | `var` (internal) | $`> 0`$ |
-| $`\log v_{jt}`$ | Log-variance | `log_var` | $`\mathbb{R}`$ |
-| $`\log n_{jt}`$ | Log-denominator | `log_n` | $`\mathbb{R}`$ |
-| $`p^*_{jt}`$ | Boundary-safe probability: raw estimate in the interior, Wilson center at a boundary | `.sm_smoothing_offset_p()` | $`(0, 1)`$ |
-| $`\ell^{\mathrm{off}}_{jt}=\log[p^*_{jt}(1-p^*_{jt})]`$ | Rate-dependent log offset supplied to the model frame | `p_offset` | $`(-\infty,\log(1/4)]`$ |
-| $`\tilde s_{jt}`$ | Smoothed SE | `se_smoothed` | finite, $`\ge 0`$ |
+The response here is a log-variance estimate. In contrast, the
+Fay–Herriot area-level model relates direct outcome estimates to
+unobserved area means and a regression model, with specified sampling
+variances (Fay & Herriot, 1979, p. 271).
+[`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md)
+leaves `theta_hat` and `theta_raw` unchanged and does not estimate
+area-level posterior means. The Fay–Herriot paper supplies a comparison
+of model targets, rather than a derivation of this variance smoother.
 
-## 3. The log-linear smoother (default)
+The worked example in Section 7 uses `prek_sim`, a fully simulated
+50-site pre-kindergarten panel. Section 8 describes a separate
+simulation that generates binomial counts. Neither uses observations of
+real children, sites, or programs.
 
-**Proposition 1 (Loglinear smoother).** *For the default `scale = "se"`
-path, fit the OLS regression*
+## 2. Variances and predictors
 
-``` math
-\boxed{
-\log v_{jt} \;=\; \beta_0 + \beta_1 \log n_{jt} + \varepsilon_{jt}.
-}
+Let s\_{jt} denote the selected input SE and v\_{jt}=s\_{jt}^2 its
+variance estimate. Here v\_{jt} is an observed input to a regression,
+not the unknown sampling variance itself. Only rows with a positive,
+finite selected SE and denominator can enter the log-variance model; the
+additional row-selection rules are described below.
+
+| Quantity | Model variable | Meaning |
+|:---|:---|:---|
+| \log v\_{jt} | `log_var` | Log of the squared input `se` or `se_raw` |
+| \log n\_{jt} | `log_n` | Log of the row denominator |
+| \ell^{\mathrm{off}}\_{jt}=\log\[p^\*\_{jt}(1-p^\*\_{jt})\] | `p_offset` | Log offset for the default `scale = "se_raw"` formula |
+| \tilde s\_{jt} | `se_smoothed` or `se_raw_smoothed` | SE obtained from the fitted log-variance |
+
+The probability p^\*\_{jt} used in the offset is defined in Section 4.
+The `scale` argument selects the input column. In particular,
+`scale = "se"` can select raw-scale SEs when the estimates were made
+with `vst = "none"`; it does not automatically select the raw-offset
+formula.
+
+## 3. The default log-linear model
+
+With `method = "loglinear"`, `scale = "se"`, `by = NULL`, and no custom
+formula or weights, the function fits an ordinary least-squares
+regression using [`stats::lm()`](https://rdrr.io/r/stats/lm.html):
+
+\log v\_{jt} \\=\\ \beta_0 + \beta_1 \log n\_{jt} + \varepsilon\_{jt}.
 \tag{M6.1}
-```
 
-*For `scale = "se_raw"`, add the rate-dependent offset*
+For `scale = "se_raw"`, the default formula adds an offset with its
+coefficient fixed at one:
 
-``` math
-\log v^{raw}_{jt} \;=\; \beta_0 + \beta_1 \log n_{jt} +
-\mathrm{offset}\{\log[p^{\mathrm{off}}_{jt}(1-p^{\mathrm{off}}_{jt})]\} +
-\varepsilon_{jt}.
-\tag{M6.2}
-```
+\log v^{\mathrm{raw}}\_{jt} \\=\\ \beta_0 + \beta_1 \log n\_{jt} +
+\ell^{\mathrm{off}}\_{jt} + \varepsilon\_{jt}. \tag{M6.2}
 
-*Predicted log-variance back-transforms with an optional Jensen
-correction:*
-$`\tilde v_{jt} = \exp(\widehat{\log v_{jt}} + \tfrac{1}{2}\hat\sigma^2_{\varepsilon})`$,
-*and* $`\tilde s_{jt} = \sqrt{\tilde v_{jt}}`$.
+The corresponding formulas are `log_var ~ log_n` and
+`log_var ~ log_n + offset(p_offset)`. Columns supplied through `by`
+enter as factor main effects; they do not cause separate fits. For
+uncorrected arcsine inputs without FPC, v=1/(4n) gives a slope of -1.
+Corrections already present in the input SE can change that
+relationship.
 
-This regression is a GVF/log-variance smoother, not a small-area outcome
-model.
+### Returning from log-variance to SE
 
-The slope $`\beta_1`$ is expected to be near $`-1`$ (the arcsine working
-variance is $`1/(4n)`$ in the no-FPC, uncorrected baseline, so
-$`\log v \approx -\log(4n)`$ in that scope). The function emits
-`sitemix_warning_unexpected_slope` when the fitted slope deviates by
-more than 0.15. With FPC or a relevant bias correction, departure from
-$`-1`$ can be a predictable design effect; interpret the warning against
-the recorded provenance rather than as evidence of estimator failure.
+Write \hat\eta\_{jt} for the fitted value on the log-variance scale,
+including any formula offset. With the default `bias_correct = TRUE`,
+the implementation calculates
+
+\tilde v\_{jt}=\exp\\\left(\hat\eta\_{jt}
++\tfrac12\hat\sigma\_\varepsilon^2\right), \qquad \tilde
+s\_{jt}=\sqrt{\tilde v\_{jt}}.
+
+The half-variance term follows from a log-normal model: if the log-scale
+error is conditionally normal with mean zero and a common variance
+\sigma\_\varepsilon^2, then E(v\_{jt}\mid\text{predictors})=
+\exp(\eta\_{jt}+\sigma\_\varepsilon^2/2). This is the log-normal mean
+identity documented in [R’s log-normal distribution
+reference](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/Lognormal.html).
+Jensen’s inequality alone does not determine this particular correction.
+
+The package substitutes `stats::sigma(fit)^2` for a linear model or
+`summary(fit)$scale` for a GAM. Setting `bias_correct = FALSE` omits the
+half-variance term; under the same log-normal model, \exp(\eta\_{jt}) is
+the conditional median of the variance input. These calculations treat
+the fitted model parameters as fixed. They do not account for
+uncertainty in the fitted regression or make the result an unbiased
+estimate of the true sampling variance. A common half-variance
+correction also needs separate justification if the log-scale errors are
+non-normal or their variance changes across rows.
 
 ## 4. The Wilson-centered raw-scale offset
 
-For boundary rows ($`\hat\pi \in \{0, 1\}`$), the raw-scale variance
-$`\hat\pi(1-\hat\pi)/n`$ is zero and the log is undefined. The
-Wilson-centered offset used in the raw-scale path is
+The binomial variance has a rate-dependent factor p(1-p), which
+motivates the offset in (M6.2). Substituting a boundary estimate
+\hat\pi\in\\0,1\\ makes its logarithm undefined. For flagged boundary
+rows, the implementation instead uses
 
-``` math
-p^*_{jt} \;=\; \frac{\hat\pi_{jt} + z^2/(2n_{jt})}{1 + z^2/n_{jt}}
-\;=\; \frac{C_{jt} + z^2/2}{n_{jt} + z^2}
-```
+p^\*\_{jt} \\=\\ \frac{\hat\pi\_{jt} + z^2/(2n\_{jt})}{1 + z^2/n\_{jt}}
+\\=\\ \frac{C\_{jt} + z^2/2}{n\_{jt} + z^2}
 
-substitutes a finite proportion at the boundary, matching the Wilson
-score center (Wilson, 1927). The plus-four Agresti-Coull form is a
-useful approximation when $`z \approx 2`$(Agresti & Coull, 1998). This
-keeps the raw-scale log-variance regression numerically well-defined.
+with z=\Phi^{-1}(0.975). This is the Wilson score center (Wilson, 1927);
+taking z\approx2 gives the related plus-four center (Agresti & Coull,
+1998). Interior rows use their raw estimates, and the result is clamped
+away from zero and one at machine precision. Using this center for the
+offset is a package modeling choice. It does not replace the response
+variance: an input SE of zero still cannot enter the log-variance
+regression.
 
 The model-frame column is not this probability itself. It is
-`p_offset = log(p_star * (1 - p_star))`, the quantity shown directly
-inside the offset in (M6.2). A custom formula should therefore use
-`offset(p_offset)`, not apply a second probability-to-log
+`p_offset = log(p_star * (1 - p_star))`, the term
+\ell^{\mathrm{off}}\_{jt} in (M6.2). A custom formula should therefore
+use `offset(p_offset)`, not apply a second probability-to-log
 transformation.
 
-### Finite-population inputs and provenance
+### Inputs with a finite-population correction
 
 Smoothing consumes the SEs already present in the input. If those SEs
-were design-adjusted under SRSWOR, the fitted response therefore already
-contains that adjustment. For an uncorrected arcsine row,
+were adjusted for simple random sampling without replacement (SRSWOR),
+the fitted response contains that adjustment. For the plug-in arcsine
+calculation with `anscombe = FALSE`, let N\>n be the finite population
+size and q=(N-n)/(N-1)\>0. The supplied variance is q/(4n), so
 
-``` math
 \log(s^2)=-\log 4-\log n+\log q,
-```
 
-so the simple $`-1`$ slope reference applies only when FPC is absent
-(and no relevant bias correction changes the baseline). In append mode,
-smoothing leaves canonical `se`, `se_raw`, and all eight FPC/design
-fields unchanged. In overwrite mode, the selected original SE is
-retained in `se_pre_smoothing` or `se_raw_pre_smoothing`; the unchanged
-FPC fields still describe the pre-smoothing design estimator, not a
-newly design-derived smoothed SE. An FPC offset or an FPC rejection gate
-would be a future design change and is not part of the v0.2.0 contract.
+Variation in q across rows can change the fitted denominator slope; the
+default smoothing formula does not add an FPC offset. This equation does
+not cover Anscombe or bias-corrected inputs. Those inputs retain their
+own SE calculation, described in [Binomial standard errors and
+transformations](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md).
+At an exact census, the SE is zero and the row is excluded from the
+log-variance fit.
 
-## 5. The GAM extension
+By default, the returned object keeps `se`, `se_raw`, and the sampling
+information used to calculate them. If overwrite is requested and
+allowed, the original SEs are saved in `se_pre_smoothing` or
+`se_raw_pre_smoothing`. The unchanged FPC fields continue to describe
+the original design calculation; they do not establish a new
+design-based interpretation for the smoothed SE.
 
-For non-linear log-variance trends, `method = "gam"` swaps the OLS fit
-for a [`mgcv::gam`](https://rdrr.io/pkg/mgcv/man/gam.html) fit with a
-smooth term on $`\log n`$:
+## 5. An additive model for a curved relationship
 
-``` math
-\log v_{jt} \;=\; f(\log n_{jt}) + \varepsilon_{jt},
+With `method = "gam"`, the default `scale = "se"`, `by = NULL` model
+replaces the straight-line term with a smooth function:
+
+\log v\_{jt} \\=\\ \beta_0 + f(\log n\_{jt}) + \varepsilon\_{jt}.
 \tag{M6.3}
-```
 
-with $`f`$ a thin-plate spline. Raw-scale GAM smoothing uses the same
-`p_offset` convention as raw-scale loglinear smoothing. The `mgcv`
-dependency is runtime-guarded (Wood, 2017).
+The default call uses
+[`mgcv::gam()`](https://rdrr.io/pkg/mgcv/man/gam.html) with `s(log_n)`,
+a Gaussian family with an identity link, and `method = "REML"` to
+estimate smoothness. The smooth uses a penalized thin plate regression
+spline, the default basis for
+[`mgcv::s()`](https://stat.ethz.ch/R-manual/R-devel/library/mgcv/html/s.html).
+The penalty controls how much curvature is fitted. For
+`scale = "se_raw"`, the formula also includes `offset(p_offset)`; `by`
+columns again add factor main effects.
 
-## 6. Conditions and failure policy
+Wood’s treatment of additive models (Wood, 2017) and the [`mgcv::gam()`
+documentation](https://stat.ethz.ch/R-manual/R-devel/library/mgcv/html/gam.html)
+describe the fitting method. Applying it to these log-variance inputs is
+the package’s choice, and those sources do not establish an improvement
+in sitemix SEs or interval coverage. The conversion back to variance
+above uses the estimated scale parameter of the GAM; its log-normal
+interpretation applies to the default Gaussian model and requires
+reconsideration if that family or error structure is changed.
 
-[`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md)
-emits three classed warnings:
+## 6. Which rows are fitted
 
-- **`sitemix_warning_smoother_multi_year_default`** — when eligible rows
-  span multiple years and `by = NULL`. The smoother pools years by
-  default; pass `by = "year"` to add a year fixed effect.
-- **`sitemix_warning_unexpected_slope`** — when the log-linear slope
-  deviates from $`-1`$ by more than 0.15.
-- **`sitemix_warning_raw_scale_smoothing`** — when smoothing on
-  raw-scale SE. The default raw-scale formula includes
-  `offset(p_offset)`; the warning reminds users that custom raw-scale
-  formulas should include an analogous rate-dependent term.
+After validating the input object, the function selects rows that are
+not suppressed and have a finite, positive selected SE and denominator.
+With the default `scope = "all"`, every such row is eligible.
+`scope = "tier2"` further restricts the fit to 11\le n\le29; this
+interval is fixed and does not follow `accountability_n` or
+`flag_below_accountability`. If supplied, `min_n` also requires
+`n >= min_n`. The Tier 2 label in
+[`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md)
+uses a separate, adjustable reporting threshold.
 
-Matching-scale matrix staleness is not a warning. With
-`overwrite = TRUE`, a matching-scale `V` raises
-`sitemix_error_smoothing_v_stale` before fitting or stamping provenance.
-An incompatible-scale `V` remains unchanged and the exact relationship
-is recorded in the smoothing attribute and fit summary. Custom formulas
-require exact left-hand side `log_var`, documented helper variables and
-terms, a full-rank converged fit with positive residual degrees of
-freedom, and finite predictions of the exact eligible-row length. There
-is no silent non-finite fallback.
+The fitted SEs replace values only in eligible rows of the added column.
+Other rows retain their input values, including zero SEs for exact
+censuses and missing SEs for suppressed rows. Thus a successful fit does
+not imply that every row in the result has a positive or finite SE.
+Objects containing non-identified suppression-sensitivity estimates are
+rejected before fitting.
 
-## 7. Implementation invariants
+At least `min_rows` eligible rows are needed; the default is `50L`. If
+fewer qualify, the function skips fitting, copies the selected input SE
+column to the alternative column, and records `status = "skipped"` in
+both summary attributes. It performs no overwrite, even with
+`overwrite = TRUE`, and adds no new residuals, fitted model, or
+pre-smoothing snapshots.
 
-| ID | Layer | Claim |
-|:---|:---|:---|
-| SM1 | smooth | Smoothed SE is finite and non-negative. |
-| SM2 | smooth | Default loglinear formulas differ by scale as documented. |
-| SM3 | smooth | Default `overwrite = FALSE` preserves the input `se` exactly. |
-| SM4 | provenance | Append-only smoothing preserves canonical `var_method`. |
-| SM5 | matrix contract | Matching-scale `V` blocks overwrite; incompatible `V` is explicit. |
-| SM6 | FPC provenance | Append mode preserves canonical SEs and all eight FPC/design fields. |
+### Warnings and fit diagnostics
 
-Verify on `prek_sim`:
+Four warning classes describe distinct conditions:
+
+- `sitemix_warning_smoother_skipped`: fewer than `min_rows` rows
+  qualified. Inspect the row selection before interpreting the
+  alternative column as fitted values.
+- `sitemix_warning_smoother_multi_year_default`: eligible rows span
+  multiple years and `by = NULL`. Use `by = "year"` for a year fixed
+  effect in one fit, or call the function on separate yearly subsets for
+  separate fits.
+- `sitemix_warning_unexpected_slope`: a loglinear fit using
+  `scale = "se"` on arcsine or Anscombe-arcsine rows has a finite
+  `log_n` coefficient more than 0.15 from -1. Interpret the slope
+  alongside any corrections already included in the input SEs.
+- `sitemix_warning_raw_scale_smoothing`: the first request for
+  `scale = "se_raw"` after loading the package. The default formula
+  includes `offset(p_offset)`; a custom formula needs its own
+  appropriate rate-dependent term.
+
+The `smoother_fit_summary` attribute records the current fit status,
+formula, eligible-row count, and relationship to any covariance
+matrices. After fitting, it also records rank, convergence, prediction
+checks, and model summaries. The `smoothing` attribute records the
+settings and eligible row indices. With `return_diagnostics = TRUE`, a
+completed fit adds `residual_log_var` and the `smoother_fit` attribute.
+Check the current status first: a skipped call adds no new fitted model
+or residuals.
+
+A custom formula must use `log_var` as its response and the model
+variables and terms documented in
+[`?sm_smooth_variance`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md).
+The fitted model must have full rank, positive residual degrees of
+freedom, and finite predictions for all eligible rows; a GAM must also
+converge. Failure raises an error instead of substituting a fallback
+fit.
+
+### Overwrite and covariance matrices
+
+When enough rows qualify to fit, `overwrite = TRUE` is rejected with
+`sitemix_error_smoothing_v_stale` if an eligible row has a `V` matrix on
+the selected SE scale. Keeping that matrix while replacing its SE could
+make the diagonal inconsistent. A matrix on a different scale remains
+unchanged, and its relation to the selected scale is recorded in
+`smoothing$v`. The insufficient-row skip described above occurs before
+the overwrite rejection and leaves both SEs and `V` unchanged.
+
+If overwrite is allowed, `scale = "se"` replaces eligible `se` values.
+With `scale = "se_raw"`, it replaces eligible `se_raw` values and also
+updates `se` for rows with `estimate_scale = "none"`. Transformed `se`
+values are preserved in that raw-column operation. `var_method` changes
+where `se` changes; `var_method_smoothed` describes the alternative SEs.
+
+## 7. Checking the returned columns
+
+This example fits the two default loglinear formulas to the 2024 FRPM
+estimates and checks that the original columns are preserved. All rows
+in this example have finite SEs; the checks on the whole column below
+therefore apply to this example, while the general rules for missing or
+zero input values are given in Section 6. The calls explicitly use
+`min_rows = 2`, rather than the default 50.
 
 ``` r
 
@@ -219,11 +284,11 @@ est_s <- sm_smooth_variance(
   est, method = "loglinear", return_diagnostics = TRUE, min_rows = 2
 )
 
-# SM1: finite nonnegative smoothed SE
+# Check the smoothed SEs in this eligible-row example.
 stopifnot(all(is.finite(est_s$se_smoothed)))
 stopifnot(all(est_s$se_smoothed >= 0))
 
-# SM2: default transformed-scale formula has no offset
+# The default transformed-scale formula has no offset.
 fit_formula <- formula(attr(est_s, "smoother_fit"))
 stopifnot(identical(deparse(fit_formula), "log_var ~ log_n"))
 
@@ -238,14 +303,14 @@ raw_formula <- formula(attr(est_raw, "smoother_fit"))
 stopifnot(identical(deparse(raw_formula),
                     "log_var ~ log_n + offset(p_offset)"))
 
-# SM3: default preserves se
+# The default call retains the original SE column.
 stopifnot(all.equal(est_s$se, est$se, tolerance = 1e-12))
 
-# SM4: alternative provenance does not rewrite canonical provenance
+# Keep the original method label and record the smoothed alternative.
 stopifnot(identical(est_s$var_method, est$var_method))
 stopifnot("var_method_smoothed" %in% names(est_s))
 
-# SM6: append-only smoothing preserves design-adjusted inputs and provenance
+# Retain the original SEs and finite-population fields.
 counts <- readRDS(system.file("extdata", "prek_sim_counts.rds",
                               package = "sitemix"))
 fpc_counts <- counts[counts$year == 2024,
@@ -268,48 +333,80 @@ stopifnot(all(vapply(fpc_fields, function(field) {
 }, logical(1))))
 ```
 
-SM1–SM4 and SM6 test the implemented behavior directly. SM5 is covered
-by the package’s matching/incompatible-scale matrix contract tests.
+The transformed-scale fit uses all 50 rows and reproduces the original
+uncorrected arcsine SEs to numerical precision. That follows from their
+1/(2\sqrt n) relationship; it is not evidence that smoothing improves
+uncertainty estimation. The raw-column fit uses the additional rate
+offset. Both fits preserve the original SE and calculation-label columns
+by default.
 
-## 8. Fixed-seed simulation gate
+The final part sets each simulated finite population to twice the sample
+size and checks the eight returned sampling fields. Preserving those
+fields records the original SRSWOR calculation. It does not test the
+statistical performance of smoothed SEs under finite-population
+sampling.
 
-The package’s maintainer audit is
-`inst/scripts/audit-smoothing-simulation.R`. It fixes seed `20260712`
-and crosses 12 denominators (`n = 8` through `150`) with seven true
-rates (`0.02` through `0.98`). The four prespecified strata are
-small/large denominator by near-boundary/interior rate. The transformed
-target is the deterministic contract variance $`1/(4n)`$; the separately
-coded raw target is $`p(1-p)/n`$. Neither target calls an internal
-`sitemix` variance helper.
+## 8. What the fixed simulation shows
 
-The promotion gate requires at least 10% pooled relative-MSE
-improvement, no stratum with more than 10% MSE degradation, no material
-coverage degradation, and at least 5% improvement in total-variation
-distance between estimated and oracle inverse-variance weights. In the
-60-replicate audit, every loglinear/GAM and raw/transformed candidate
-received **NO-GO**. In particular, raw-scale MSE was more than twice the
-unsmoothed comparator, while the transformed comparator was already
-deterministic and offered no material improvement to recover. Coverage
-occasionally moved closer to 95%, but that single metric did not
-override the failed joint gate.
+The maintainer script `inst/scripts/audit-smoothing-simulation.R`
+compares unsmoothed SEs with loglinear and GAM alternatives. The
+recorded full run used seed `20260712` and 60 replicates. Each replicate
+generated independent binomial counts on an 84-row grid: 12 denominators
+from 8 to 150 crossed with seven true rates from 0.02 to 0.98. The four
+reporting strata crossed n\le20 versus larger n with near-boundary rates
+(p\le0.10 or p\ge0.90) versus interior rates.
 
-This is a bounded contract audit, not evidence of universal inferiority.
-It does not span every data-generating process or hierarchical model.
-The policy decision is therefore narrow: retain the existing function
-name and `scope = "all"` only for compatibility inside an explicitly
-experimental, opt-in, append-only helper; do not promote smoothing,
-canonical overwrite, or a smoothed inverse-variance analysis as a
-default. A future promotion requires a new, prespecified simulation that
-passes all criteria.
+The estimates used `vst = "arcsine"`,
+`boundary_method = "wilson_floor"`, and `min_n = 1`, without FPC. Each
+smoother used all eligible rows, `min_rows = 50`, `bias_correct = TRUE`,
+and `overwrite = FALSE`. The variance targets, calculated separately
+from the package helpers, were the arcsine working approximation 1/(4n)
+and the exact binomial proportion variance p(1-p)/n. The first target is
+not the exact finite-sample variance of the transformed estimator.
 
-## 9. Where to go next
+Relative variance MSE means the average of \[(\hat v-v)/v\]^2, using the
+target v on the corresponding scale. Coverage measures symmetric normal
+intervals for p or \arcsin\sqrt p, using the same point estimates with
+each candidate SE. The weight measure is the average total-variation
+distance between normalized 1/\hat v weights and normalized target 1/v
+weights; it does not evaluate a fitted hierarchical model.
 
-- [M7 · Fréchet envelope
-  theory](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md)
-  — the sibling sensitivity tool for the D1 case.
-- [A7 · Variance smoothing and
-  Fréchet](https://joonho112.github.io/sitemix/articles/a7-variance-smoothing-and-frechet.md)
-  for the applied face including the GAM demo.
+The recorded raw-scale results were:
+
+| Method     | Relative variance MSE | 95% interval coverage | Weight distance |
+|:-----------|----------------------:|----------------------:|----------------:|
+| Unsmoothed |                0.7404 |                0.9373 |          0.1984 |
+| Loglinear  |                1.5980 |                0.9452 |          0.2042 |
+| GAM        |                1.5889 |                0.9442 |          0.2047 |
+
+Both raw-scale smoothers moved pooled coverage closer to 95%, while more
+than doubling relative variance MSE and slightly increasing weight
+distortion. On the transformed scale, all three methods reproduced the
+deterministic variance target to numerical precision, and all had
+coverage about 0.9101. Agreement with 1/(4n) therefore did not imply
+nominal coverage.
+
+The criteria specified in advance by the maintainer required all of the
+following: at least 10% lower pooled relative MSE; no stratum with more
+than 10% relative-MSE deterioration; increases in absolute coverage
+error of at most 0.01 overall and 0.03 in every stratum; and at least 5%
+lower weight distance. For effectively zero baseline errors, matching
+that baseline counted as equality, not improvement. None of the four
+scale-by-method candidates met all criteria.
+
+These results do not support a general recommendation to smooth or
+overwrite SEs. They also do not establish that smoothing is inferior
+under other data-generating processes. The simulation contains no
+finite-population sampling, suppression, covariance matrices,
+multiple-year trends, or downstream hierarchical model. The function
+remains an optional, experimental way to compare alternative SEs.
+
+For worked comparisons with a GAM and Fréchet sensitivity results, see
+[Variance smoothing and Fréchet sensitivity
+analysis](https://joonho112.github.io/sitemix/articles/a7-variance-smoothing-and-frechet.md).
+For the scope of the Fréchet calculation itself, see [Pairwise Fréchet
+bounds and projected dependence
+scenarios](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md).
 
 ## References
 

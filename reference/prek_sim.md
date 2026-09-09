@@ -1,9 +1,10 @@
 # Simulated pre-kindergarten site panel
 
-A fully simulated 50-site panel of pre-kindergarten enrollment records
-with four overlapping binary means-test indicators across five school
-years. The panel is the worked example used throughout the package
-documentation and in the regression tests.
+Simulated enrollment records for 50 pre-kindergarten sites from 2021
+through 2025. Each row represents one simulated student and contains
+four overlapping binary indicators of program eligibility or
+participation. The panel is used in the package examples and regression
+tests; it represents no real students or sites.
 
 ## Usage
 
@@ -51,45 +52,35 @@ realized panel summary.
 
 ## Details
 
-No administrative, restricted, or person-level source data of any kind
-is read by the builder or represented in the shipped artifacts. Every
-row is generated from design constants recorded in
-`inst/scripts/build-prek-sim.R`, so the panel can be regenerated from a
-plain R installation with no special data access.
+`inst/scripts/build-prek-sim.R` generates every row from design
+constants without reading external records. The chosen parameters
+produce different site sizes, correlated indicators, and many zero-count
+TANF cells. They illustrate estimation with sparse and overlapping
+indicators and are not estimates of any program's caseload.
 
-The design targets are round numbers chosen to give the package a
-didactic example with the features its estimators are built for:
-site-year cells ranging from a handful of children to more than a
-hundred, four overlapping means-tested indicators, one rare indicator
-that produces many zero cells, and enough between-site heterogeneity for
-a meaningful empirical-Bayes demonstration. They are not estimates of
-any particular program's caseload.
+Sites have three size strata, with enrollment varying by year around
+each site's typical size. Correlated site effects on the logit scale and
+a Gaussian copula generate associations among the indicators. The
+`build_info` attribute records the design targets, calibrated
+parameters, and a summary of the resulting panel.
 
-Sites are drawn in three size strata; each site carries a vector of
-correlated random effects on the logit scale, so high-need sites are
-high-need on every indicator at once; and within a site-year cell the
-four indicators are drawn from a Gaussian copula thresholded at that
-cell's indicator probabilities. Design targets, calibrated latent
-parameters, and a summary of the realized panel are stored under the
-`build_info` attribute.
+The package also includes two files generated from the same panel:
 
-The same builder generates two external artifacts:
+- `inst/extdata/prek_sim.csv`, a CSV copy of the student rows.
 
-- `inst/extdata/prek_sim.csv` for non-R consumers.
+- `inst/extdata/prek_sim_counts.rds`, a table of site-year denominators,
+  marginal counts, and pairwise co-occurrence counts.
 
-- `inst/extdata/prek_sim_counts.rds` for pre-aggregated multivariate
-  sufficient counts.
-
-Access both artifacts with
+Locate either file with
 [`system.file()`](https://rdrr.io/r/base/system.file.html).
 
 ## See also
 
 - [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-  for the primary consumer.
+  for estimating site-level proportions from the student rows.
 
 - [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
-  for the bundled `prek_sim_counts.rds` consumer.
+  for estimation from the bundled count table.
 
 - [`vignette("a1-getting-started")`](https://joonho112.github.io/sitemix/articles/a1-getting-started.md)
   for the applied tutorial.

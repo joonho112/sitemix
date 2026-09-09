@@ -1,13 +1,11 @@
-# Audit aggregate-input suppression and accountability tiers
+# Summarize suppression and reporting thresholds in aggregate data
 
-`sm_suppression_report()` audits the **three-tier aggregate denominator
-regime** before estimation. It reports observed tier counts and
-denominator observability per group; it does **not** impute hidden
-values. Use it before
-[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-to understand how many rows are publisher-suppressed (Tier 1), observed
-but below accountability threshold (Tier 2), or observed and publishable
-(Tier 3).
+`sm_suppression_report()` counts publisher-suppressed rows and rows
+below a chosen denominator threshold. It also reports whether suppressed
+denominators are observed. Use it to examine published input data before
+calling
+[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md).
+It does not fill in hidden values.
 
 ## Usage
 
@@ -33,15 +31,15 @@ sm_suppression_report(
 - x:
 
   A data frame or tibble of aggregate input data. Required columns
-  depend on the publisher schema; see
-  [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-  for the canonical input format.
+  depend on the input format; see
+  [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md).
 
 - by:
 
-  Character vector. Columns to group the report by after aggregate
-  normalization. Defaults to `c("subgroup", "year")`. Each group gets
-  its own row in the returned tibble.
+  A character vector, or `NULL` for one overall row. Columns to group
+  the report by after aggregate normalization. Defaults to
+  `c("subgroup", "year")`. Each group gets its own row in the returned
+  tibble.
 
 - id_cols:
 
@@ -51,14 +49,12 @@ sm_suppression_report(
 - numerator_col:
 
   Character scalar or `NULL` (default `NULL`). Source numerator column
-  name. Required when the publisher schema uses non-default column
-  names.
+  name. Required when the publisher uses other column names.
 
 - denominator_col:
 
   Character scalar or `NULL` (default `NULL`). Source denominator column
-  name. Required when the publisher schema uses non-default column
-  names.
+  name. Required when the publisher uses other column names.
 
 - indicator_col:
 
@@ -73,7 +69,8 @@ sm_suppression_report(
 - suppression_col:
 
   Character scalar or `NULL` (default `NULL`). Source publisher
-  suppression flag column.
+  suppression flag column. With `NULL`, an existing `suppression_flag`
+  column is used.
 
 - suppression_flag_value:
 
@@ -82,20 +79,22 @@ sm_suppression_report(
 
 - suppression_when:
 
-  Function or `NULL` (default `NULL`). Optional predicate with highest
-  detection priority; overrides flag-based detection.
+  Function or `NULL` (default `NULL`). Optional predicate returning one
+  logical value per normalized row; overrides flag and missing-numerator
+  detection.
 
 - min_n:
 
-  Positive integer scalar. Tier-1 boundary reference used for
-  diagnostics on the boundary between observed and suppressed rows.
-  Defaults to `10L`.
+  A positive whole number stored in the report's `min_n` attribute.
+  Defaults to `10L`. The tier counts use suppression status and
+  `accountability_n`; changing `min_n` alone does not change those
+  counts.
 
 - accountability_n:
 
-  Positive integer scalar. Tier-2 / Tier-3 boundary. Rows with \\n\_{jt}
-  \<\\ `accountability_n` are classified Tier 2; others Tier 3. Defaults
-  to `30L`.
+  Positive integer scalar. Tier-2 / Tier-3 boundary. Among rows that are
+  not suppressed, those with \\n\_{jt} \<\\ `accountability_n` are Tier
+  2; those meeting the threshold are Tier 3. Defaults to `30L`.
 
 ## Value
 
@@ -128,7 +127,7 @@ A `sitemix_suppression_report` tibble with one row per group defined by
 
 - `n_denominator_missing`:
 
-  Integer count of rows missing the denominator column.
+  Integer count of rows with a missing denominator value.
 
 - `pct_suppressed`:
 
@@ -136,9 +135,9 @@ A `sitemix_suppression_report` tibble with one row per group defined by
 
 - `pct_below_accountability`:
 
-  Numeric share of rows that are not publishable under the three-tier
-  framework: Tier 1 publisher-suppressed rows plus Tier 2 observed rows
-  below `accountability_n`.
+  Numeric share of suppressed rows plus rows that are not suppressed and
+  fall below the threshold: Tier 1 rows plus Tier 2 rows below
+  `accountability_n`.
 
 - `median_n_suppressed`:
 
@@ -152,13 +151,13 @@ A `sitemix_suppression_report` tibble with one row per group defined by
 
 - `suppression_sources`:
 
-  Character; a compact enumeration of which detection rule fired
-  (publisher flag, structural missingness, or user predicate).
+  Character; a compact list of the detection rules used (publisher flag,
+  missing numerator, or user predicate).
 
 - `recommended_action`:
 
-  Character; a one-line recommendation distinguishing canonical missing
-  retention from an acknowledged variance sensitivity.
+  Character; a one-line recommendation distinguishing retained missing
+  estimates from an acknowledged variance sensitivity.
 
 - `sensitivity_role`:
 
@@ -180,12 +179,11 @@ A `sitemix_suppression_report` tibble with one row per group defined by
 - `upper_bound_role`:
 
   Character; identifies the legacy `"upper_bound"` option as a
-  non-identified variance-sensitivity scenario, never an estimate.
-  Legacy counterpart of `sensitivity_role`; it retains
-  `"not_applicable"` when Tier 1 is absent, where the canonical role is
-  `"none"`.
+  non-identified variance-sensitivity scenario rather than an estimate.
+  This older counterpart of `sensitivity_role` uses `"not_applicable"`
+  when Tier 1 is absent, whereas `sensitivity_role` uses `"none"`.
 
-The report also retains two legacy compatibility aliases.
+Two older column names are also retained:
 `upper_bound_numeric_variance_available` mirrors
 `sensitivity_numeric_variance_available`;
 `upper_bound_requires_acknowledgement` mirrors
@@ -193,51 +191,50 @@ The report also retains two legacy compatibility aliases.
 
 ## Details
 
-**Three-tier framework.** Aggregate inputs from state and district
-publishers carry three distinct denominator regimes that the audit
-summarizes separately:
+The report groups rows into three tiers:
 
-- **Tier 1 – publisher-suppressed**:
+- Tier 1 – suppressed:
 
-  The publisher masked the row. Detected via missing numerator /
-  denominator, an explicit publisher suppression flag (controlled by
-  `suppression_col` and `suppression_flag_value`), or a user-supplied
-  predicate (`suppression_when`). These rows cannot be estimated; they
-  appear in the report so the analyst can retain canonical missing audit
-  rows or explicitly acknowledge a separated variance-sensitivity
-  scenario through the aggregate estimator's `suppression =` argument.
+  Rows identified by a publisher flag or a missing numerator with an
+  observed positive denominator. A `suppression_when` predicate
+  overrides both rules. Missing denominators alone do not identify
+  suppression.
 
-- **Tier 2 – observed below accountability**:
+- Tier 2 – below threshold:
 
-  Denominator is present and \\n\_{jt} \<\\ `accountability_n`. The row
-  is estimable, but the publisher (or the analyst's project rules)
-  treats it as too small to publish individually.
+  Rows that are not suppressed and have an observed denominator smaller
+  than `accountability_n`.
 
-- **Tier 3 – observed and meets threshold**:
+- Tier 3 – meets threshold:
 
-  Denominator is present and \\n\_{jt} \ge\\ `accountability_n`. The row
-  is estimable and publishable under the project's accountability rules.
+  Rows that are not suppressed and have an observed denominator at least
+  as large as `accountability_n`.
 
-The function returns one row per group defined by `by` (e.g.,
-`c("subgroup", "year")`) with Tier 1 / Tier 2 / Tier 3 counts and the
-share of the total. This is the recommended pre-flight check for any D0
-or D1 estimation; the
+These tiers describe suppression and the chosen size threshold. The
+report retains missing-denominator counts separately. Its
+`accountability_n` threshold can be changed; it is distinct from the
+fixed 11–29 denominator range used by
+`sm_smooth_variance(scope = "tier2")`.
+
+Each group defined by `by` (for example, `c("subgroup", "year")`)
+receives counts and proportions. For suppressed rows, the report
+distinguishes retaining missing estimates from an explicitly
+acknowledged variance-sensitivity analysis. Use
 [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-audit operates on the post-estimation tibble and assumes Tier 1 rows
-have already been dispositioned.
+to examine the resulting estimates.
 
 ## See also
 
 - [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-  for the upstream aggregate estimator and suppression controls.
+  for estimating proportions and handling suppressed input rows.
 
 - [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-  for the post-estimation audit.
+  for the post-estimation diagnostics.
 
 - [`sm_pivot_subgroups_to_sites()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_sites.md)
   and
   [`sm_pivot_subgroups_to_indicators()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_indicators.md)
-  for subgroup-file pivots used before this audit.
+  for reshaping subgroup data before making the report.
 
 - [`vignette("a5-published-aggregates")`](https://joonho112.github.io/sitemix/articles/a5-published-aggregates.md)
   and
@@ -250,7 +247,7 @@ Other audit:
 ## Examples
 
 ``` r
-# Build a small aggregate slice from bundled counts:
+# Prepare aggregate counts from the simulated data:
 counts_path <- system.file(
   "extdata", "prek_sim_counts.rds",
   package = "sitemix", mustWork = TRUE

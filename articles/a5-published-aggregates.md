@@ -1,48 +1,30 @@
-# A5 · Published aggregates D0 / D1
+# Estimating proportions from published aggregates
 
 Abstract
 
-For external researchers working from publisher CSVs (state
-accountability files, district reports) rather than student rows. This
-vignette walks through the D0 (single numerator/denominator per
-site-year) and D1 (multiple marginals per site-year) paths, the Framing
-X / Framing Y subgroup pivots, and the three-tier publisher-side
-suppression audit.
+Estimate site-year proportions from published numerator and denominator
+counts. Work with one or several marginal indicators, reshape subgroup
+tables, and identify suppressed rows before estimation.
 
-## Overview
+Published tables often provide the numerator and denominator for each
+site-year without individual student records. For one proportion, use
+the single-indicator aggregate path (D0). For several marginal
+proportions, use the multivariate aggregate path (D1).
 
-### 1. Why you are here
+Missing joint counts and suppressed marginal values are different
+problems. Observed marginals can support individual rate estimates even
+when their cross-indicator covariance is unknown. A suppressed
+numerator, in contrast, cannot provide an observed proportion. The
+examples below keep these cases separate; [Choosing an input
+format](https://joonho112.github.io/sitemix/articles/a2-input-formats.md)
+compares the aggregate path with student records and sufficient counts.
 
-Dana is an external researcher with no microdata access. She works
-exclusively from state-published accountability files: numerator counts
-plus subgroup splits with cells masked at `< 10`. She needs site-level
-rates and standard errors from these files, plus raw pairwise intervals
-and projected stress scenarios for what the publisher masked.
+We use aggregate counts from the bundled, fully simulated `prek_sim`
+data and a small generated subgroup table. These are examples of data
+handling, not empirical findings about children or programs (see
+[`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)).
 
-### 2. What you will leave with
-
-By the end you will have:
-
-- A D0 (single-indicator) and a D1 (multi-marginal) call each producing
-  a `sitemix_estimates` tibble.
-- The Framing X and Framing Y pivots for subgroup files.
-- A three-tier suppression audit confirming how many rows survive
-  publisher-side masking.
-
-**Prerequisites.** [A2 · Input
-formats](https://joonho112.github.io/sitemix/articles/a2-input-formats.md).
-
-> **About the example data.** All results here are computed live from
-> `prek_sim`, a fully simulated 50-site pre-kindergarten panel shipped
-> in the package (see
-> [`?prek_sim`](https://joonho112.github.io/sitemix/reference/prek_sim.md)).
-> The D0 and D1 rows are aggregate counts built from that sample (its
-> companion `prek_sim_counts` file), and the subgroup section adds a
-> small generated fixture. It describes no real children, sites, or
-> program, and must not be cited as empirical Pre-K results. Every code
-> block runs offline with a fixed random seed.
-
-## 3. Scenario D0 — one numerator and denominator per site-year
+## One numerator and denominator per site-year (D0)
 
 D0 is the simplest publisher case: each row is one site-year with
 explicit numerator (`c_jt`) and denominator (`n_jt`). Build a D0 slice
@@ -70,7 +52,9 @@ head(d0_frpm, 3)
 #> 3 S003     2024 frpm          4     8
 ```
 
-Estimate:
+The default column names are already present, so no explicit column
+mapping is needed. Estimate FRPM rates and their arcsine-scale standard
+errors:
 
 ``` r
 
@@ -95,24 +79,33 @@ unique(est_d0$estimate_scale)
 #> [1] "arcsine"
 ```
 
-The output is identical in shape to
-[`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-Scenario A output; the only difference is `input_mode = "aggregate"`.
+Each row is one site’s FRPM estimate for 2024. The main estimate and SE
+columns have the same meaning as in student-level binomial output:
+`theta_raw` is the observed proportion, while `theta_hat` and `se` use
+`estimate_scale`. Here `input_mode = "aggregate"` records the source
+format.
 
-## 4. Scenario D1 — multiple aggregate marginals per site-year
+For a publisher file with different column names, use `numerator_col`
+and `denominator_col` to map them to `c_jt` and `n_jt`. An existing
+`suppression_flag` is read by default; `suppression_col` can name a
+different flag column. Do not turn a suppressed count into zero. See the
+suppression example below for how unavailable values are retained.
+
+## Several marginal proportions per site-year (D1)
 
 D1 is the case where the publisher reports several marginal indicators
 per site-year (e.g., FRPM rate + SNAP rate + WIC rate). Each marginal
 becomes a row; cross-marginal correlation is unidentified from marginals
-alone, so the engine emits a diagonal working-independence `V` (when
-`vjt = TRUE`).
+alone. With `vjt = TRUE`, sitemix uses a diagonal `V` as a
+working-independence assumption; it does not estimate zero dependence
+from the data.
 
-Tell the engine whether those marginals describe the same observed units
-with `sampling_relation`. Use `"same_units"` only with source
-documentation that establishes a common sample, `"different_units"` when
-the marginal samples are known to differ, and the default `"unknown"`
-otherwise. Equal denominators are recorded as a denominator pattern;
-they do not prove common units.
+Describe whether those marginals refer to the same observed units with
+`sampling_relation`. Use `"same_units"` only with source documentation
+that establishes a common sample, `"different_units"` when the marginal
+samples are known to differ, and the default `"unknown"` otherwise.
+Equal denominators are recorded as a denominator pattern; they do not
+prove common units.
 
 ``` r
 
@@ -138,7 +131,11 @@ head(d1_long, 4)
 #> 4    S004 2024      frpm    6   14
 ```
 
-Estimate:
+The FRPM and SNAP counts below were built from the same simulated
+students, so `sampling_relation = "same_units"` is justified here.
+Requesting `V` produces `sitemix_warning_working_independence_default`:
+the example captures that expected warning, while any other warning
+stops the render.
 
 ``` r
 
@@ -168,7 +165,8 @@ head(est_d1, 4)
 #> #   V <list>, K <int>
 ```
 
-The working-independence `V` matrix for site `S001`:
+Inspect the first site’s working-independence matrix and recorded
+assumptions:
 
 ``` r
 
@@ -187,28 +185,37 @@ attr(est_d1, "d1_regime")
 #> [1] "D1a"
 ```
 
-`vcov_method = "working_independence"` — the off-diagonals are exactly
-zero because cross-marginal covariance is not identified from publisher
-marginals alone. For formal raw pairwise intervals and explicitly
-non-bound projected stress scenarios, see [A7 · Variance smoothing and
-Fréchet](https://joonho112.github.io/sitemix/articles/a7-variance-smoothing-and-frechet.md)
-and the formal derivation in [M7 · Fréchet envelope
-theory](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md).
+The zero off-diagonals express the working assumption. In this D1
+example, `V` is on the row’s arcsine scale and its diagonal equals
+`se^2`. Keeping `sampling_relation` separate from `denominator_pattern`
+makes the same-unit assumption explicit; matching denominator values
+alone would not justify it.
 
-## 5. Subgroup files — Framing X vs Framing Y
+To explore the unidentified dependence, see [Variance smoothing and
+Fréchet sensitivity
+analysis](https://joonho112.github.io/sitemix/articles/a7-variance-smoothing-and-frechet.md)
+and [the Fréchet
+derivation](https://joonho112.github.io/sitemix/articles/m7-frechet-envelope-theory.md).
+Formal pairwise covariance ranges require complete same-unit marginals
+with a common finite denominator, IID plug-in variance,
+`anscombe = FALSE`, and no FPC or `binomial_bc`. Those ranges are
+raw-scale quantities. PSD-projected matrices are stress scenarios and
+need not be attainable joint covariance bounds.
+
+## Choose the unit of analysis for subgroup files
 
 When the publisher file carries one row per `(site, year, subgroup)`
 triple, you must pivot before estimation. The choice between Framing X
 and Framing Y depends on your question.
 
 Both helpers map the fixed publisher total vocabulary `ALL`,
-`ALL STUDENT(S)`, `TOTAL`, and `OVERALL` to canonical `ALL`; matching
-ignores case, surrounding whitespace, and punctuation between words.
-Framing X keeps the publisher spelling in `source_subgroup` for audit
-while using canonical `ALL` in its composite key, and Framing Y uses
-canonical `ALL` as the indicator. Alias collisions fail as duplicates.
-Mixed school/district/state rows are not routed automatically: split
-them into homogeneous reporting-level tables before pivoting.
+`ALL STUDENT(S)`, `TOTAL`, and `OVERALL` to `ALL`; matching ignores
+case, surrounding whitespace, and punctuation between words. Framing X
+keeps the publisher spelling in `source_subgroup` for audit while using
+`ALL` in its composite key, and Framing Y uses `ALL` as the indicator.
+Alias collisions fail as duplicates. Mixed school/district/state rows
+are not routed automatically: split them into homogeneous
+reporting-level tables before pivoting.
 
 ``` r
 
@@ -244,27 +251,37 @@ fx <- sm_pivot_subgroups_to_sites(
 head(fx, 4)
 #> # A tibble: 4 × 9
 #>   site_id     year indicator  c_jt  n_jt suppression_flag framing source_site_id
-#>   <chr>      <int> <chr>     <int> <int> <lgl>            <chr>   <chr>         
-#> 1 S001_ell    2024 frpm_tak…     8    12 FALSE            subgro… S001          
-#> 2 S001_non_…  2024 frpm_tak…     3     7 FALSE            subgro… S001          
-#> 3 S002_ell    2024 frpm_tak…     4     6 FALSE            subgro… S002          
-#> 4 S002_non_…  2024 frpm_tak…    10    15 FALSE            subgro… S002          
+#>   <chr>      <int> <chr>     <int> <int> <lgl>            <chr>   <chr>
+#> 1 S001_ell    2024 frpm_tak…     8    12 FALSE            subgro… S001
+#> 2 S001_non_…  2024 frpm_tak…     3     7 FALSE            subgro… S001
+#> 3 S002_ell    2024 frpm_tak…     4     6 FALSE            subgro… S002
+#> 4 S002_non_…  2024 frpm_tak…    10    15 FALSE            subgro… S002
 #> # ℹ 1 more variable: source_subgroup <chr>
 ```
 
-The Framing-X default keeps `partition_target = "none"` and returns
-conditional rates. The only composition options are
-`"denominator_composition"` and `"case_composition"`; both require the
-same complete category grid and one canonical `ALL` total in every
-site-year. A missing category row is an error, not an implicit zero.
-Suppressed numerators rule out case composition, whereas denominator
-composition is available only when every required denominator is
-observed.
+The default `partition_target = "none"` keeps each subgroup’s own
+numerator and denominator. It prepares conditional rates such as FRPM
+participation within ELL students; assigning a new site ID does not turn
+them into shares of the whole site’s population.
+
+For shares of a common site total, the same helper offers
+`"denominator_composition"` and `"case_composition"`. Those options
+return wide category counts for
+`sm_estimate_from_counts(family = "multinomial")`. They require mutually
+exclusive categories covering the relevant total, a complete category
+set, and one `ALL` row per site-year. The common `n_jt` is the
+category-count sum, checked against `ALL` within the supplied tolerance.
+A missing category must not be silently treated as zero. Denominator
+composition needs observed denominators but permits suppressed
+numerators; case composition needs observed numerators that are not
+suppressed.
 
 **Framing Y** — each subgroup becomes a marginal indicator of the
-original site. Subgroups commonly describe different observational
-units, so use `sampling_relation = "different_units"` unless the source
-establishes otherwise:
+original site. The ELL and non-ELL groups in this example represent
+different students, so the call uses
+`sampling_relation = "different_units"`. For other data, use that value
+only when the samples are known to differ; keep `"unknown"` when the
+source does not establish their relationship:
 
 ``` r
 
@@ -276,8 +293,8 @@ fy <- sm_pivot_subgroups_to_indicators(
 )
 head(fy, 4)
 #> # A tibble: 4 × 8
-#>   site_id  year indicator source_subgroup  c_jt  n_jt suppression_flag framing  
-#>   <chr>   <int> <chr>     <chr>           <int> <int> <lgl>            <chr>    
+#>   site_id  year indicator source_subgroup  c_jt  n_jt suppression_flag framing
+#>   <chr>   <int> <chr>     <chr>           <int> <int> <lgl>            <chr>
 #> 1 S001     2024 ell       ell                 8    12 FALSE            subgroup…
 #> 2 S001     2024 non_ell   non_ell             3     7 FALSE            subgroup…
 #> 3 S002     2024 ell       ell                 4     6 FALSE            subgroup…
@@ -292,15 +309,21 @@ est_fy <- sm_estimate_from_aggregates(
 )
 ```
 
-Pass either pivoted tibble to
-[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-with the appropriate family.
+In this example, both `fx` and `fy` retain the subgroup-specific
+fractions. `fx` represents ten subgroup-sites; `fy` represents five
+original sites with two indicators each. The pivots change that
+organization, not the counts. The default indicator pivot removes an
+entire site-year if a selected subgroup is missing or suppressed. Use
+`na_action = "keep_na"` to retain missing coordinates, then choose the
+aggregate suppression handling explicitly.
 
-## 6. Publisher-side suppression audit
+## Count suppressed and small-denominator rows
 
 Before estimation, count how many rows are Tier 1
 (publisher-suppressed), Tier 2 (observed below `accountability_n`), or
-Tier 3 (publishable). Use
+Tier 3 (observed at or above that threshold). These labels describe the
+supplied counts and threshold; they do not decide whether a publisher
+may release a result. Use
 [`sm_suppression_report()`](https://joonho112.github.io/sitemix/reference/sm_suppression_report.md).
 
 ``` r
@@ -321,7 +344,7 @@ print(as.data.frame(report), row.names = FALSE)
 #>  n_denominator_missing pct_suppressed pct_below_accountability
 #>                      0              0                     0.66
 #>  median_n_suppressed denominator_observed_on_suppressed suppression_sources
-#>                   NA                               TRUE                    
+#>                   NA                               TRUE
 #>       recommended_action sensitivity_role
 #>  no_suppression_detected             none
 #>  sensitivity_numeric_variance_available sensitivity_requires_acknowledgement
@@ -332,16 +355,21 @@ print(as.data.frame(report), row.names = FALSE)
 #>                                 FALSE
 ```
 
-If `pct_suppressed` is high, the default `suppression = "drop"` retains
-unavailable audit rows with canonical estimates and SEs missing. The
-legacy `suppression = "upper_bound"` option is not imputation: with
-`suppression_sensitivity_acknowledge = TRUE`, it stores a worst-case
-Bernoulli variance scenario only in separated `sensitivity_*` fields. It
-never populates canonical estimates or ordinary covariance. When the
-denominator is hidden, even those numeric sensitivity variances remain
-missing.
+This complete simulated slice has no suppressed rows. On a publisher
+file, `pct_suppressed` reports their share on a 0–1 scale. The default
+`suppression = "drop"` retains those rows with missing estimates and
+SEs.
 
-## 7. Audit
+If a separate variance-sensitivity analysis is warranted,
+`suppression = "upper_bound"` with explicit acknowledgement stores
+`sensitivity_*` fields. With an observed denominator it uses the
+Bernoulli variance at p = 0.5; it does not fill in a suppressed
+proportion. This option requires `vst = "arcsine"` and
+`anscombe = FALSE`. Hidden denominators leave even the numeric
+sensitivity variances missing. Neither kind of suppressed row can supply
+an ordinary `V` or Fréchet input.
+
+## Check the example outputs
 
 ``` r
 
@@ -355,16 +383,14 @@ stopifnot(nrow(fx) == 10L)  # 5 sites × 2 subgroups
 stopifnot(nrow(fy) == 10L)
 ```
 
-## 8. What’s next?
+## Related examples
 
-- [A6 · Diagnostics and
-  suppression](https://joonho112.github.io/sitemix/articles/a6-diagnostics-and-suppression.md)
+- [Checking estimates and handling suppressed
+  data](https://joonho112.github.io/sitemix/articles/a6-diagnostics-and-suppression.md)
   for the full three-tier audit workflow.
-- [A7 · Variance smoothing and
-  Fréchet](https://joonho112.github.io/sitemix/articles/a7-variance-smoothing-and-frechet.md)
+- [Variance smoothing and Fréchet sensitivity
+  analysis](https://joonho112.github.io/sitemix/articles/a7-variance-smoothing-and-frechet.md)
   for D1 raw pairwise Fréchet intervals and projected stress scenarios.
-- [M5 · Aggregate engines D0 /
-  D1](https://joonho112.github.io/sitemix/articles/m5-aggregate-engines.md)
+- [Sampling uncertainty from published
+  aggregates](https://joonho112.github.io/sitemix/articles/m5-aggregate-engines.md)
   for the formal derivations.
-
-## References

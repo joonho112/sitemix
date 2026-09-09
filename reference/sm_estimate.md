@@ -1,22 +1,20 @@
 # Estimate site-year rates and standard errors
 
-`sm_estimate()` is the main entry point for producing site-year point
-estimates and standard errors for downstream analyses that propagate
-sampling uncertainty. It accepts three input shapes – student rows,
-sufficient counts, or published aggregates – and five estimation
-scenarios (A/B/C/D0/D1) selected by a combination of `family`,
-`from_counts`, and `from_aggregates`. For the two narrow input shapes,
-prefer the wrappers listed under *See Also*; for student rows, call
-`sm_estimate()` directly. The output is a `sitemix_estimates` tibble;
-pass it to
-[`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-to audit scalar and joint sampling uncertainty before downstream use.
+`sm_estimate()` estimates proportions and standard errors for each site
+and year. It accepts individual student rows, sufficient counts, or
+published aggregates. Choose `family = "binomial"` for one binary
+indicator, `"multivariate"` for overlapping binary indicators, or
+`"multinomial"` for mutually exclusive categories.
 
-The v0.2 public signature is frozen. None of the current arguments is
-deprecated: direct `from_counts` / `from_aggregates` dispatch and the
-`vjt` covariance opt-in remain supported compatibility surfaces. The
-wrappers are the recommended entry points for counts and published
-aggregates because they lock the input path explicitly.
+For counts or published aggregates,
+[`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
+and
+[`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
+set the input type for you. You can also use `from_counts = TRUE` or
+`from_aggregates = TRUE` here. The result is a `sitemix_estimates`
+tibble. Use
+[`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
+to check the estimates and their uncertainty before further analysis.
 
 ## Usage
 
@@ -61,268 +59,263 @@ sm_estimate(
 
 - data:
 
-  A data frame or tibble. Required columns depend on the dispatched
-  Scenario: `(site_id, year, indicator)` for Scenario A from student
-  rows; `(site_id, year, indicators)` for Scenario B;
-  `(site_id, year, indicator)` as a factor or character column for
-  Scenario C from student rows. Sufficient counts require `n_jt` plus
-  family-specific `c_jt_*` columns. Published aggregates use numerator
-  and denominator columns named by `numerator_col` and
-  `denominator_col`.
+  A data frame or tibble containing site and year columns named by
+  `id_cols`. Student rows need the column named by `indicator`, or the
+  binary columns named by `indicators`. Counts input needs `n_jt` and
+  family-specific `c_jt_*` columns. Published aggregates may use the
+  standard aggregate column names or the column mappings below; see
+  [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md).
 
 - family:
 
-  Character scalar. Estimation family selecting the dispatched engine.
-  One of `"binomial"`, `"multivariate"`, or `"multinomial"`. No default;
-  omission raises `sitemix_error_invalid_family`.
+  A single string: `"binomial"`, `"multivariate"`, or `"multinomial"`.
+  Required; omitting it raises `sitemix_error_invalid_family`. Published
+  aggregate input supports only `"binomial"` and `"multivariate"`.
 
 - indicator:
 
-  Character scalar or `NULL` (default `NULL`). Name of the single
-  indicator column in `data`. Required for Scenarios A, C, and D0. For
-  Scenario A the column must be logical or 0/1 numeric; for Scenario C
-  the column must be a factor or character.
+  A single column name, or `NULL` (default). Required for
+  single-indicator student/count input (A) and categorical student input
+  (C). Binary columns must be logical or numeric 0/1; categorical
+  columns must be factors or character vectors. For long-form aggregate
+  input, this argument supplies or replaces the indicator label; `NULL`
+  keeps the labels already in the data.
 
 - indicators:
 
-  Character vector or `NULL` (default `NULL`). For Scenario B, the
-  column names of overlapping binary indicators whose joint moments are
-  estimated. For Scenario C with `from_counts = TRUE` (including
-  [`sm_estimate_from_counts`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)),
-  the explicit category order applied to the supplied `c_jt_*` count
-  columns. For Scenario D1, the marginal column names.
+  A character vector, or `NULL` (default). Names of overlapping binary
+  indicators for B. For multinomial counts (C), gives the category order
+  of the `c_jt_*` columns. For wide-form D1 aggregates, gives the
+  marginal indicator names.
 
 - id_cols:
 
-  Character vector of length two. Column names identifying site and
-  year, in that order. Defaults to `c("site_id", "year")`.
+  A character vector of length two, giving the site and year column
+  names in that order. Defaults to `c("site_id", "year")`.
 
 - vst:
 
-  Character scalar. Variance-stabilizing transform applied to
-  `theta_hat` and `se`. One of `"arcsine"` (default), `"logit"`, or
-  `"none"`. Sets the row-level `estimate_scale` column of the returned
-  tibble.
+  A single string giving the transformation used for `theta_hat` and
+  `se`: `"arcsine"` (default), `"logit"`, or `"none"`. The returned
+  `estimate_scale` column records the chosen scale.
 
 - boundary_method:
 
-  Character scalar. Policy applied to boundary cells where \\C\_{jt} \in
-  \\0, n\_{jt}\\\\. One of `"wilson_floor"` (default),
-  `"agresti_coull"`, or `"none"`. Boundary rows are flagged via
-  `flag_zero_cell` regardless of the selected policy. Wilson and
-  Agresti–Coull values regularize uncertainty only: `theta_raw` and
-  `theta_hat` retain the observed \\C\_{jt}/n\_{jt}\\ point on raw
-  output. The public option names are retained for compatibility; row
-  provenance explicitly labels the resulting values as boundary
-  surrogates.
+  A single string specifying how to calculate uncertainty when \\C\_{jt}
+  \in \\0, n\_{jt}\\\\: `"wilson_floor"` (default), `"agresti_coull"`,
+  or `"none"`. Boundary rows have `flag_zero_cell = TRUE`. The Wilson
+  and Agresti–Coull options replace boundary uncertainty with a
+  surrogate; they do not move the observed raw proportion away from 0
+  or 1. Logit output is unavailable at these boundaries.
 
 - bias_correction:
 
-  Character scalar or `NULL` (default `NULL`). When `"binomial_bc"`,
-  applies the binomial n-1 correction to legal interior row-level scalar
-  SEs. Raw rows carry `var_method = "binomial_bc"`; arcsine and logit
-  rows carry scale-specific delta-method provenance. Scenario B/C
-  covariance-matrix correction is handled separately. The option is
-  incompatible with `anscombe = TRUE`. `NULL` disables the correction.
+  `NULL` (default) or `"binomial_bc"`. The latter uses the n-1
+  correction for interior scalar variances and propagates it to arcsine
+  or logit standard errors by the delta method. B/C covariance-matrix
+  correction is handled separately. This option cannot be combined with
+  `anscombe = TRUE`.
 
 - vjt:
 
-  Logical scalar. If `TRUE`, attach the within-site covariance as a
-  [`sm_vcov`](https://joonho112.github.io/sitemix/reference/sm_vcov.md)
-  list-column `V`; if `FALSE` (default), omit it. Use it when a
-  downstream analysis needs joint covariance (Scenarios B / C / D1).
-  Agresti–Coull boundary regularization with `vjt = TRUE` is not
-  supported. This stable opt-in is not deprecated.
+  A single logical value. If `TRUE`, include within-site covariance
+  matrices as a `V` list-column of
+  [`sm_vcov()`](https://joonho112.github.io/sitemix/reference/sm_vcov.md)
+  objects. Defaults to `FALSE`. Use it for analyses involving several
+  indicators together. Agresti–Coull boundary uncertainty is not
+  supported for covariance-matrix output.
 
 - min_n:
 
-  Positive integer scalar. Threshold for the `flag_small_n` output
-  column; rows with \\n\_{jt} \<\\ `min_n` are flagged. Defaults to
-  `10L`.
+  A positive whole number. Rows with `n < min_n` receive
+  `flag_small_n = TRUE`. Defaults to `10L`.
 
 - accountability_n:
 
-  Positive integer scalar. Threshold for the `flag_below_accountability`
-  output column; rows with \\n\_{jt} \<\\ `accountability_n` are
-  flagged. Defaults to `30L`.
+  A positive whole number. Rows with `n < accountability_n` receive
+  `flag_below_accountability = TRUE`. Defaults to `30L`.
 
 - fpc:
 
-  Positive whole-number population size(s) or `NULL` (default `NULL`).
-  This declares a fixed finite population of size \\N\\ sampled by
-  simple random sampling without replacement (SRSWOR), not a generic
-  correction factor. A scalar is recycled across site-year groups. A
-  vector must align with input rows and be constant within each
-  `id_cols` group. Every retained group requires \\N \ge n\\; equality
-  is a census with zero sampling uncertainty. FPC is not allowed for
-  synthetic suppression-sensitivity rows. The current aggregate
-  implementation additionally fails closed when any Tier-1 row is
-  present, including retained `suppressed_missing` rows, because
-  object-wide FPC provenance requires fully observed aggregate rows.
+  Positive whole-number population sizes, or `NULL` (default). Supply
+  the population size \\N\\ for simple random sampling without
+  replacement (SRSWOR). A single value is used for all site-year groups.
+  A vector must align with input rows and be constant within each
+  `id_cols` group. Each retained group requires \\N \ge n\\; equality
+  represents a census with zero sampling uncertainty. This argument is a
+  population size, not a variance multiplier. Aggregate inputs
+  containing any suppressed rows, including retained missing rows and
+  sensitivity rows, cannot currently use `fpc`.
 
 - anscombe:
 
-  Logical scalar. If `TRUE`, applies the Anscombe arcsine correction
-  shown in *Details*; the resulting rows carry
-  `var_method = "arcsine_anscombe"`. Defaults to `FALSE`. It requires
-  `vst = "arcsine"` and is incompatible with
-  `boundary_method = "agresti_coull"` and
+  A single logical value. If `TRUE`, apply the Anscombe correction shown
+  in *Details*. Defaults to `FALSE`. Requires `vst = "arcsine"` and
+  cannot be combined with `boundary_method = "agresti_coull"` or
   `bias_correction = "binomial_bc"`.
 
 - from_counts:
 
-  Logical scalar. If `TRUE`, treat `data` as sufficient counts (one row
-  per site-year with `c_jt_*` columns) rather than student rows.
-  Mutually exclusive with `from_aggregates`. Defaults to `FALSE`. This
-  direct-dispatch switch remains supported; the counts wrapper is
-  preferred for new code.
+  A single logical value. If `TRUE`, treat `data` as one row of
+  sufficient counts per site-year. Defaults to `FALSE`; cannot be
+  combined with `from_aggregates = TRUE`.
+  [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
+  sets this argument automatically.
 
 - na_action:
 
-  Character scalar. Missing-value policy for the indicator column(s).
-  One of `"drop_rows"` (default) or `"error"`. `"error"` raises
+  A single string describing how to handle missing indicator values:
+  `"drop_rows"` (default) or `"error"`. The latter raises
   `sitemix_error_input_missing` on any `NA`.
 
 - description:
 
-  Character scalar or `NULL` (default `NULL`). Optional human-readable
-  label preserved in the `description` attribute of the returned tibble.
+  A single string, or `NULL` (default). An optional label stored in the
+  returned object's `description` attribute.
 
 - from_aggregates:
 
-  Logical scalar. If `TRUE`, treat `data` as published aggregate input
-  (Scenarios D0 / D1). Mutually exclusive with `from_counts`. Defaults
-  to `FALSE`. This direct-dispatch switch remains supported;
+  A single logical value. If `TRUE`, treat `data` as published
+  aggregates (D0/D1). Defaults to `FALSE`; cannot be combined with
+  `from_counts = TRUE`.
   [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-  is preferred for new aggregate-input code.
+  sets this argument automatically.
 
 - aggregate_case:
 
-  Aggregate case: `"auto"` (infer; default), `"D0"`, or `"D1"`. Ignored
-  off the aggregate path; invalid values fail before dispatch.
+  A single string: `"auto"` (default, inferred from the indicators),
+  `"D0"`, or `"D1"`. Valid values have no effect outside aggregate
+  input; invalid values always raise an error.
 
 - framing:
 
-  Aggregate subgroup framing. Character scalar or `NA_character_`
-  (default; direct D0 framing). For Framing X or Framing Y, pivot first
-  with the corresponding subgroup helper listed under *See Also*. Valid
-  inactive values are accepted silently; invalid values always raise
+  `NA_character_` (default), `"subgroup_as_site"`, or
+  `"subgroup_as_indicator"`. Describes how aggregate subgroups are
+  represented. Reshape the data first with
+  [`sm_pivot_subgroups_to_sites()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_sites.md)
+  or
+  [`sm_pivot_subgroups_to_indicators()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_indicators.md);
+  this argument does not reshape raw subgroup rows. Invalid values raise
   `sitemix_error_invalid_framing`.
 
 - sampling_relation:
 
-  Character scalar describing D1 sampling-unit provenance. One of
-  `"unknown"` (default), `"same_units"`, or `"different_units"`. These
-  map to object-level `d1_regime` values `"unknown"`, `"D1a"`, and
-  `"D1b"`, respectively. Equal denominators are recorded separately and
-  never establish common observational units. Invalid values raise
-  `sitemix_error_invalid_sampling_relation`. A valid value outside D1 is
-  accepted silently and has no effect.
+  A single string describing the observational units behind D1
+  marginals: `"unknown"` (default), `"same_units"`, or
+  `"different_units"`. These produce `d1_regime` labels `"unknown"`,
+  `"D1a"`, and `"D1b"`, respectively. Equal denominators do not imply
+  the same units. Valid values have no effect outside D1; invalid values
+  raise `sitemix_error_invalid_sampling_relation`.
 
 - suppression:
 
-  Character scalar. Aggregate Tier-1 handling mode. One of `"drop"`
-  (default; retain an unavailable audit row with canonical point/SE
-  columns missing) or `"upper_bound"` (legacy option for an explicitly
-  acknowledged, separated worst-case Bernoulli variance sensitivity).
-  The latter never writes a synthetic point or SE to canonical columns
-  and is excluded from ordinary `V` and Fréchet inputs. A valid value is
-  ignored when `from_aggregates = FALSE`; invalid values are rejected
-  before dispatch.
+  A single string for handling publisher-suppressed aggregate rows:
+  `"drop"` (default) or `"upper_bound"`. `"drop"` retains a row with
+  missing estimates and standard errors. `"upper_bound"` adds separately
+  labeled Bernoulli variance-sensitivity fields after explicit
+  acknowledgement; it leaves the estimate and SE columns missing. These
+  rows cannot supply ordinary `V` or Fréchet inputs. When suppressed
+  rows are present, `"upper_bound"` requires `vst = "arcsine"` and
+  `anscombe = FALSE`. Valid values have no effect for other input types;
+  invalid values always raise an error.
 
 - suppression_col:
 
-  Character scalar or `NULL` (default `NULL`). Name of the publisher
-  suppression flag column in `data`. `NULL` disables flag-based
-  detection.
+  A single column name, or `NULL` (default). Names the publisher
+  suppression flag. With `NULL`, an existing `suppression_flag` column
+  is used if present; missing numerators can also identify suppressed
+  rows.
 
 - suppression_flag_value:
 
-  Value or vector of values marking Tier-1 suppression in
-  `suppression_col`. Defaults to `""` (the empty string).
+  Values in the suppression flag column that indicate suppression.
+  Defaults to `""` (the empty string).
 
 - suppression_when:
 
-  Function or `NULL` (default `NULL`). Optional predicate overriding
-  flag-based detection.
+  A function, or `NULL` (default). An optional predicate returning one
+  logical value per aggregate row; it overrides the usual flag and
+  missing-numerator detection.
 
 - suppressed_theta_hat:
 
-  Numeric scalar in \\\[0, 1\]\\. Legacy compatibility name for the
-  raw-scale probability used only to maximize Bernoulli variance under
-  `suppression = "upper_bound"`. Any finite interior value is
-  syntactically valid, but an active upper-bound sensitivity with a
-  suppressed row requires `0.5`. It is stored in
-  `sensitivity_probability` and never substituted into canonical
-  estimate columns. The argument is retained without a deprecation
-  warning or removal schedule in v0.2.
+  A finite numeric value strictly between 0 and 1; defaults to `0.5`.
+  Used only for `suppression = "upper_bound"`. When suppressed rows are
+  present, it must be `0.5`, which maximizes Bernoulli variance. The
+  value is stored as `sensitivity_probability`; it never replaces an
+  observed or missing point estimate.
 
 - suppression_sensitivity_acknowledge:
 
-  Logical scalar. Must be `TRUE` when `suppression = "upper_bound"`
-  actually encounters suppressed rows. This explicitly acknowledges that
-  the returned separated fields are a non-identified
-  variance-sensitivity scenario, not an estimate or an ordinary
-  covariance input.
+  A single logical value, defaulting to `FALSE`. Must be `TRUE` when
+  `suppression = "upper_bound"` encounters suppressed rows. The
+  additional fields describe a variance-sensitivity scenario; they are
+  not estimated values or ordinary covariance inputs.
 
 - suppressed_n_strategy:
 
-  Character scalar. Denominator strategy for hidden suppressed rows. One
-  of `"observed_n"` (default) or legacy `"worst_case_bound"` (record
-  `suppressed_n_bound` as an operational placeholder). Because an upper
-  bound on an unknown denominator is not a conservative SE denominator,
-  hidden-denominator sensitivity rows make no numeric variance claim.
+  A single string: `"observed_n"` (default) or `"worst_case_bound"`. For
+  suppressed upper-bound rows, the default uses the observed
+  denominator. The latter records `suppressed_n_bound` as `n` and
+  `n_eff`, even when the input denominator is observed. On
+  observed-denominator rows, that chosen value is also `sensitivity_n`
+  in the variance calculation. A hidden denominator supplies no numeric
+  sensitivity variance; a recorded bound does not identify the actual
+  sample size.
 
 - suppressed_n_bound:
 
-  Positive integer scalar or `NULL` (default). Legacy audit placeholder
-  for the worst-case strategy; never a variance denominator.
+  A positive whole number, or `NULL` (default). Required for active
+  suppressed upper-bound rows with
+  `suppressed_n_strategy = "worst_case_bound"`; must be no larger than
+  `min_n`. It becomes the recorded row denominator and, when the input
+  denominator is observed, the sensitivity denominator.
+  Hidden-denominator rows retain missing sensitivity variances.
 
 - numerator_col:
 
-  Character scalar or `NULL` (default `NULL`). Name of the aggregate
-  numerator column. Required for Scenario D0 inputs; ignored otherwise.
+  A single column name, or `NULL` (default). Maps an aggregate numerator
+  to `c_jt`. With `NULL`, long-form input uses an existing `c_jt`
+  column; wide-form input uses `c_jt_*` columns.
 
 - denominator_col:
 
-  Character scalar or `NULL` (default `NULL`). Name of the aggregate
-  denominator column. Required for Scenarios D0 / D1; ignored otherwise.
+  A single column name, or `NULL` (default). Maps an aggregate
+  denominator to `n_jt`. With `NULL`, use the standard denominator
+  columns described in
+  [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md).
 
 - indicator_col:
 
-  Character scalar or `NULL` (default `NULL`). Name of the long-form
-  indicator-key column in aggregate inputs (one row per
-  site-year-indicator).
+  A single column name, or `NULL` (default). Maps long-form aggregate
+  indicator labels to `indicator`; `NULL` uses that name if present.
 
 - subgroup_col:
 
-  Character scalar or `NULL` (default `NULL`). Name of the subgroup-key
-  column in aggregate D1 inputs.
+  A single column name, or `NULL` (default). Maps aggregate subgroup
+  labels to `subgroup`; `NULL` uses that name if present.
 
 ## Value
 
-A `sitemix_estimates` tibble with one row per site-year-indicator.
-Columns (the order follows the constructor in `R/output-assembly.R`):
+A `sitemix_estimates` tibble with one row per site-year-indicator. The
+main columns are:
 
 - `site_id`:
 
-  Character site identifier; the first member of the keyed pair
-  `(site_id, year)`.
+  Character site identifier.
 
 - `year`:
 
-  Integer year identifier; the second member of the keyed pair.
+  Integer year.
 
 - `indicator`:
 
-  Character scalar; the indicator name passed via `indicator =`
-  (Scenarios A, D0) or one of the indicator-component names (Scenarios
-  B, C, D1).
+  Character indicator or category name.
 
 - `theta_raw`:
 
-  Numeric in \\\[0, 1\]\\; the raw-scale proportion \\\hat\pi\_{jt} =
-  C\_{jt}/n\_{jt}\\.
+  Numeric in \\\[0, 1\]\\; the observed proportion \\\hat\pi\_{jt} =
+  C\_{jt}/n\_{jt}\\. Missing for suppressed rows.
 
 - `theta_hat`:
 
@@ -343,12 +336,16 @@ Columns (the order follows the constructor in `R/output-assembly.R`):
 
 - `n`:
 
-  Positive integer; the site-year denominator \\n\_{jt}\\.
+  Positive integer denominator. A hidden-denominator suppression row may
+  instead record `suppressed_n_bound`; that value does not establish an
+  observed sample size.
 
 - `n_eff`:
 
-  Numeric; transform-denominator provenance. Finite-population sampling
-  does not change this value.
+  Numeric denominator used for transformed standard errors: `n + 1/2`
+  with Anscombe, otherwise `n`. This is distinct from the `n + 3/4` in
+  the Anscombe point transformation. Finite-population correction leaves
+  it unchanged.
 
 - `estimate_scale`:
 
@@ -361,28 +358,28 @@ Columns (the order follows the constructor in `R/output-assembly.R`):
 
 - `var_method`:
 
-  Character scalar; the row-level SE provenance, drawn from the
-  implemented lexicon described in *Details*.
+  Character string naming the standard-error calculation; possible
+  values are listed in *Details*.
 
 - `flag_small_n`:
 
-  Logical; `TRUE` iff \\n\_{jt} \<\\ `min_n`.
+  Logical; `TRUE` if \\n\_{jt} \<\\ `min_n`.
 
 - `flag_zero_cell`:
 
   Logical; `TRUE` at an identified boundary \\C\_{jt} \in \\0,
-  n\_{jt}\\\\, `FALSE` in an identified interior, and `NA` when
-  publisher suppression hides the numerator.
+  n\_{jt}\\\\, `FALSE` for an observed interior proportion, and `NA`
+  when publisher suppression hides the numerator.
 
 - `input_mode`:
 
   Character scalar; one of `"student_level"`, `"counts_full_suff"`, or
-  `"aggregate"`, recording the dispatched input pathway.
+  `"aggregate"`, recording the input type.
 
 - `flag_suppressed`:
 
-  Logical; `TRUE` iff the site-year was suppressed by the publisher
-  (Tier 1 in the three-tier framework). Always `FALSE` when
+  Logical; `TRUE` if the site-year was suppressed by the publisher (Tier
+  1 in the reporting scheme). Always `FALSE` when
   `from_aggregates = FALSE`.
 
 - `framing`:
@@ -392,11 +389,11 @@ Columns (the order follows the constructor in `R/output-assembly.R`):
 
 - `flag_below_accountability`:
 
-  Logical; `TRUE` iff \\n\_{jt} \<\\ `accountability_n`.
+  Logical; `TRUE` if \\n\_{jt} \<\\ `accountability_n`.
 
-- **Suppression provenance**:
+- **Suppression information**:
 
-  Optional columns emitted as one set when an aggregate input contains
+  Optional columns returned as one set when an aggregate input contains
   Tier-1 rows:
 
   - Status: `estimate_status`.
@@ -404,7 +401,8 @@ Columns (the order follows the constructor in `R/output-assembly.R`):
   - Values: `sensitivity_probability`, `sensitivity_var_raw`,
     `sensitivity_var`, and `sensitivity_n`.
 
-  - Provenance: `sensitivity_method` and `sensitivity_acknowledged`.
+  - Method and acknowledgement: `sensitivity_method` and
+    `sensitivity_acknowledged`.
 
   `estimate_status` distinguishes identified rows, retained
   suppressed-missing rows, and non-identified sensitivity rows.
@@ -412,15 +410,15 @@ Columns (the order follows the constructor in `R/output-assembly.R`):
   \\0.25/n\\; hidden-denominator rows leave the numeric sensitivity
   variance and denominator missing.
 
-- **Finite-population provenance**:
+- **Finite-population information**:
 
-  Optional structured SRSWOR columns emitted together when `fpc` is
+  Optional structured SRSWOR columns returned together when `fpc` is
   supplied:
 
   - Design: `population_size`, `sampling_fraction`, and
     `sampling_design`.
 
-  - Canonical multipliers: `fpc_variance_multiplier` and
+  - Conventional FPC multipliers: `fpc_variance_multiplier` and
     `fpc_se_multiplier`.
 
   - Applied multipliers: `variance_multiplier_applied` and
@@ -428,23 +426,23 @@ Columns (the order follows the constructor in `R/output-assembly.R`):
 
   `n_eff` remains unchanged; `variance_rule` distinguishes plug-in from
   design-corrected `binomial_bc` uncertainty. The `fpc_*` columns record
-  the canonical SRSWOR \\q\\, while `*_applied` records the multiplier
-  actually applied relative to the same infinite-population variance
-  rule.
+  the conventional SRSWOR \\q\\, while `*_applied` records the
+  multiplier actually applied relative to the same infinite-population
+  variance rule.
 
 - `V`:
 
   Optional list-column of
   [`sm_vcov`](https://joonho112.github.io/sitemix/reference/sm_vcov.md)
-  objects. Present iff `vjt = TRUE`. For Scenarios A / D0 each element
+  objects. Present when `vjt = TRUE`. For Scenarios A / D0 each element
   is \\1 \times 1\\; for B / C / D1 the dimension is the indicator
   count.
 
 - `K`:
 
   Optional integer column; present only alongside `V` for Scenarios B /
-  C / D1 when `vjt = TRUE`, recording the indicator-component count for
-  the row.
+  C / D1 when `vjt = TRUE`, recording the number of indicators or
+  categories.
 
 The returned object also carries the following object-level attributes:
 
@@ -455,7 +453,7 @@ The returned object also carries the following object-level attributes:
 
 - `family`:
 
-  Character scalar or `NULL`; the dispatched estimation family.
+  Character scalar or `NULL`; the estimation family.
 
 - `sitemix_role`:
 
@@ -467,7 +465,8 @@ The returned object also carries the following object-level attributes:
 
 - `sampling_relation`:
 
-  For D1, the explicit sampling-unit provenance supplied by the caller.
+  For D1, whether the caller stated that the indicators describe the
+  same or different units.
 
 - `denominator_pattern`:
 
@@ -486,171 +485,145 @@ The returned object also carries the following object-level attributes:
 
 - `suppression`:
 
-  For D0/D1, suppression detection, denominator observability,
-  acknowledgement, and sensitivity-role provenance.
+  For D0/D1, suppression detection, whether denominators are observed,
+  and any acknowledged sensitivity analysis.
 
 - `smoothing`:
 
-  When experimental append-only smoothing has been attempted, its
-  target, method, fit status, and covariance-relation provenance.
+  After experimental smoothing, the target, method, fit status, and
+  relationship to the covariance matrices.
 
 ## Details
 
-**Scenario dispatch.** The function selects one of five engines from
-`family`, `from_counts`, and `from_aggregates`:
+**Input types.** The documentation uses the following scenario labels
+for the supported combinations of input and family:
 
 |                      |            |                |               |
 |----------------------|------------|----------------|---------------|
-| Input shape          | `binomial` | `multivariate` | `multinomial` |
+| Input                | `binomial` | `multivariate` | `multinomial` |
 | Student rows         | A          | B              | C             |
 | Sufficient counts    | A          | B              | C             |
-| Published aggregates | D0         | D1             | rejected      |
+| Published aggregates | D0         | D1             | Not supported |
 
-Count-input Scenario B requires ordered marginal counts and every
-pairwise co-occurrence count; the approved public path verifies joint
-feasibility for \\K = 2\\ or \\K = 3\\ and fails closed for \\K \ge 4\\.
-Published aggregate marginals do not identify a multinomial composition:
-that cell raises `sitemix_error_ambiguous_dispatch`. Use sufficient
-category counts for Scenario C instead. Anscombe is an arcsine-only
-transform in every legal cell; `anscombe = TRUE` with a non-arcsine
-`vst` raises `sitemix_error_anscombe_requires_arcsine`.
+For student rows, use `indicator` to name a single binary column (A) or
+a factor/character column of categories (C). Use `indicators` to name
+several binary columns that can overlap (B).
 
-- **Scenario A – binomial**:
+Counts input for overlapping indicators requires each marginal count and
+every pairwise co-occurrence count, in the order specified by
+`indicators`. When `vjt = TRUE`, the covariance calculation checks
+whether these counts can come from a common sample. It supports two or
+three indicators; covariance requests with four or more indicators
+require student rows. Counts input with four or more indicators is
+accepted when `vjt = FALSE`.
 
-  One binary indicator per site-year. Input is student rows
-  (`from_counts = FALSE`, `from_aggregates = FALSE`) or sufficient
-  counts (`from_counts = TRUE`). Selected when `family = "binomial"` and
-  `from_aggregates = FALSE`. `V` is \\1 \times 1\\.
+Published aggregates use numerator/denominator pairs (D0) or several
+marginal proportions (D1). D1 covariance assumes working independence;
+it does not recover dependence from the marginals. The
+`sampling_relation` argument records whether the indicators refer to the
+same observational units. Equal denominators alone do not establish
+this. See
+[`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)
+for dependence sensitivity. Published marginals do not supply a
+multinomial composition; use complete category counts for C instead. An
+aggregate request with `family = "multinomial"` raises
+`sitemix_error_ambiguous_dispatch`.
 
-- **Scenario B – multivariate**:
+`from_counts` and `from_aggregates` cannot both be `TRUE`; this raises
+`sitemix_error_input_path_conflict`. Omitting `family` raises
+`sitemix_error_invalid_family`. Argument values are checked even when
+they do not affect the selected input type. Valid unused values have no
+effect; invalid values raise an error. Required data columns and
+combinations of arguments are checked for the input type being used.
 
-  Overlapping binary indicators per site-year with SUR-style covariance.
-  Input is student rows with multiple logical or 0/1 numeric columns
-  named in `indicators`, or sufficient counts containing the ordered
-  marginal and pairwise co-occurrence columns. Selected when
-  `family = "multivariate"` and `from_aggregates = FALSE`. `V` is \\K
-  \times K\\.
+**Transformations.** By default, `theta_hat` and `se` use the arcsine
+square-root scale (`vst = "arcsine"`). Without bias correction, its
+first-order standard error, before any finite-population correction, is
+\$\$\mathrm{SE}(\hat\theta\_{jt}) = 1 / (2\sqrt{n\_{jt}}).\$\$ With
+`bias_correction = "binomial_bc"`, interior arcsine and logit rows
+instead propagate the n-1-corrected raw variance through the
+corresponding delta method. Use `vst = "logit"` for the logit scale or
+`vst = "none"` for proportions. The `estimate_scale` column identifies
+the scale of the returned estimates and standard errors. Any `V` matrix
+has its own `vcov_scale`, which can differ; see *Scale conventions*
+below.
 
-- **Scenario C – multinomial**:
-
-  Mutually exclusive categories summing to \\n\_{jt}\\. Input is student
-  rows with one factor or character column named in `indicator`, or
-  sufficient counts with `c_jt_*` columns when `from_counts = TRUE`.
-  Selected when `family = "multinomial"` and `from_aggregates = FALSE`.
-  `V` is simplex-structured with analytic rank \\S - 1\\, where \\S\\ is
-  the number of categories with positive observed counts.
-
-- **Scenario D0 – aggregate binomial**:
-
-  Published numerator and denominator per site-year. Selected when
-  `from_aggregates = TRUE` and `family = "binomial"`. `V` is \\1 \times
-  1\\.
-
-- **Scenario D1 – aggregate marginal**:
-
-  Published marginal rates with working-independence covariance and
-  optional Fréchet stress analysis. Selected when
-  `from_aggregates = TRUE` and `family = "multivariate"`. With
-  `vjt = TRUE`, `V` is diagonal (\\K \times K\\); see the [Fréchet
-  diagnostic](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md).
-  The `sampling_relation` argument, not denominator equality, determines
-  whether the output is labeled D1a, D1b, or unknown.
-
-**Mutual exclusion.** `from_counts = TRUE` and `from_aggregates = TRUE`
-are mutually exclusive; supplying both raises a
-`sitemix_error_input_path_conflict` condition. `family` is required;
-omitting it raises `sitemix_error_invalid_family`.
-
-**Inactive public controls.** Supplied path-specific controls are
-validated for syntax before dispatch. A valid control that is inactive
-for the selected input path is accepted silently and has no effect; an
-invalid value raises its stable classed condition even when that path is
-inactive. This preserves valid legacy calls without adding lifecycle
-warnings while preventing dispatch-dependent validation surprises.
-Data-column existence and cross-argument compatibility remain
-active-path checks.
-
-**Scale conventions.** On the default scale (`vst = "arcsine"`),
-`theta_hat` is the arcsine-stabilized rate and, without bias correction,
-`se` is its closed-form delta-method standard error
-\$\$\mathrm{SE}(\hat\theta\_{jt}) \\=\\ 1 / (2\sqrt{n\_{jt}}).\$\$ With
-`bias_correction = "binomial_bc"`, legal interior arcsine and logit rows
-propagate the n-1 raw variance through the corresponding delta method.
-Switch with `vst = "logit"` or `vst = "none"`; the row-level
-`estimate_scale` column records the choice. The matrix scale of any `V`
-list-column is recorded separately in each `sm_vcov` object's
-`vcov_scale` field and *may differ* from `estimate_scale` under
-Scenarios B and C. Derivations live in
+With `anscombe = TRUE`, the transformation is
+\$\$\arcsin\sqrt{(C\_{jt}+3/8)/(n\_{jt}+3/4)}\$\$ This option requires
+`vst = "arcsine"`; other transforms raise
+`sitemix_error_anscombe_requires_arcsine`. For derivations, see
 [`vignette("m2-scalar-se-binomial")`](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md).
-The Anscombe option uses
-\$\$\arcsin\sqrt{(C\_{jt}+3/8)/(n\_{jt}+3/4)}\$\$
 
-**var_method lexicon.** The `var_method` column records row-level SE
-provenance from this implemented base lexicon:
+**Standard-error methods.** The `var_method` column names the
+calculation used for each row:
 
-- Arcsine values: `"arcsine_vst"` and `"arcsine_anscombe"`.
+- Arcsine: `"arcsine_vst"`, `"arcsine_anscombe"`, or
+  `"arcsine_delta_binomial_bc"`.
 
-- Bias-corrected arcsine: `"arcsine_delta_binomial_bc"`.
+- Logit: `"logit_delta"` or `"logit_delta_binomial_bc"`.
 
-- Logit values: `"logit_delta"` and `"logit_delta_binomial_bc"`.
+- Untransformed: `"binomial"` or `"binomial_bc"`.
 
-- Raw-scale values: `"binomial"` and `"binomial_bc"`.
-
-- Boundary values: `"wilson_boundary_surrogate"` and
+- Boundary standard errors: `"wilson_boundary_surrogate"` or
   `"agresti_coull_boundary_surrogate"`.
 
-- Suppression values: `"suppressed_drop"` and
-  `"suppression_sensitivity"`.
+- Suppressed rows: `"suppressed_drop"` or `"suppression_sensitivity"`.
 
-Experimental GVF/log-variance smoothing records
-`" + gvf_smooth_loglinear"` or `" + gvf_smooth_gam"` in
-`var_method_smoothed`; these labels enter canonical `var_method` only
-under an allowed overwrite. Legacy `" + fh_smooth_*"` labels remain
-readable. The matrix-level `vcov_method` field on each
-[`sm_vcov`](https://joonho112.github.io/sitemix/reference/sm_vcov.md)
-object uses its own lexicon; see
-[`sm_vcov()`](https://joonho112.github.io/sitemix/reference/sm_vcov.md)
-for the canonical `vcov_method` / `vcov_scale` specification.
+[`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md)
+records experimental alternatives with `" + gvf_smooth_loglinear"` or
+`" + gvf_smooth_gam"` in `var_method_smoothed`. They replace
+`var_method` only when an allowed overwrite is requested. Older
+`" + fh_smooth_*"` labels can still be read. The method used for a
+covariance matrix is recorded separately in its `vcov_method` field; see
+[`sm_vcov()`](https://joonho112.github.io/sitemix/reference/sm_vcov.md).
 
-## Package-neutral export
+## Using the estimates in other analyses
 
-Call
+Run
 [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-before converting the object:
-[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) is a
-transport boundary, not validation. For scalar work, project all rows to
-the identity, `theta_hat`, `se`, `estimate_scale`, `var_method`,
-suppression/accountability flags, and every present
-`estimate_status`/`sensitivity_*` field before filtering by indicator.
-Define local eligibility explicitly; only identified rows with finite
-estimates and strictly positive finite SEs are ordinary inverse-variance
-inputs. Retain exact-census zero-SE rows, suppressed rows, and
-non-identified sensitivity rows for audit, but do not assign them
-inverse-variance weights. Never substitute `sensitivity_var` for `se`.
-If an experimental smoothed SE is selected, pair it with
-`var_method_smoothed` and preserve the canonical pair. For joint work,
-retain complete site-year indicator groups and verify each `V`'s
-`indicator_order`, dimnames, and scale metadata.
+before selecting or converting the results.
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) changes
+their format but does not check whether they are suitable for an
+analysis. Keep site/year/indicator identifiers, `theta_hat`, `se`,
+`estimate_scale`, `var_method`, reporting flags, and any
+`estimate_status` or `sensitivity_*` columns together so that the
+meaning of each row remains clear.
+
+Ordinary inverse-variance weighting requires identified finite estimates
+and finite, strictly positive standard errors. Census rows with zero SE,
+suppressed rows, and sensitivity scenarios should remain available for
+inspection, but should not receive ordinary inverse-variance weights.
+`sensitivity_var` is not a replacement for `se`. If you choose a
+smoothed SE, retain `var_method_smoothed` and the original SE/method
+pair as well. For joint analyses, keep complete site-year indicator
+groups and check each matrix's `indicator_order`, dimnames, and
+`vcov_scale`. See
+[`vignette("a8-downstream-workflows", package = "sitemix")`](https://joonho112.github.io/sitemix/articles/a8-downstream-workflows.md).
 
 ## Scale conventions
 
-Under Scenario A (binomial 1x1) and Scenario D0, each `V` entry is a \\1
-\times 1\\ covariance matrix whose `vcov_scale` is derived from the row
-`estimate_scale`; for example, arcsine rows record
-`vcov_scale = "arcsine_delta"`. Under Scenarios B and C, `V` is returned
-on the raw probability scale regardless of `estimate_scale`;
-consequently `sqrt(diag(V))` is *not* equal to `se` for those rows when
-row-level output is transformed. Always inspect each `sm_vcov` object's
-`vcov_scale` field before downstream use. Under Scenario D1 with
-working-independence covariance, `V` follows `estimate_scale`;
-matrix-scale transformations aligning Scenario B / C `V` with the row
-estimate scale are not implemented in v0.2. The `sm_vcov$diag_contract`
-field makes the row companion explicit: A/D0/D1 matrices match `se^2`;
-B/C raw matrices ordinarily match `se_raw^2`; and multinomial boundary
-surrogates record the intentional scalar/simplex-diagonal exception.
-When `fpc` is supplied, matrix metadata records the SRSWOR population,
-sampling fraction, conventional FPC, actually applied multiplier, and
-plug-in/design-corrected rule without changing `n_eff`.
+With a single binary indicator (A/D0), `V` is a \\1 \times 1\\ matrix on
+the row's estimate scale. For example, arcsine output has
+`vcov_scale = "arcsine_delta"`. D1 working-independence matrices also
+follow the row's estimate scale.
+
+For overlapping indicators (B) and mutually exclusive categories (C),
+`V` stays on the raw probability scale even when the row estimates are
+transformed. Thus `sqrt(diag(V))` should not be compared with
+transformed `se`. sitemix does not transform B/C matrices to match a
+different row scale. Always inspect `vcov_scale` before using a matrix
+in a joint analysis.
+
+The `diag_contract` field identifies the corresponding scalar variance:
+A/D0/D1 matrices match `se^2`; B/C raw matrices usually match
+`se_raw^2`. For multinomial boundary cells, scalar boundary surrogates
+intentionally differ from the simplex diagonal. With `fpc`, the matrix
+records the population size, sampling fraction, conventional FPC,
+applied multiplier, and variance rule. It does not change `n_eff`. See
+[`sm_vcov()`](https://joonho112.github.io/sitemix/reference/sm_vcov.md)
+for these fields and
+[`vignette("m8-output-contract", package = "sitemix")`](https://joonho112.github.io/sitemix/articles/m8-output-contract.md)
+for the conditions needed to use the returned estimates together.
 
 ## References
 
@@ -670,24 +643,23 @@ Association*, **22**(158), 209–212.
 ## See also
 
 [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
-for the sufficient-counts wrapper;
+for sufficient counts;
 [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-for the published-aggregates wrapper;
+for published aggregates;
 [`sm_diagnose()`](https://joonho112.github.io/sitemix/reference/sm_diagnose.md)
-for the uncertainty audit;
+for checking uncertainty;
 [`sm_vcov()`](https://joonho112.github.io/sitemix/reference/sm_vcov.md)
-for the `V` list-column class spec and the canonical `vcov_scale` /
-`vcov_method` / `var_method` lexicons;
+for covariance matrices and their method and scale fields;
 [`sm_smooth_variance()`](https://joonho112.github.io/sitemix/reference/sm_smooth_variance.md)
-for experimental GVF/log-variance smoothing;
+for experimental variance smoothing;
 [`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)
-for D1-aggregate sensitivity;
+for sensitivity to unknown D1 dependence;
 [`vignette("a1-getting-started", package = "sitemix")`](https://joonho112.github.io/sitemix/articles/a1-getting-started.md)
-for the five-minute applied tutorial;
+for a first example;
 [`vignette("m1-statistical-foundations", package = "sitemix")`](https://joonho112.github.io/sitemix/articles/m1-statistical-foundations.md)
-for the sampling-uncertainty framework and notation;
+for sampling uncertainty and notation;
 [`vignette("m2-scalar-se-binomial", package = "sitemix")`](https://joonho112.github.io/sitemix/articles/m2-scalar-se-binomial.md)
-for the delta-method SE derivation.
+for standard-error calculations.
 
 Other estimation:
 [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md),
@@ -698,7 +670,7 @@ Other estimation:
 ``` r
 data(prek_sim, package = "sitemix")
 
-# Scenario A -- binomial from student rows
+# Estimate the FRPM proportion at each site in 2024.
 est_a <- sm_estimate(
   subset(prek_sim, year == 2024),
   family    = "binomial",
@@ -719,10 +691,10 @@ head(est_a, 5)
 #> # ℹ 9 more variables: estimate_scale <chr>, transform <chr>, var_method <chr>,
 #> #   flag_small_n <lgl>, flag_zero_cell <lgl>, input_mode <chr>,
 #> #   flag_suppressed <lgl>, framing <chr>, flag_below_accountability <lgl>
-unique(est_a$estimate_scale)
+unique(est_a$estimate_scale) # theta_hat and se use the arcsine scale
 #> [1] "arcsine"
 
-# Scenario B -- multivariate with joint covariance
+# Estimate two overlapping indicators and retain their covariance.
 est_b <- sm_estimate(
   subset(prek_sim, year == 2024),
   family     = "multivariate",
@@ -744,7 +716,7 @@ head(est_b, 4)
 #> #   flag_small_n <lgl>, flag_zero_cell <lgl>, input_mode <chr>,
 #> #   flag_suppressed <lgl>, framing <chr>, flag_below_accountability <lgl>,
 #> #   V <list>, K <int>
-est_b$V[[1L]]$vcov_scale   # raw under Scenario B
+est_b$V[[1L]]$vcov_scale   # V is on the raw probability scale
 #> [1] "raw"
 est_b$V[[1L]]$vcov_method  # "sur"
 #> [1] "sur"
