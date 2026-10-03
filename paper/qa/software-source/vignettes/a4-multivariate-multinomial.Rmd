@@ -1,0 +1,252 @@
+---
+title: "Analyzing overlapping indicators and mutually exclusive categories"
+author: "JoonHo Lee (jlee296@ua.edu)"
+date: "2026-07-12"
+abstract: >
+  Choose between overlapping binary indicators and mutually exclusive
+  categories, then estimate their site-level proportions and covariance.
+  Examples show how to interpret raw-scale matrices alongside transformed
+  standard errors and why multinomial covariance can be singular.
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    fig_caption: true
+    df_print: tibble
+vignette: >
+  %\VignetteIndexEntry{Analyzing overlapping indicators and mutually exclusive categories}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, include = FALSE, error = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, results = "markup", comment = "#>", collapse = TRUE,
+  message = FALSE, warning = FALSE, error = FALSE,
+  fig.width = 7, fig.height = 4.5, fig.retina = 2, dpi = 144,
+  fig.align = "center", out.width = "100%"
+)
+options(warn = 2)
+set.seed(
+  1L, kind = "Mersenne-Twister", normal.kind = "Inversion",
+  sample.kind = "Rejection"
+)
+library(sitemix)
+data(prek_sim, package = "sitemix")
+```
+
+Estimates for several indicators measured on the same students can have
+dependent sampling errors. To retain their covariance, set `vjt = TRUE`.
+First choose the estimation family from how the variables are recorded.
+
+The examples use 50 simulated sites in `prek_sim` and an added simulated
+language category. They describe no real children or programs and are not
+empirical Pre-K findings. See [Choosing an input format](a2-input-formats.html)
+for the distinction between student records, counts, and published aggregates.
+
+# Choose from the observed variables
+
+| Data | Family and argument | Information used for covariance |
+|:--|:--|:--|
+| Several binary indicators on the same students; a student may have more than one | `family = "multivariate"`, `indicators = c(...)` (B) | Marginal and pairwise co-occurrence counts from the same observations |
+| One categorical variable; every retained student belongs to exactly one category | `family = "multinomial"`, `indicator = "..."` (C) | Category counts that sum to the shared site-year denominator |
+
+FRPM, SNAP, WIC, and TANF are overlapping binary indicators: a student can
+have any combination of these statuses. Primary language, recorded as
+exactly one of English, Spanish, or Other, is a multinomial category.
+The categories must be mutually exclusive and together cover all retained
+observations. A set of categories with omitted observations or overlapping
+membership does not meet that requirement.
+
+For B, the same student records supply the marginal proportions and the
+proportion positive for each pair of indicators. A pair's covariance can
+be positive, negative, or zero; the possibility of overlapping membership
+does not determine its value. With C, the category proportions sum to one,
+and the covariance matrix must respect that constraint.
+
+Both families also accept complete sufficient counts through
+`sm_estimate_from_counts()`. B requires every marginal and pairwise
+co-occurrence count from a common sample, in the supplied indicator order.
+Count-based covariance is supported for two or three overlapping indicators;
+use student records for `vjt = TRUE` with four or more. C requires every
+category count, with an exact sum of `n_jt` per site-year. A category with
+zero count must remain in the specified category set.
+
+Separate published marginal counts, without the joint counts, use the D1
+aggregate method. Equal denominators alone do not establish that the same
+students were observed. D1 working independence does not recover joint
+counts and is not a multinomial composition; see
+[Estimating proportions from published aggregates](a5-published-aggregates.html).
+
+# Estimate overlapping binary indicators
+
+Use `indicators` to name the four binary columns and `vjt = TRUE` to
+request their joint covariance:
+
+```{r scenario-b}
+benefits_2024 <- sm_estimate(
+  subset(prek_sim, year == 2024),
+  family     = "multivariate",
+  indicators = c("frpm", "snap", "wic", "tanf"),
+  vjt        = TRUE
+)
+head(benefits_2024, 4)
+```
+
+The result has four rows per site-year, one per indicator. Each row carries
+the same site-year covariance object in `V`; these are repeated copies of
+one group matrix, not four independent matrices. The first object is for
+site `S001` in 2024:
+
+```{r scenario-b-vcov}
+V_S001 <- benefits_2024$V[[1L]]
+round(as.matrix(V_S001), 4)
+V_S001$vcov_scale
+V_S001$vcov_method
+```
+
+The matrix rows and columns identify the indicators, and `vcov_method`
+is `"sur"`, the package's label for covariance calculated from their
+joint observations. `vcov_scale = "raw"` means that it describes the
+raw proportions in `theta_raw`. This scale is a package choice; the
+matrix is not automatically transformed with the row estimates.
+
+By default, `theta_hat` and `se` use the arcsine scale. Consequently,
+`sqrt(diag(V))` should be compared with `se_raw` for B, not with the
+transformed `se`. Keep `vcov_scale` and the matrix's indicator order
+when using the result in a joint analysis.
+
+# Estimate mutually exclusive categories
+
+`prek_sim` has no categorical language variable. The following code
+simulates one label for every student, using the fixed seed for this
+article. The specified probabilities are example settings.
+
+```{r scenario-c-data}
+language_data <- transform(
+  prek_sim,
+  primary_language = sample(
+    c("english", "spanish", "other"),
+    nrow(prek_sim),
+    replace = TRUE,
+    prob    = c(0.70, 0.25, 0.05)
+  )
+)
+language_data <- language_data[
+  c("student_id", "site_id", "year", "primary_language")
+]
+head(language_data, 5)
+```
+
+Use `indicator` to name this single categorical column and
+`family = "multinomial"` to estimate all of its category proportions:
+
+```{r scenario-c}
+language_2024 <- sm_estimate(
+  subset(language_data, year == 2024),
+  family    = "multinomial",
+  indicator = "primary_language",
+  vjt       = TRUE
+)
+head(language_2024, 6)
+```
+
+The result has three rows per site-year, one per category. Within each
+site-year, the raw proportions in `theta_raw` sum to one. The covariance
+matrix for `S001` is:
+
+```{r scenario-c-vcov}
+V_lang_S001 <- as.matrix(language_2024$V[[1L]])
+round(V_lang_S001, 4)
+```
+
+This matrix also uses the raw-proportion scale, while the default
+`theta_hat` and `se` remain on the arcsine scale. Its method label is
+`"multinomial"`. Because the category proportions have a fixed sum,
+the covariance row sums are zero up to numerical rounding:
+
+```{r simplex-check}
+rowSums(V_lang_S001)
+```
+
+This sum-to-one constraint is called the **simplex** constraint. It makes
+the covariance matrix singular: the category estimates cannot vary
+independently. Singularity is expected here and does not itself indicate
+an invalid matrix.
+
+If `S` categories have positive observed counts, the matrix's
+`positive_support` field is `S` and `matrix_rank` records `S - 1`.
+This is the analytic support rank. It remains the recorded value when
+an exact census under a supplied finite-population design makes the actual
+covariance matrix zero. A census therefore has numerical rank zero even
+if `matrix_rank` is positive.
+
+A category with no observations at a site has an exact zero row and
+column in its multinomial matrix. This zero in the estimated matrix does
+not establish that membership in the category is impossible.
+With the default Wilson boundary treatment and no finite-population
+correction, that category still has a positive scalar `se_raw`.
+Its squared value does not replace the zero matrix diagonal, which is
+needed to preserve the simplex constraint. The `diag_contract` field
+records this boundary exception. At an exact census, the finite-population
+correction makes sampling uncertainty zero. See
+[Covariance for multinomial proportions](m4-multinomial-simplex.html) for the formulas
+and the distinction between scalar boundary uncertainty and the joint matrix.
+
+# Use individual estimates or joint covariance
+
+For analyses that treat each indicator separately, select the estimates,
+standard errors, scale, and calculation method from this complete example:
+
+```{r split}
+scalar_inputs <- split(
+  as.data.frame(benefits_2024[, c(
+    "site_id", "year", "indicator", "theta_hat", "se",
+    "estimate_scale", "var_method"
+  )]),
+  benefits_2024$indicator
+)
+names(scalar_inputs)
+```
+
+These tables keep `theta_hat` with its matching `se` and `estimate_scale`.
+They omit cross-indicator covariance, so they are not sufficient for
+comparisons or combinations that require joint uncertainty. Use the
+complete site-year `V` matrix and its corresponding raw estimates for a
+raw-scale joint analysis. Match the indicator order before calculating
+contrasts. A linear contrast uses the covariance matrix without requiring
+its inverse, so a valid singular multinomial matrix can still be used.
+See [Using estimates and covariance matrices in further analyses](a8-downstream-workflows.html) for the
+required checks and extraction examples.
+
+# Check the example results
+
+The following checks confirm the expected row counts, methods, raw B
+covariance scale, positive semidefiniteness of the first B matrix, and
+the zero-sum constraint for the first C matrix:
+
+```{r audit}
+stopifnot(nrow(benefits_2024) == 200L)  # 50 sites × 4 indicators
+stopifnot(inherits(benefits_2024$V[[1]], "sm_vcov"))
+stopifnot(benefits_2024$V[[1]]$vcov_method == "sur")
+stopifnot(benefits_2024$V[[1]]$vcov_scale == "raw")
+stopifnot(min(eigen(as.matrix(benefits_2024$V[[1]]),
+                    symmetric = TRUE)$values) >= -1e-10)
+stopifnot(nrow(language_2024) == 150L)  # 50 sites × 3 categories
+stopifnot(language_2024$V[[1]]$vcov_method == "multinomial")
+stopifnot(max(abs(rowSums(as.matrix(language_2024$V[[1]])))) < 1e-10)
+```
+
+# Examine the uncertainty in more detail
+
+-   [Checking estimates and handling suppressed data](a6-diagnostics-and-suppression.html)
+    for `level = "vcov"` diagnostics including the smallest eigenvalue,
+    PSD tolerance, and estimate/covariance scale compatibility.
+-   [Using estimates and covariance matrices in further analyses](a8-downstream-workflows.html) for using
+    estimates and joint covariance in another analysis.
+-   [Covariance for overlapping binary indicators](m3-multivariate-sur-covariance.html)
+    for the formal SUR derivation.
+-   [Covariance for multinomial proportions](m4-multinomial-simplex.html) for
+    the formal simplex-covariance derivation.

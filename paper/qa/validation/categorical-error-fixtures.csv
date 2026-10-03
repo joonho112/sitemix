@@ -1,0 +1,41 @@
+"fixture","expected_class","actual_class","message","interpretation"
+"C_n0","sitemix_error_input_indicator_count","sitemix_error_input_indicator_count","`n_jt` contains invalid count values.
+✖ Expected `positive counts`.
+ℹ Actual: `0 to 0`.
+ℹ Fix: Check count aggregation before estimation.","Zero denominator is not an observed zero category."
+"C_missing_n","sitemix_error_input_type","sitemix_error_input_type","`n_jt` must contain integer-like counts.
+✖ Expected `integer-like numeric values`.
+ℹ Actual: `numeric`.
+ℹ Fix: Use whole-number count columns.","Missing denominator cannot define a proportion."
+"C_incomplete_partition","sitemix_error_input_indicator_count","sitemix_error_input_indicator_count","Multinomial category counts must sum to `n_jt` on every row.
+✖ Expected `sum category counts == n_jt`.
+ℹ Actual: `at least one row differs`.
+ℹ Fix: Check category count columns and row filters before estimation.","Complete category counts must sum to the denominator."
+"C_aggregate_wrapper","sitemix_error_ambiguous_dispatch","sitemix_error_ambiguous_dispatch","Published aggregate-input dispatch does not implement multinomial composition estimation.
+✖ Expected `family = ""binomial"" for D0` and `family = ""multivariate"" for D1`.
+ℹ Actual: `multinomial`.
+ℹ Fix: Use full sufficient counts for Scenario C, or keep aggregate marginals in the D0/D1 paths.","Published origin does not prohibit C counts, but aggregate wrapper does not dispatch C."
+"C_AC_boundary_matrix","sitemix_error_estimate_vcov_invariant","sitemix_error_estimate_vcov_invariant","Agresti-Coull boundary adjustment is not defined for Scenario C matrix output.
+✖ Expected `no boundary cells, or boundary_method = ""wilson_floor"" / ""none""`.
+ℹ Actual: `a`.
+ℹ Fix: Use `boundary_method = ""wilson_floor""` for `vjt = TRUE`, or request scalar-only output.","C Agresti-Coull matrix incompatibility is activated by boundary cells; interior fixture passes."
+"R2_one_C_for_two_variables","sitemix_error_input_indicator_count","sitemix_error_input_indicator_count","Multinomial category counts must sum to `n_jt` on every row.
+✖ Expected `sum category counts == n_jt`.
+ℹ Actual: `at least one row differs`.
+ℹ Fix: Check category count columns and row filters before estimation.","Concatenated counts sum to 2n and are not one categorical partition."
+"Frechet_unknown_units","sitemix_error_invalid_population_regime","sitemix_error_invalid_population_regime","Formal D1a pairwise intervals require explicit same-unit provenance.
+✖ Expected `sampling_relation = same_units and d1_regime = D1a`.
+ℹ Actual: `sampling_relation = unknown, d1_regime = unknown`.
+ℹ Fix: Rebuild the estimates with `sampling_relation = ""same_units""` only when publisher metadata establishes common sampled units.","Equal denominators do not establish same observational units."
+"Frechet_suppressed_missing","sitemix_error_invalid_indicators","sitemix_error_invalid_indicators","Suppressed-missing rows leave the formal Frechet indicator set incomplete.
+✖ Expected `complete identified D1 marginals in every site-year group`.
+ℹ Actual: `1 suppressed-missing row(s)`.
+ℹ Fix: Provide identified marginals for the full indicator set before computing a formal Frechet envelope.","Suppressed marginal is not an observed zero and blocks formal complete-marginal inference."
+"Suppression_sensitivity_raw_scale_rejected","sitemix_error_estimate_var_method","sitemix_error_estimate_var_method","`suppression = ""upper_bound""` currently requires the default arcsine scale.
+✖ Expected `vst = ""arcsine"" and anscombe = FALSE`.
+ℹ Actual: `none`.
+ℹ Fix: Use default arcsine output for suppressed upper-bound rows.","Current suppression upper-bound sensitivity requires unadjusted arcsine output."
+"Frechet_suppression_sensitivity","sitemix_error_suppression_sensitivity_excluded","sitemix_error_suppression_sensitivity_excluded","Suppression-sensitivity rows are excluded from formal Frechet inputs.
+✖ Expected `identified D1 marginals only`.
+ℹ Actual: `1 suppression-sensitivity row(s)`.
+ℹ Fix: Use `suppression = ""drop""` and a complete identified indicator set; consume separated sensitivity fields outside the Frechet API.","Sensitivity fields are not identified marginals."

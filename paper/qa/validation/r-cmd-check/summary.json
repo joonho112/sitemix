@@ -1,0 +1,36 @@
+{
+  "version": "0.3.1",
+  "status": "OK",
+  "errors": 0,
+  "warnings": 0,
+  "notes": 0,
+  "command": "R CMD check sitemix_0.3.1.tar.gz",
+  "as_cran": false,
+  "examples": true,
+  "vignettes": true,
+  "manual": true,
+  "commands": [
+    {
+      "command": [
+        "R",
+        "CMD",
+        "build",
+        "./qa/validation/r-cmd-check/build-source"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 21.58,
+      "finished_utc": "2026-10-03T15:53:33.389634+00:00"
+    },
+    {
+      "command": [
+        "R",
+        "CMD",
+        "check",
+        "sitemix_0.3.1.tar.gz"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 88.26,
+      "finished_utc": "2026-10-03T15:55:01.651644+00:00"
+    }
+  ]
+}

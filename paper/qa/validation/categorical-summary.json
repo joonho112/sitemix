@@ -1,0 +1,47 @@
+{
+  "step": "Step 3.2",
+  "status": "pass",
+  "assertions": 118,
+  "passed": 118,
+  "failed": 0,
+  "tolerance": {
+    "absolute": 1e-12,
+    "relative": 0,
+    "rank_eigen_threshold": 1e-12
+  },
+  "max_numeric_absolute_error": 5.5511e-17,
+  "package_version": "0.3.1",
+  "package_path": "./qa/r-library/sitemix",
+  "source_manifest_sha256": "5c5843a9ae7f440441e14bd2ecef46d88fad3e5090a1fea3f22bdc945632e959",
+  "public_commit": {},
+  "started_utc": "2026-10-03 17:30:17 UTC",
+  "ended_utc": "2026-10-03 17:30:17 UTC",
+  "elapsed_seconds": 0.5846,
+  "expected_error_fixtures": 10,
+  "warnings_recorded": 1,
+  "warning_note": "One session-level D1 working-independence warning is captured and recorded; warnings are not treated as errors.",
+  "scope": "Bounded independent categorical fixtures, not full test suite or performance/coverage claims.",
+  "r2": {
+    "lower_cov": -0.0012,
+    "upper_cov": 0.0018,
+    "contrast_difference_variance": [
+      0.0069,
+      0.0009
+    ],
+    "contrast_sum_variance": [
+      0.0021,
+      0.0081
+    ]
+  },
+  "census_rank": {
+    "counts": [
+      2,
+      2,
+      1
+    ],
+    "N": 5,
+    "analytic_metadata": 2,
+    "numeric_rank": 0
+  },
+  "AC_matrix_behavior": "Scenario C interior allowed; boundary rejected"
+}

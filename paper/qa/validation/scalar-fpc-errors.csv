@@ -1,0 +1,37 @@
+"case_id","expected_class","actual_class","pass","message"
+"E01","sitemix_error_estimate_var_method","sitemix_error_estimate_var_method;sitemix_error_estimate;sitemix_error;rlang_error;error;condition",TRUE,"Logit-scale binomial output requires interior site-year proportions.
+✖ Expected `0 < C < n for every retained cell`.
+ℹ Actual: `C = 0, n = 10`.
+ℹ Fix: Use `vst = ""arcsine""`, `vst = ""none""`, or filter boundary cells before logit output."
+"E02","sitemix_error_estimate_var_method","sitemix_error_estimate_var_method;sitemix_error_estimate;sitemix_error;rlang_error;error;condition",TRUE,"Logit-scale binomial output requires interior site-year proportions.
+✖ Expected `0 < C < n for every retained cell`.
+ℹ Actual: `C = 10, n = 10`.
+ℹ Fix: Use `vst = ""arcsine""`, `vst = ""none""`, or filter boundary cells before logit output."
+"E03","sitemix_error_estimate_var_method","sitemix_error_estimate_var_method;sitemix_error_estimate;sitemix_error;rlang_error;error;condition",TRUE,"Logit-scale binomial output requires interior site-year proportions.
+✖ Expected `0 < C < n for every retained cell`.
+ℹ Actual: `C = 0, n = 1`.
+ℹ Fix: Use `vst = ""arcsine""`, `vst = ""none""`, or filter boundary cells before logit output."
+"E04","sitemix_error_anscombe_incompatible_correction","sitemix_error_anscombe_incompatible_correction;sitemix_error_argument;sitemix_error;rlang_error;error;condition",TRUE,"`anscombe = TRUE` is incompatible with `binomial_bc`.
+✖ Expected `bias_correction = NULL`.
+ℹ Actual: `bias_correction = ""binomial_bc""`.
+ℹ Fix: Use the Anscombe approximation without an additional n-1 correction."
+"E05","sitemix_error_anscombe_incompatible_correction","sitemix_error_anscombe_incompatible_correction;sitemix_error_argument;sitemix_error;rlang_error;error;condition",TRUE,"`anscombe = TRUE` is incompatible with Agresti-Coull boundary regularization.
+✖ Expected `boundary_method = ""wilson_floor"" or ""none""`.
+ℹ Actual: `boundary_method = ""agresti_coull""`.
+ℹ Fix: Use the Anscombe transform without Agresti-Coull regularization."
+"E06","sitemix_error_invalid_fpc","sitemix_error_invalid_fpc;sitemix_error_argument;sitemix_error;rlang_error;error;condition",TRUE,"Finite-population SRSWOR requires `fpc >= n` in every retained group.
+✖ Expected `population_size >= sample size`.
+ℹ Actual: `fpc = 7, n = 8`.
+ℹ Fix: Use the fixed population size for each site-year; `fpc = n` is a valid census."
+"E07","sitemix_error_invalid_fpc","sitemix_error_invalid_fpc;sitemix_error_argument;sitemix_error;rlang_error;error;condition",TRUE,"`fpc` must be NULL or positive whole-number finite-population sizes.
+✖ Expected `NULL, one population size, or an input-row-aligned vector`.
+ℹ Actual: `class = numeric; length = 1`.
+ℹ Fix: Use a scalar whole population size or repeat a group-constant size on every input row."
+"E08","sitemix_error_estimate_vcov_invariant","sitemix_error_estimate_vcov_invariant;sitemix_error_estimate;sitemix_error;rlang_error;error;condition",TRUE,"Agresti-Coull boundary adjustment is not defined for Scenario C matrix output.
+✖ Expected `no boundary cells, or boundary_method = ""wilson_floor"" / ""none""`.
+ℹ Actual: `a, b`.
+ℹ Fix: Use `boundary_method = ""wilson_floor""` for `vjt = TRUE`, or request scalar-only output."
+"E09","sitemix_error_estimate_var_method","sitemix_error_estimate_var_method;sitemix_error_estimate;sitemix_error;rlang_error;error;condition",TRUE,"Scenario C whole-matrix binomial correction requires n > 1.
+✖ Expected `n > 1`.
+ℹ Actual: `1`.
+ℹ Fix: Use the plug-in matrix for a one-unit group."

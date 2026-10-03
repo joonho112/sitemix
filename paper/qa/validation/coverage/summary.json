@@ -1,0 +1,14 @@
+{
+  "version": "0.3.1",
+  "type": "tests",
+  "metric": "covr::percent_coverage (line)",
+  "percent": 91.3685,
+  "covered": 9220,
+  "measured": 10091,
+  "files": 27,
+  "explicit_line_or_function_exclusions": false,
+  "scope": "Instrumented package R source exercised by tests; not dependencies, examples/vignettes-only execution, or statistical interval coverage.",
+  "started_utc": "2026-10-03 15:53:11 UTC",
+  "completed_utc": "2026-10-03 15:54:12 UTC",
+  "elapsed_seconds": 60.8377
+}

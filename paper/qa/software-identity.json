@@ -1,0 +1,15 @@
+{
+  "version": "0.3.1",
+  "fixed_source": "qa/software-source",
+  "source_file_count": 178,
+  "source_manifest_sha256": "5c5843a9ae7f440441e14bd2ecef46d88fad3e5090a1fea3f22bdc945632e959",
+  "public_source": {
+    "repo": "https://github.com/joonho112/sitemix",
+    "commit": null,
+    "release_tag": null,
+    "publication_status": "distributed_with_repository"
+  },
+  "source_identity_method": "versioned source plus SHA-256 manifest",
+  "scope": "Version 0.3.1 distributed package source, identified by version, repository URL, and SHA-256 manifest.",
+  "isolated_library": "qa/r-library"
+}

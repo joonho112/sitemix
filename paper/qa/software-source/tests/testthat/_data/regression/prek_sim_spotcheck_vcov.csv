@@ -1,0 +1,5 @@
+"site_id","year","vcov_method","vcov_scale","indicator_order","diag_frpm","diag_snap","diag_wic","diag_tanf","max_abs_offdiag"
+"S001",2024,"working_independence","arcsine_delta","frpm|snap|tanf|wic",0.0277777777777778,0.0277777777777778,0.0277777777777778,0.0277777777777778,0
+"S010",2024,"working_independence","arcsine_delta","frpm|snap|tanf|wic",0.0108695652173913,0.0108695652173913,0.0108695652173913,0.0108695652173913,0
+"S025",2024,"working_independence","arcsine_delta","frpm|snap|tanf|wic",0.00925925925925926,0.00925925925925926,0.00925925925925926,0.00925925925925926,0
+"S050",2024,"working_independence","arcsine_delta","frpm|snap|tanf|wic",0.00257731958762887,0.00257731958762887,0.00257731958762887,0.00257731958762887,0

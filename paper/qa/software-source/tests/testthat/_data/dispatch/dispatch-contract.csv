@@ -1,0 +1,10 @@
+input_shape,family,legal,scenario,observable_input_mode,public_entry,required_shape,condition_class
+student,binomial,TRUE,A,student_level,sm_estimate,one binary indicator,
+student,multivariate,TRUE,B,student_level,sm_estimate,two or more overlapping binary indicators,
+student,multinomial,TRUE,C,student_level,sm_estimate,one categorical indicator with at least two observed categories,
+counts,binomial,TRUE,A,counts_full_suff,sm_estimate_from_counts,n_jt plus c_jt_<indicator>,
+counts,multivariate,TRUE,B,counts_full_suff,sm_estimate_from_counts,n_jt plus ordered marginal and pairwise co-occurrence counts for K=2 or K=3,
+counts,multinomial,TRUE,C,counts_full_suff,sm_estimate_from_counts,n_jt plus at least two c_jt_<category> columns summing to n_jt,
+aggregate,binomial,TRUE,D0,aggregate,sm_estimate_from_aggregates,one published marginal per site-year,
+aggregate,multivariate,TRUE,D1,aggregate,sm_estimate_from_aggregates,two or more published marginals with the same ordered indicator set in every site-year group,
+aggregate,multinomial,FALSE,,,sm_estimate_from_aggregates,D1 marginals do not identify a multinomial composition,sitemix_error_ambiguous_dispatch

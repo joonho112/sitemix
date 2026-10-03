@@ -1,0 +1,1142 @@
+[
+  {
+    "path": ".DS_Store",
+    "bytes": 6148,
+    "sha256": "ddc43a8a1a5261693e5743e6d09b25135f37c088ec8436c62e961b5ead32f043"
+  },
+  {
+    "path": "README.md",
+    "bytes": 4882,
+    "sha256": "9afac581219708e533a4652438b8d3e2427039c419d429a0a885888ce0ee19b1"
+  },
+  {
+    "path": "data/numbers.csv",
+    "bytes": 922,
+    "sha256": "5d75be187244dfe2f554801191fe346764536421dc5852cbcd5fad8a8e6ac0d3"
+  },
+  {
+    "path": "data/results.rds",
+    "bytes": 44565,
+    "sha256": "80df1948bd207a17e2895b450b8ac9a19c5878825a95642ce4c69a211171c9a6"
+  },
+  {
+    "path": "expected-artifact-hashes.json",
+    "bytes": 183,
+    "sha256": "88299a01ab6c3a2bbaeb61cd5ec5d074cd39f1b8d8e95e30e8980932848f43b6"
+  },
+  {
+    "path": "figures/fig_aggregates.pdf",
+    "bytes": 77260,
+    "sha256": "10f4d1bd89f4eb5e331580501b666944aeb28f66ce173fb0e03a659abaacfe41"
+  },
+  {
+    "path": "figures/fig_blindspot.pdf",
+    "bytes": 46523,
+    "sha256": "13f6167ea09d42bffe284ecf8cd839f9684cf465ce182d0eabc7ff04b0ba0c3b"
+  },
+  {
+    "path": "figures/fig_eb.pdf",
+    "bytes": 52999,
+    "sha256": "2936154f9e372a3f9d558b042c61079cad4393de58521ca5fd0fea36524e36a1"
+  },
+  {
+    "path": "figures/fig_two_scales.pdf",
+    "bytes": 106486,
+    "sha256": "1aa9ed840b8db10e4b42dbaa272f068548a7173de14d646e72275d27bbdad7c2"
+  },
+  {
+    "path": "install-fixed-package.sh",
+    "bytes": 698,
+    "sha256": "3df7ba239d2876e8e3e29acbd2b858f65c9e9908ee919316ef22e28269b36fa6"
+  },
+  {
+    "path": "osm/fig_panel.pdf",
+    "bytes": 34487,
+    "sha256": "4d317bd0d46b8fab0ae96a2ab5a2286e90b683e13f3e8c76379f4ec221912af1"
+  },
+  {
+    "path": "qa/software-identity/reproduction-dependencies.csv",
+    "bytes": 1466,
+    "sha256": "47b19719d712b4f93a735adc47e4e5b97dc01efe7f14d6c400cfb0c80e3f6776"
+  },
+  {
+    "path": "qa/software-identity/source-files.json",
+    "bytes": 28259,
+    "sha256": "5c5843a9ae7f440441e14bd2ecef46d88fad3e5090a1fea3f22bdc945632e959"
+  },
+  {
+    "path": "qa/software-identity/source-sha256.txt",
+    "bytes": 65,
+    "sha256": "436fa981a66b9ce272ebdbcdcaccbe6c13c322a3387137b4b149ca92d4634713"
+  },
+  {
+    "path": "qa/software-identity/verify-source.py",
+    "bytes": 610,
+    "sha256": "9aa61ef0734d324f0890cbb24b13f229ba9ac4369b61554ecf117b85fd251543"
+  },
+  {
+    "path": "qa/software-identity.json",
+    "bytes": 593,
+    "sha256": "a73bcc997384f5b416741df178a1ec493c5b8deb56dc8e6a8e0d35288ea4f087"
+  },
+  {
+    "path": "qa/software-source/.Rbuildignore",
+    "bytes": 466,
+    "sha256": "f65d3fe5107e9d40f011acd580f7d11afd615bf3f25b74f69b015139219b9399"
+  },
+  {
+    "path": "qa/software-source/DESCRIPTION",
+    "bytes": 1448,
+    "sha256": "69af64f4f801898f0e9730f1a590d1b72b54b1750e18747db3bececf4e78b86c"
+  },
+  {
+    "path": "qa/software-source/LICENSE",
+    "bytes": 40,
+    "sha256": "cd2c023447ed04501ce1ff4437db8c8fd7f16c7d5e494fea20794847e1b55b72"
+  },
+  {
+    "path": "qa/software-source/LICENSE.md",
+    "bytes": 1067,
+    "sha256": "e37077d27b4373f05ed757830d45dae873c1a7f2727994c8a0a5979eab8e5502"
+  },
+  {
+    "path": "qa/software-source/NAMESPACE",
+    "bytes": 881,
+    "sha256": "25ee0cbb1d4f697724439825f388f89c416deacd7f843a4a43a2f88618db9ad4"
+  },
+  {
+    "path": "qa/software-source/NEWS.md",
+    "bytes": 26939,
+    "sha256": "2d4bce75f233234b57371a6abae2e23c212f9b19e2653d0ccc951c60290a7125"
+  },
+  {
+    "path": "qa/software-source/R/aggregate.R",
+    "bytes": 9578,
+    "sha256": "34118782dbf1092ca9fd9767431c8ff8910a55205381b580ea25ccc2e5ed6e87"
+  },
+  {
+    "path": "qa/software-source/R/aggregates.R",
+    "bytes": 23306,
+    "sha256": "4357d4cf0aeef58f2d3530b4a3efa89e764498f86c8b4effbdcd863abb5d6419"
+  },
+  {
+    "path": "qa/software-source/R/cli-helpers.R",
+    "bytes": 2532,
+    "sha256": "b04aa7b56e324210399e301fee86999be543cfb9f247e83fce433a8027d955a1"
+  },
+  {
+    "path": "qa/software-source/R/data.R",
+    "bytes": 2940,
+    "sha256": "27dfa6eb00b3ebac2618eefe34712cd47a75f0b2980d62096d4d8b7a3a0bf2de"
+  },
+  {
+    "path": "qa/software-source/R/engine-aggregate-d0.R",
+    "bytes": 11605,
+    "sha256": "eab2f5b136f0a4e4d62d7a35975d0f9917713dc6799ecf614d22c934d44868aa"
+  },
+  {
+    "path": "qa/software-source/R/engine-aggregate-d1.R",
+    "bytes": 20780,
+    "sha256": "c66be32b32a23de6024c772ceae79cb30a4c75900bf7bf4821c945c138cfab15"
+  },
+  {
+    "path": "qa/software-source/R/engine-binomial.R",
+    "bytes": 6894,
+    "sha256": "02ecb331d98054b29d07ea09f05ac2c3f1b7eff7a87b908814cb3d37acea4d23"
+  },
+  {
+    "path": "qa/software-source/R/engine-multinomial.R",
+    "bytes": 3628,
+    "sha256": "604dc07ed77d5ab019513273e9c260bf6218b46bc99734095be5260f637adada"
+  },
+  {
+    "path": "qa/software-source/R/engine-multivariate.R",
+    "bytes": 4908,
+    "sha256": "78edc8fc246d856ea3c7a8e541768f364d841b23e2f768501b59545f832363ce"
+  },
+  {
+    "path": "qa/software-source/R/errors.R",
+    "bytes": 7685,
+    "sha256": "380a4ff41fbf1b2fedb480659467eb0d6e78dba02faaf1c295bbdfa442c7e8a2"
+  },
+  {
+    "path": "qa/software-source/R/fpc.R",
+    "bytes": 8826,
+    "sha256": "03273dba170a7bfb6153f96703a7161f8d0f5ea9e5136bb236c2d524b87b5992"
+  },
+  {
+    "path": "qa/software-source/R/frechet.R",
+    "bytes": 96381,
+    "sha256": "b79f0901ad05e037724fe2ee25eb303e470ed59759fa8f4cbdbecc96f5fbbe4a"
+  },
+  {
+    "path": "qa/software-source/R/multinomial-covariance.R",
+    "bytes": 7686,
+    "sha256": "5aecfae07fec18ee7e15213fea31513515c6eeec6b1a7409cae35aa5ee85d902"
+  },
+  {
+    "path": "qa/software-source/R/output-assembly.R",
+    "bytes": 20295,
+    "sha256": "e142ff166b13f7b111cd24b2b7d20c7fd94ce92de0efbd0bcf2da5ad272ff932"
+  },
+  {
+    "path": "qa/software-source/R/pivot-subgroups.R",
+    "bytes": 41341,
+    "sha256": "5b1cf135ef7e4a3d702dc3a5bf8fd8d2d307c4bdeea0ba3c8fc0a5e7993c234e"
+  },
+  {
+    "path": "qa/software-source/R/sitemix-package.R",
+    "bytes": 4032,
+    "sha256": "077fb1826675c673514018cfe87907fd2b807081790ff4939de7538ded9ee6fe"
+  },
+  {
+    "path": "qa/software-source/R/sitemix_estimates.R",
+    "bytes": 58570,
+    "sha256": "18a58e36b79ce35b05b5e872fd4407c6915b6d349bb1d07b165c34a1a13f00b6"
+  },
+  {
+    "path": "qa/software-source/R/sm_diagnose.R",
+    "bytes": 26819,
+    "sha256": "933a1b9c6857114a3e68058a0ef51f236ffeb13a138f2bbf601828d3af4cea93"
+  },
+  {
+    "path": "qa/software-source/R/sm_estimate.R",
+    "bytes": 37979,
+    "sha256": "3f3492f7ad31e2edd2957c70f1e71b89abe234f0c19b1ace08425a7db44ef8fc"
+  },
+  {
+    "path": "qa/software-source/R/sm_estimate_from_aggregates.R",
+    "bytes": 9598,
+    "sha256": "7e344cd03945986181425e7d5922895694c5ce8e0b3f88f9a8ffa88d3aac38b2"
+  },
+  {
+    "path": "qa/software-source/R/sm_estimate_from_counts.R",
+    "bytes": 4915,
+    "sha256": "e3e9bbd6fda793d6519658568d8a54d9d784408e3148d6d1f5fb0dda351fa811"
+  },
+  {
+    "path": "qa/software-source/R/sm_vcov.R",
+    "bytes": 39112,
+    "sha256": "0e982eae3e306b56dc1ef16fe7bcd2bf6ccce8b22f5f9a9621eaf555bdf6ad04"
+  },
+  {
+    "path": "qa/software-source/R/smooth.R",
+    "bytes": 38833,
+    "sha256": "5f86b2b3b1adcfa891ecda01e940652a18d1db3203c4b62d9bd40149ed54964f"
+  },
+  {
+    "path": "qa/software-source/R/suppression.R",
+    "bytes": 21196,
+    "sha256": "b02e412183a09a9a41f9af2ebc97c7c136537cd1db313b0b2fd27eb04ac73c04"
+  },
+  {
+    "path": "qa/software-source/R/sur-covariance.R",
+    "bytes": 17913,
+    "sha256": "c80e2be013751176591aad59b87404fcaa46351caf776c8d73276668a029d8fc"
+  },
+  {
+    "path": "qa/software-source/R/transforms.R",
+    "bytes": 5971,
+    "sha256": "c8a7d76f1c899aed6ee0c1fab36b8f4b6f4ecf074258ef01bada201843159ab1"
+  },
+  {
+    "path": "qa/software-source/R/uncertainty-contract.R",
+    "bytes": 6745,
+    "sha256": "85592ff439a89ab4b6f9dae8527d38d7844952b2d94404d386ef3f1f08a1255f"
+  },
+  {
+    "path": "qa/software-source/R/validate-input.R",
+    "bytes": 25781,
+    "sha256": "f6218b04ff45be29d3b34057f8d3e0464f1eed3b31f5ca47f0ba92fd9393813e"
+  },
+  {
+    "path": "qa/software-source/R/variance.R",
+    "bytes": 13484,
+    "sha256": "409bc5576ae66c9888a3b4363a809888cfdee5dc5c67d14af274f4b94fb630db"
+  },
+  {
+    "path": "qa/software-source/README.Rmd",
+    "bytes": 7677,
+    "sha256": "0edb196252b765b6dc07701e55daa66e4ddb4d9f77b59470a1574368d983043a"
+  },
+  {
+    "path": "qa/software-source/README.md",
+    "bytes": 7874,
+    "sha256": "ca1bdad537a7b555e8e90ed11474a749a956d54b79d90200b6aada79698c601b"
+  },
+  {
+    "path": "qa/software-source/data/prek_sim.rda",
+    "bytes": 7208,
+    "sha256": "485aec1813c8dbb49de84cb421707ec411ae19494f6ec4695a41b24427e64f9b"
+  },
+  {
+    "path": "qa/software-source/inst/CITATION",
+    "bytes": 424,
+    "sha256": "440d277f2681fc9442092d43a4fbdaac20c363079ba4db68415d823d9ecca857"
+  },
+  {
+    "path": "qa/software-source/inst/WORDLIST",
+    "bytes": 2575,
+    "sha256": "fc60035e516962b8a25fb91cb3f076542b5dcf6c75e2aa2ce9cabd9e6f30dfca"
+  },
+  {
+    "path": "qa/software-source/inst/bench/README.md",
+    "bytes": 2679,
+    "sha256": "3278e0809bbbbbd0cd1798ef24bcde68b44535fd958edc994fd7476a393c13a3"
+  },
+  {
+    "path": "qa/software-source/inst/bench/performance-contract-self-test.R",
+    "bytes": 4659,
+    "sha256": "0301858cefd6be095302e97ba2f5f53f09951902a3309302752cb30b6d704f4b"
+  },
+  {
+    "path": "qa/software-source/inst/bench/performance-smoke.R",
+    "bytes": 44070,
+    "sha256": "c539846ac1775df678fc18166c612ec6f3a8f0acc71f08d0375bb80f8360bf4d"
+  },
+  {
+    "path": "qa/software-source/inst/bench/vcov-validation-profile.R",
+    "bytes": 35045,
+    "sha256": "d66f51e00ebd9d998c8f74534a64725e1a6bc5551538e64d0ad18de125c2a280"
+  },
+  {
+    "path": "qa/software-source/inst/extdata/prek_sim.csv",
+    "bytes": 235407,
+    "sha256": "bd83fae02791e94ca33230d629d8f107e3d22986d1ada28ff02aac1b78fc52b2"
+  },
+  {
+    "path": "qa/software-source/inst/extdata/prek_sim_counts.rds",
+    "bytes": 3267,
+    "sha256": "76ab567444960a930c59203b1191e77895e1420211f0d9a98b0eb9140c3d52ef"
+  },
+  {
+    "path": "qa/software-source/inst/extdata/prek_sim_design.txt",
+    "bytes": 1513,
+    "sha256": "15bc49182f79b0bfa612ff9d62ddb91e1b64d12b1b8a6b7c8a50b45feaf2f0ef"
+  },
+  {
+    "path": "qa/software-source/inst/gates/ci-action-pins.csv",
+    "bytes": 367,
+    "sha256": "9d2405667559469f781035f6d1de6e8749f51966ade729e65b2b73eedeaa9b8f"
+  },
+  {
+    "path": "qa/software-source/inst/gates/ci-job-contract.csv",
+    "bytes": 1622,
+    "sha256": "8e0eaf28a4c4477455e2ebea732edef3877d5d0b95727c75fecd2cb4e10e13c5"
+  },
+  {
+    "path": "qa/software-source/inst/gates/coverage-gate-budget.csv",
+    "bytes": 265,
+    "sha256": "09c8b52d4b2497788355bbb0da8704abf12da7babe8d022eab7259267444d7e9"
+  },
+  {
+    "path": "qa/software-source/inst/gates/data-fixture-provenance.csv",
+    "bytes": 7475,
+    "sha256": "1a786d93469f940193128b5e8749136cb0c4d8326c9051d08447d54fe322f6cb"
+  },
+  {
+    "path": "qa/software-source/inst/gates/data-fixture-provenance.md",
+    "bytes": 2995,
+    "sha256": "be110e803ec556775cd0f018d2f6a1eeafd21a3a8ef7c2ac8b0d5c30cf737384"
+  },
+  {
+    "path": "qa/software-source/inst/gates/dependency-floor.csv",
+    "bytes": 739,
+    "sha256": "f340046969b14a82fd9007425a863617ccbbf62dc9f3d93ad6681cb4ba625a9e"
+  },
+  {
+    "path": "qa/software-source/inst/gates/documentation-qa-budget.csv",
+    "bytes": 2821,
+    "sha256": "2725175dec7d436909a76472897208536b59ee599693b224d16558e3cc1d1bea"
+  },
+  {
+    "path": "qa/software-source/inst/gates/lint-object-usage-baseline.csv",
+    "bytes": 36131,
+    "sha256": "46b67e644ee9535e3bc07309d299c0f77d9952f9ddce17699e5124b606a35716"
+  },
+  {
+    "path": "qa/software-source/inst/gates/lint-policy.csv",
+    "bytes": 3443,
+    "sha256": "0fa27064a38a4d8b459a054b3a62aa81e53e4c7a644004a15eee33197a45d553"
+  },
+  {
+    "path": "qa/software-source/inst/gates/lint-style-baseline.csv",
+    "bytes": 65816,
+    "sha256": "48a587c0e6de28351342d4ca59030779858529381845c582e07ed0465fe08518"
+  },
+  {
+    "path": "qa/software-source/inst/gates/performance-budget.csv",
+    "bytes": 3330,
+    "sha256": "0567932b52b6ec8a6f7d63636830d041710ae9654b87f1b129a3c66456ded660"
+  },
+  {
+    "path": "qa/software-source/inst/gates/performance-runtime.csv",
+    "bytes": 1018,
+    "sha256": "e1d8171957a62750228f4c2c0d02192b8f294b1daa6ad60af4cea11395f713d3"
+  },
+  {
+    "path": "qa/software-source/inst/gates/test-timing-baseline.csv",
+    "bytes": 5169,
+    "sha256": "d2eb77a826a32d5e1644a4278fe3c70d980607c993e199ab5f47e79024f374ee"
+  },
+  {
+    "path": "qa/software-source/inst/gates/test-timing-budget.csv",
+    "bytes": 1356,
+    "sha256": "8162dd289e8ad9e546be34f015ef4061e97aeda92d479d3a93c41c5c50480097"
+  },
+  {
+    "path": "qa/software-source/inst/hex/sitemix-hex.svg",
+    "bytes": 3742,
+    "sha256": "259bb4cc93a43e24e3be5d021b01667a61e3035f0d77603f3a53368e9782e57b"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-ci-semantics.R",
+    "bytes": 49586,
+    "sha256": "55aae4c9543f172618880f3d5a4dedbad633cf09957a9bdf98e93eb98a48594c"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-coverage-gate.R",
+    "bytes": 11130,
+    "sha256": "d59c117a16c55486a631be5bfbd45be9635a8f8d2b325a6e302b551d0d96adb7"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-data-fixture-provenance.R",
+    "bytes": 49820,
+    "sha256": "e51ac5fd3197ddaf55fea0df42443e37b0d32c3daa1c3e62b2daeba6067a7224"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-dependency-floor.R",
+    "bytes": 31315,
+    "sha256": "0eafd48c395a43391c56859d939e1ae6ddf1ed3ae367f7e594404f421758a0bf"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-documentation-drift.R",
+    "bytes": 18749,
+    "sha256": "fa6171955fab9c8da1b089c96635d962052b99fb8d9cb27c71b0d6e3dafadeb3"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-documentation-qa.R",
+    "bytes": 56101,
+    "sha256": "2d1091c17738fab3d22af1361de018ba17ba3ce71f961d79dddc89f32175b351"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-frechet-boundaries.R",
+    "bytes": 1488,
+    "sha256": "76366547f4a21150419c471310dffd3be3f7c7dff7dafe2a30d223687b10628b"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-lint-gate.R",
+    "bytes": 30667,
+    "sha256": "28636ee1fedf3fbc43152028f041fa8c3e2d63cd122f7b1d093be24e8f044f0e"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-smoothing-simulation.R",
+    "bytes": 13335,
+    "sha256": "15152fccb54040716a44c0dc7ae325760e5ba4bd578777f1feb43a16728b4c36"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-test-budget.R",
+    "bytes": 50092,
+    "sha256": "65750825f1131cc020b114b6c83cff6142130237ee66fe25485bf24751da3bc6"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/audit-vignette-reproducibility.R",
+    "bytes": 29888,
+    "sha256": "52eb658be6e130171979828a3f9f0806cf2d1af1fc4474afa0bc484c0811be8a"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/build-prek-sim.R",
+    "bytes": 14353,
+    "sha256": "e76d6305a1ce172720acf34363df91d78bab1f376fb150593d8960afdc9e6872"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/build-regression-baselines.R",
+    "bytes": 1184,
+    "sha256": "29e8909b541af31ff47042591b462bd745c8b172bf6574a4ee6a90ced050acb1"
+  },
+  {
+    "path": "qa/software-source/inst/scripts/isolate-optional-dependencies.R",
+    "bytes": 11668,
+    "sha256": "ab877225642ef1fc11bc31bcf93173eed964d2136d29cd7b84fcf9dc987ae6e5"
+  },
+  {
+    "path": "qa/software-source/man/figures/logo.png",
+    "bytes": 38989,
+    "sha256": "29d1badd4a2f13c7c0fb2a214c15161005f7ca0000c334ab1d8dd87b3d7b769a"
+  },
+  {
+    "path": "qa/software-source/man/prek_sim.Rd",
+    "bytes": 2854,
+    "sha256": "5dd68bc041e2c55c720540bd5fbb1485d3105e540f16ff5c379326c8ecd120d4"
+  },
+  {
+    "path": "qa/software-source/man/sitemix-package.Rd",
+    "bytes": 4217,
+    "sha256": "f00aa894dc0ec7d5b13778392eb5c62af80d0e53e3364832731d08599c81bd1a"
+  },
+  {
+    "path": "qa/software-source/man/sm_diagnose.Rd",
+    "bytes": 5167,
+    "sha256": "8de2fb7c3220790a8e6497f90c4bcd2687b61c50750f0922748db9902c065451"
+  },
+  {
+    "path": "qa/software-source/man/sm_estimate.Rd",
+    "bytes": 26589,
+    "sha256": "91e08e6bb81b58f6c0d517df37a0eb7768bcec5d1435100b2c39a6f35fedabfa"
+  },
+  {
+    "path": "qa/software-source/man/sm_estimate_from_aggregates.Rd",
+    "bytes": 14204,
+    "sha256": "5e9f409aa7616bb5ef1044b0e9edf1689dd86421812ed645948e9dff5341e7d0"
+  },
+  {
+    "path": "qa/software-source/man/sm_estimate_from_counts.Rd",
+    "bytes": 5887,
+    "sha256": "b6325c075683669aa43b3991aa6b6520b0955fdb58737803d1048a86412f5fe4"
+  },
+  {
+    "path": "qa/software-source/man/sm_frechet_envelope.Rd",
+    "bytes": 11387,
+    "sha256": "9388ecfca011f200ade8dfa3662e06d7dbf3fe410db7da75cb967810007609f3"
+  },
+  {
+    "path": "qa/software-source/man/sm_pivot_subgroups_to_indicators.Rd",
+    "bytes": 8143,
+    "sha256": "5b449be33325298f24cf7f9c12ee5a29c3727ac5e3288428ee83a8cf43658473"
+  },
+  {
+    "path": "qa/software-source/man/sm_pivot_subgroups_to_sites.Rd",
+    "bytes": 9180,
+    "sha256": "3258f359aa6f43da9c112db26b349f6d781d2b32904c193d14dd3a1e5f303835"
+  },
+  {
+    "path": "qa/software-source/man/sm_smooth_variance.Rd",
+    "bytes": 9964,
+    "sha256": "3bb000f25b2fae9dd2d00c0cbc1e3b55f70e21b22bf2766c2920901aa721bf2a"
+  },
+  {
+    "path": "qa/software-source/man/sm_suppression_report.Rd",
+    "bytes": 8212,
+    "sha256": "771cb49c93c2f46891fb787c39c27dcfde7a5357ab7e1b2addc823d08eb1fa12"
+  },
+  {
+    "path": "qa/software-source/man/sm_vcov.Rd",
+    "bytes": 13167,
+    "sha256": "8696244d8ce607038cd8b6b09be26c908d6af069c1e73e35e51e3e9707cfd300"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/api/generic-summary-export-contract.csv",
+    "bytes": 3406,
+    "sha256": "e7b5a496166e4f584965d000b4f910baf911742771fa668dc070e6996d8decbc"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/api/public-signature-lifecycle.csv",
+    "bytes": 4911,
+    "sha256": "696f6f7c7644295518f03b8f4adc0b6a554aeeba9cf3b386bc7c670ade818502"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/conditions/public-validation-contract.csv",
+    "bytes": 3591,
+    "sha256": "b893c626a75e5c84ae60e6be5bdb530228195fb90a3f44e4081008971f2b6cf8"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/dispatch/dispatch-contract.csv",
+    "bytes": 1167,
+    "sha256": "b5781a515f56c73fc7b9c175fa9c7f76e1c491dd86301ed54bb371f4ca9954a5"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/regression/prek_sim_spotcheck_rows.csv",
+    "bytes": 4461,
+    "sha256": "6e0be454f46c789a7f49202f9731a7ade995cca0e558efc4233cf97dd3ecc37a"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/regression/prek_sim_spotcheck_vcov.csv",
+    "bytes": 735,
+    "sha256": "9b08491439d88b60daaf4fd8d3eb815437780058c3a4bd4eb8bf2f2a9097de58"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/regression/prek_sim_summary.csv",
+    "bytes": 1321,
+    "sha256": "73ac2fbb47e79b4b078ecf05219cbb7a95c9efab8ed22913f0d97e81a3fe4691"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/regression/regression-baselines.rds",
+    "bytes": 4387,
+    "sha256": "14893814546bf401777e637ff29577d4e32eb672f327eb6760edd4f5c0cffde9"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/regression/small_cases_rows.csv",
+    "bytes": 8174,
+    "sha256": "958e932a73dccfcf48d9abb064c0bf10f28856499254d1845c299ae5abe98d6b"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/regression/small_cases_vcov.csv",
+    "bytes": 7911,
+    "sha256": "2e2ff8b7e5dade01a5443ad21a32838a0799ee104545ebe1c9cd49fca510a192"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/smoothing/smoothing-simulation-fast-reference.csv",
+    "bytes": 938,
+    "sha256": "ad3c87e84c8dece1ecd31a42ac1f936ae962f0bc0b34a0a92bf36043b2da2e0d"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/test-architecture/fixture-provenance.csv",
+    "bytes": 4676,
+    "sha256": "e158e9aa68b7bcb9ca6af3158c39d123621dd9f8f8e430c20251417592e49d7b"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/test-architecture/job-skip-budget.csv",
+    "bytes": 2766,
+    "sha256": "09991a031c3e22b71f4b47102f04e9fea02ccd402f7edc187c6475d08b0a4ac1"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_data/test-architecture/test-file-taxonomy.csv",
+    "bytes": 5000,
+    "sha256": "131f58372f0daee36916eeec306876b8f56745edd1b15a2d75c79387df8f2b35"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/_snaps/output-schema.md",
+    "bytes": 18441,
+    "sha256": "ed838cde596fba9618627826af12e5e5b286fa633076474bc9e47f6824885c8e"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/helper-regression.R",
+    "bytes": 14031,
+    "sha256": "d8995a4044f42164d593a998c23669e3bbbdd5b4ffd265d3704e385279d103db"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-accountability-n.R",
+    "bytes": 11066,
+    "sha256": "9bab0b4331ea243d36365a9d28fcf6968ed9fd0f913c6b1719411598c27bb94c"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-aggregate-d0.R",
+    "bytes": 7129,
+    "sha256": "9a10d6abf6e3a1b5ec1eaa0d43c2711da58692901742fb950006ff26b32257fe"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-aggregate-d1.R",
+    "bytes": 12686,
+    "sha256": "6a2e2a6f51dd65fcde9d4009084fd9572f05fe2dda7eee614d59baa0c42bdaad"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-aggregate-state-machine.R",
+    "bytes": 6759,
+    "sha256": "3e356aac2ddfbe7311f0b1445c3a612c03f41b238e80e3f6895c88490f2adfbe"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-aggregate-suppression-modes.R",
+    "bytes": 9030,
+    "sha256": "39513b8801b3155e61f5123120f21e1787118b097c3a597d4cf8ff1e7ff87e33"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-aggregate-validators.R",
+    "bytes": 13084,
+    "sha256": "a2edcaa3b258d7767456170719be0743d922365b8828fdbdd4784f6b2350f62d"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-aggregation.R",
+    "bytes": 9124,
+    "sha256": "dda1e753394708999334866f5d2897073a9ad81707faa25f337cf64435065c1b"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-boundary.R",
+    "bytes": 7156,
+    "sha256": "781c141bc333fc2d14367b845c55d9dea3dd8de7f21a99269c3e074dd3727cb1"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-cross-scenario-invariants.R",
+    "bytes": 25626,
+    "sha256": "1d0445324e65f9e65ce34af1f181b1d291615aacef7d964f88d2be7f31a31fc3"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-data-prek-sim.R",
+    "bytes": 5138,
+    "sha256": "48160b4c15f4cda1f05099b8cef770351a900644ee0e89128673ed30dae4878b"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-diagnose.R",
+    "bytes": 14278,
+    "sha256": "867b88b544f36c787774fa0908f7f40481306e22e90bfd25cafc6ec7f4f27805"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-diagnostics-suppression-api.R",
+    "bytes": 18817,
+    "sha256": "acbfde6776dcb9e823ae6fc53361a7a4861015a436a5228b8d466f1f51465072"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-dispatch-contract.R",
+    "bytes": 8123,
+    "sha256": "5697054c4759e1e0561df140df1cfac88190ee48573971eceb331be42f4fda12"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-engine-binomial.R",
+    "bytes": 9383,
+    "sha256": "2006551e7abf03ebbe7ca834f982ec5881c445323f656b15859c1e86c1d437a6"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-engine-multinomial.R",
+    "bytes": 9604,
+    "sha256": "687d089d1cc4de80d17a03ef8e7c79bf829bd488dc4eb04706a7a3e15c6c6849"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-engine-multivariate.R",
+    "bytes": 10730,
+    "sha256": "efc0e1150aef84e66616a6430d084618012b54c8ce382c2f2736d81a399657bc"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-error-classes.R",
+    "bytes": 16431,
+    "sha256": "f9c6e1fb609957e891b52bedb13400b6042f23fb79ca794712a639f9c0aecb91"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-fpc-scalar-propagation.R",
+    "bytes": 7928,
+    "sha256": "4596df2b07aaae51c0593e1ffe43ae7631207f5e4a9483c9b1df9d468d29f724"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-fpc-vcov-schema.R",
+    "bytes": 13993,
+    "sha256": "3c62d4917276635cbb76d71b962a7b8409990a43c5a52dd43ed05f546d44c9dd"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-frechet-psd-numerics.R",
+    "bytes": 17933,
+    "sha256": "76188de4ccf5cd4f0217c8a130de148f6bb1781b066c44421a669e0b2be7a5d4"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-frechet-semantics.R",
+    "bytes": 20718,
+    "sha256": "d23d05c36fb302ee91a6fc7d8c5a5951381c3796fb257f08f024f37341692f6d"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-frechet.R",
+    "bytes": 14573,
+    "sha256": "68d27ab910a93074aa38305276be44b1d1b83aa76988648a0c91ace48337c1af"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-generic-summary-export-contract.R",
+    "bytes": 20089,
+    "sha256": "33305b6257a722176838124a86734c277b5d6cdd52430d4da0302ea01a69f86d"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-input-validation.R",
+    "bytes": 8419,
+    "sha256": "842fcf79e26ff4ab1182069ebab59fd75842ade35b34f88e04638f53d91d3091"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-joint-uncertainty-interoperability.R",
+    "bytes": 25711,
+    "sha256": "5ddc5cd0e8f939a96dc0456407c4bd6e36dc6b2f0478e57264934ee8fdce03e0"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-multinomial-covariance.R",
+    "bytes": 7550,
+    "sha256": "d264c6ee3a8a3b317d19037b151e0403223cde03ae0ad9180e510fe9db409e2b"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-multinomial-oracle-characterization.R",
+    "bytes": 8918,
+    "sha256": "44114fa5e5dd20eaacef67a2d2ab88536268577a9482a1feaa08543c4b3cf5e4"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-oracle-fpc-srswor.R",
+    "bytes": 9447,
+    "sha256": "3017a193666dc44503efc5fc0369d0dbc0ba0c25c10e96d3a34d44ed85ff8333"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-output-assembly.R",
+    "bytes": 15961,
+    "sha256": "aa6d5745bfe79610bccac737eea74dc0c7f5fa1742d8d11472a894c50bdb55a7"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-output-schema.R",
+    "bytes": 11514,
+    "sha256": "bcf883dc93aa039c4aa2ff0ff1fd99b46bed4d35bcdf56b178cfe8c45417ed4b"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-output-subset-semantics.R",
+    "bytes": 16281,
+    "sha256": "12ca5657f4fb0564ab50bad43d87ba2a6802092944142e02a6cbcbb6f65819f5"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-package-skeleton.R",
+    "bytes": 100,
+    "sha256": "db8f8a674967216b0aaec6af0eaba186dfb2929ea01032694f98820c12ecfc8c"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-pivot-alias-mixed-level.R",
+    "bytes": 12791,
+    "sha256": "86debd678214c9642937dad08d77409460c40e2f6c8e9e2e86944ef0781ae90f"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-pivot-subgroups-to-indicators.R",
+    "bytes": 6403,
+    "sha256": "5d51457c6d148107d629deafa2fdaafa6d1184eb97c0b4bd4463181d750d5004"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-pivot-subgroups-to-sites.R",
+    "bytes": 12706,
+    "sha256": "df102d01d1e20afd500b34c329008bc35dc2bbd403458317451a16bc0fc88acf"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-public-signature-lifecycle.R",
+    "bytes": 9994,
+    "sha256": "2ca7bb29fbc050c369f56907f1615711c4706f12790c8a397971c1f5469859be"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-regression.R",
+    "bytes": 5522,
+    "sha256": "406590c472d338be3d0f6f8440830dc6cef5030a3b480f031d3acc4719e212f6"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-scalar-oracle-characterization.R",
+    "bytes": 9917,
+    "sha256": "babe491d0069800d4722199710c6fa93c133e3ed35b0522e986264df90c1530a"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-scale-aware-matrix-tolerance.R",
+    "bytes": 6557,
+    "sha256": "b0fb1f442981d88c85bb90772c5ff6aeb0817d56fea619ef2aff8aa673b50073"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-sitemix-estimates.R",
+    "bytes": 10398,
+    "sha256": "9c77a0f95bc9dcb8c9643fbc9aa5dcfffc993798b37fe421c8698e731ab952d8"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-sm-estimate-dispatch.R",
+    "bytes": 7067,
+    "sha256": "7616d5502d876257f42fee8ce78097a90f7a9d5482fd6208cc8d0beab796f512"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-smooth-variance.R",
+    "bytes": 26332,
+    "sha256": "98d3bf98001fd122a31ed17108152b2210a23a94eb98752c582a7a318710dfd2"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-smoothing-simulation.R",
+    "bytes": 6378,
+    "sha256": "90cac74df99c36c771ef3cafafef05422997572c0061818b999d459064c4d568"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-suppression-report.R",
+    "bytes": 5526,
+    "sha256": "24758b7387fc2ac13cd01d5828dd9242a5b0a423707ec9800d690aef60418a7f"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-suppression-sensitivity-role.R",
+    "bytes": 11823,
+    "sha256": "fad65e768d85b17199edcefc62d3419cabaf6e45b0f60871f3505045a80fae14"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-suppression.R",
+    "bytes": 5394,
+    "sha256": "37b989757b8c0daefe480797169f1843a521d66cf8dd46e85bb132e8a9b72e09"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-sur-covariance.R",
+    "bytes": 13261,
+    "sha256": "d40ab6f6fac11646a14e83976f0834624b62ee6c015b76d4c4efbb4c631c958e"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-sur-matrix-correction.R",
+    "bytes": 15870,
+    "sha256": "a31818b993c9f91649faf4ef9cb1708052095721042ec4b13c44568983100818"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-test-architecture.R",
+    "bytes": 55779,
+    "sha256": "a4a7257c254cf3fd98bacf8ff8b59accb228c62d2b7c38f88a5d7ff08ab70ea3"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-transforms-variance.R",
+    "bytes": 19989,
+    "sha256": "76508196df26ca7fbb693b921492c5fc0fd99f775309e467fddbc7aac717533e"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-validation-order-contract.R",
+    "bytes": 10763,
+    "sha256": "c1c256c2c95a5694dc9cd0dfa059298ce605257711e1116e42fc8581c5352ecc"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-vcov-api-surface.R",
+    "bytes": 7867,
+    "sha256": "7a9e89671cc3e3e7e7aa21f4ffd646cdb0c14d86ba9b943a62ee0c2bfe9b535d"
+  },
+  {
+    "path": "qa/software-source/tests/testthat/test-vcov.R",
+    "bytes": 19924,
+    "sha256": "50bdaf0cc25dbe25949e0454b082d72b21660c8e14b388f4c4755e1045167582"
+  },
+  {
+    "path": "qa/software-source/tests/testthat.R",
+    "bytes": 58,
+    "sha256": "834467676e2448505b302bbedf59d4621b384a870816d7054f54dd444c537fea"
+  },
+  {
+    "path": "qa/software-source/vignettes/a1-getting-started.Rmd",
+    "bytes": 6801,
+    "sha256": "9cbdc113ed38a8b42d58db39e92749b57b1a822f2503dd58a73e310de7a661b8"
+  },
+  {
+    "path": "qa/software-source/vignettes/a2-input-formats.Rmd",
+    "bytes": 11497,
+    "sha256": "8db9f406dfdd08621bad1ece05d4028db85f183f3ded1567cca6aa8d29354e3d"
+  },
+  {
+    "path": "qa/software-source/vignettes/a3-scenario-binomial.Rmd",
+    "bytes": 10749,
+    "sha256": "1628209c35113be5f7fd166459c50efcc3d81f983996763b6ab5832caec1ed44"
+  },
+  {
+    "path": "qa/software-source/vignettes/a4-multivariate-multinomial.Rmd",
+    "bytes": 10554,
+    "sha256": "bad8fa4446cd6150a8bf244637760481e69479701fb10504dbc3ff795b38c439"
+  },
+  {
+    "path": "qa/software-source/vignettes/a5-published-aggregates.Rmd",
+    "bytes": 12982,
+    "sha256": "87b1a89676b0c01c39a046564ff986b5e4681b6288d8e284f17c3852377de823"
+  },
+  {
+    "path": "qa/software-source/vignettes/a6-diagnostics-and-suppression.Rmd",
+    "bytes": 10730,
+    "sha256": "5e5aed5a72cd200ded39b5c72120dd91e6dde6029cbcec54298b6e76c2058882"
+  },
+  {
+    "path": "qa/software-source/vignettes/a7-variance-smoothing-and-frechet.Rmd",
+    "bytes": 14711,
+    "sha256": "05123c16ae805a1badaa46b6715e62d40fca442c53de57f4035e0ee88dcebeb9"
+  },
+  {
+    "path": "qa/software-source/vignettes/a8-downstream-workflows.Rmd",
+    "bytes": 16400,
+    "sha256": "769a9e092bda6cfbc75c225066c516981c9c54d25fcd36747b27c6a95b043258"
+  },
+  {
+    "path": "qa/software-source/vignettes/a9-case-study-end-to-end.Rmd",
+    "bytes": 7144,
+    "sha256": "9344c57e7dc84efd9e7e626feabc71a557973036c529f890e302423a73055134"
+  },
+  {
+    "path": "qa/software-source/vignettes/apa.csl",
+    "bytes": 85458,
+    "sha256": "610fa72d0a15be130cb328974ed81bf8ef7f7a7f449b2ea24716871bf43489dd"
+  },
+  {
+    "path": "qa/software-source/vignettes/m1-statistical-foundations.Rmd",
+    "bytes": 10710,
+    "sha256": "8e9b760c1eea0d08185104a6073b55fa747541aec6916a29cfcae6d14f21c770"
+  },
+  {
+    "path": "qa/software-source/vignettes/m2-scalar-se-binomial.Rmd",
+    "bytes": 18418,
+    "sha256": "44de7e7cbe0893257da22d0de97046e7735cf991277ceb5421fe48e9c3c9cfba"
+  },
+  {
+    "path": "qa/software-source/vignettes/m3-multivariate-sur-covariance.Rmd",
+    "bytes": 17094,
+    "sha256": "3fdee254cabc4513eb7e4f81cfe3dc6843e645965111f504f8661c884ce93f86"
+  },
+  {
+    "path": "qa/software-source/vignettes/m4-multinomial-simplex.Rmd",
+    "bytes": 13347,
+    "sha256": "034c9c86d893a7ef6f6e6318735937394cb18811900e3277d26daa933219a7c8"
+  },
+  {
+    "path": "qa/software-source/vignettes/m5-aggregate-engines.Rmd",
+    "bytes": 13950,
+    "sha256": "ced33a39b4702cfc102a24ab9775c05a8b577a6ef49967d2308f546558528f02"
+  },
+  {
+    "path": "qa/software-source/vignettes/m6-variance-smoothing-theory.Rmd",
+    "bytes": 20763,
+    "sha256": "1404fd533501633166baf7eedaac747f24ebe2f52efe282a99f1ad011ab0688a"
+  },
+  {
+    "path": "qa/software-source/vignettes/m7-frechet-envelope-theory.Rmd",
+    "bytes": 18746,
+    "sha256": "37e460dc530f322bef0b3ba74f9c8fad430a7ee36f5dbf5ff0bbd30e069182dd"
+  },
+  {
+    "path": "qa/software-source/vignettes/m8-output-contract.Rmd",
+    "bytes": 25713,
+    "sha256": "5d5c9928bf5861b2147b4f03e6d8b86b38a630ea744172ab8c40c50be8566bfe"
+  },
+  {
+    "path": "qa/software-source/vignettes/references.bib",
+    "bytes": 6349,
+    "sha256": "65554cefcb63ff4996456b1ef666f64719b9c4a4e86fa4e540e3bb26be00aa09"
+  },
+  {
+    "path": "qa/validation/categorical-checks.csv",
+    "bytes": 14236,
+    "sha256": "4e19cfc8d918fc528f6428439519e91bf32fda119e808b3f060054b03ae08f72"
+  },
+  {
+    "path": "qa/validation/categorical-contrasts.csv",
+    "bytes": 169,
+    "sha256": "9419eef1b6be4dc16469aae7dbdc24847eece88e56a425e89793fe3237a4a282"
+  },
+  {
+    "path": "qa/validation/categorical-error-fixtures.csv",
+    "bytes": 4277,
+    "sha256": "cf70c512a6fcbc2bc9c4e8a8def3797b7cbf7f0cd9bad09b97aa6b17bfa4253a"
+  },
+  {
+    "path": "qa/validation/categorical-frechet-boundary.csv",
+    "bytes": 479,
+    "sha256": "f9dba124738ee94cc7c382274f2a192b498c7cae0ee55382f822698f7da76f5f"
+  },
+  {
+    "path": "qa/validation/categorical-frechet-endpoints.csv",
+    "bytes": 521,
+    "sha256": "7ba24cca29e3571df110daf9f77e9f5ad90eff07f773b4d4c152d1acad9352a7"
+  },
+  {
+    "path": "qa/validation/categorical-joint-tables.csv",
+    "bytes": 196,
+    "sha256": "8b6b55c0b407058e85143ca5308bc5aa995731798f6b6d0f0f7d00769e75fbf9"
+  },
+  {
+    "path": "qa/validation/categorical-matrices.csv",
+    "bytes": 6481,
+    "sha256": "ebdea32b4e52ee64ac46da3db0e161858f29681d0ca47f192115fcd7c9f5dbef"
+  },
+  {
+    "path": "qa/validation/categorical-scalar-matrix.csv",
+    "bytes": 3753,
+    "sha256": "ff3642b4ee6eebb03f25e52bfc0e8fe0db09a74ae15faf00dedbff7104dd4683"
+  },
+  {
+    "path": "qa/validation/categorical-summary.json",
+    "bytes": 1259,
+    "sha256": "8c821223d9955da4d6fbdf1e761f12a2dc5dd66640d3f8f324e73d0dd4d488c8"
+  },
+  {
+    "path": "qa/validation/categorical-warnings.csv",
+    "bytes": 384,
+    "sha256": "f897d3b33fc6c83821cffe76a9de182f953efdcd7651306c984f53c639a91c23"
+  },
+  {
+    "path": "qa/validation/coverage/file-coverage.csv",
+    "bytes": 1172,
+    "sha256": "2d44e81c999671d8c2f1dd00c9ea5fbdbc252796428b7986dd4a18e270407543"
+  },
+  {
+    "path": "qa/validation/coverage/summary.json",
+    "bytes": 486,
+    "sha256": "0e8eb35efbab589c4843bf7c8b9087e96a19e55ad0371332b782cf99504a91d8"
+  },
+  {
+    "path": "qa/validation/full-tests/summary.json",
+    "bytes": 427,
+    "sha256": "4356b4e1ab7ad9640a3f00978eb6e1bc2575057ed76e12263c7ad0989822a3aa"
+  },
+  {
+    "path": "qa/validation/publication-check/summary.json",
+    "bytes": 1897,
+    "sha256": "519eb81b02623bdc403dcec131ad649d8355fae69e62e72659624c75aac9aa42"
+  },
+  {
+    "path": "qa/validation/r-cmd-check/summary.json",
+    "bytes": 713,
+    "sha256": "1be46638214b4308b9c51dc1336fa8906079d7fa3c2ca8e61498671d0d86a0d4"
+  },
+  {
+    "path": "qa/validation/reference-software-summary.json",
+    "bytes": 314,
+    "sha256": "70fc674d725cbcfdc059e56bbb602e6674af2399298f8f7f282e41976b392d41"
+  },
+  {
+    "path": "qa/validation/scalar-fpc-design.csv",
+    "bytes": 3582,
+    "sha256": "d5061944dcac4553c4eb184edaee9a0e4580c9eeae8e5cb1228aba6d1e4102a1"
+  },
+  {
+    "path": "qa/validation/scalar-fpc-errors.csv",
+    "bytes": 3613,
+    "sha256": "183aa27757ea8afe277b53c401e0ea6ce62442fabf83358516fa18fbb59bff57"
+  },
+  {
+    "path": "qa/validation/scalar-fpc-metadata.csv",
+    "bytes": 57764,
+    "sha256": "c77bdd63675a21c52043fe0c2540707423b92a3ae3eae6c48aecf9d162667744"
+  },
+  {
+    "path": "qa/validation/scalar-fpc-summary.json",
+    "bytes": 2608,
+    "sha256": "b620ad275e8bf6256f8f83864289e0524c799742427a3be8709f407ee3d54a22"
+  },
+  {
+    "path": "qa/validation/scalar-fpc.csv",
+    "bytes": 211254,
+    "sha256": "2d9ed618fe4726d2163a3bf7ba1740e672d0e992aa664f85fe6759534276426d"
+  },
+  {
+    "path": "qa/validation/small-n-checks.csv",
+    "bytes": 38407,
+    "sha256": "c249e849b1dbb925b477b1ecc18f4a9887fc91cb00d3eea469fed6bd0a84e9ca"
+  },
+  {
+    "path": "qa/validation/small-n-extrema.csv",
+    "bytes": 2258,
+    "sha256": "ed923d1fd3d096728dac06b380737743219f2977311c7296e8fd1066e3a342d6"
+  },
+  {
+    "path": "qa/validation/small-n-selected.csv",
+    "bytes": 2636,
+    "sha256": "2b87cb6934c08916e2fb3d56457433197931838b45c7788f876c39a92342b233"
+  },
+  {
+    "path": "qa/validation/small-n-summary.json",
+    "bytes": 4238,
+    "sha256": "638e8f2b009f966e6fa7a5cd0079488778eeaf1de781c02fc75f319b2c5a634b"
+  },
+  {
+    "path": "qa/validation/small-n.csv",
+    "bytes": 24432,
+    "sha256": "274ee66fc8eb5e2ab0ec7f5a88ed67d5e5f2f21c3d34996f8aad845b24a410fe"
+  },
+  {
+    "path": "run-quick-checks.sh",
+    "bytes": 322,
+    "sha256": "6db361133f63349e5e97690acf38a8e2be487b3525fd99875bf0c1b0ba62b853"
+  },
+  {
+    "path": "scripts/analysis.R",
+    "bytes": 9224,
+    "sha256": "7f2016ad4dbba06201cb850304efb9e21595a53c04d3a86d27d04b63e8a906eb"
+  },
+  {
+    "path": "scripts/figures.R",
+    "bytes": 14659,
+    "sha256": "b79ba527c111a376f695bf84f17b15475258cc0db29979c345b16000273e5483"
+  },
+  {
+    "path": "scripts/reproduce.R",
+    "bytes": 2466,
+    "sha256": "949bd9c1302c477d782d644c437e8d63fb6912b8cc7378605ab1e6b625c5bbd9"
+  },
+  {
+    "path": "scripts/validate-categorical.R",
+    "bytes": 16882,
+    "sha256": "a322247ad429f01114053d25a98fcf52091300d7ff26cf7e032a868a3f88fac8"
+  },
+  {
+    "path": "scripts/validate-reference-software.R",
+    "bytes": 3058,
+    "sha256": "c0b447526097e42f375b8b9c38dcf367abe48f17310a9b7f358586fd09b75f90"
+  },
+  {
+    "path": "scripts/validate-scalar-fpc.R",
+    "bytes": 14173,
+    "sha256": "938530c76861124df3d0ae877e3de8f674de8f8bf1135eceebf948b0d4ceac59"
+  },
+  {
+    "path": "scripts/validate-small-n.R",
+    "bytes": 9444,
+    "sha256": "4197323f3d1c3084f8ec15fa6cb1e8ed54c625c2e70a526a6b408bb18b978cbf"
+  }
+]

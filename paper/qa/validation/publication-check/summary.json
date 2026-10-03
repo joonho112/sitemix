@@ -1,0 +1,73 @@
+{
+  "version": "0.3.1",
+  "completed_utc": "2026-10-03T17:32:28.788468+00:00",
+  "status": "PASS",
+  "source_manifest_sha256": "5c5843a9ae7f440441e14bd2ecef46d88fad3e5090a1fea3f22bdc945632e959",
+  "source_files": 178,
+  "source_tarball_sha256": "55242846eb4981b77bbfcc8c06745ff6694969d83ef37c5835b0aee0798708b4",
+  "r_cmd_check": {
+    "status": "OK",
+    "errors": 0,
+    "warnings": 0,
+    "notes": 0,
+    "command": "NOT_CRAN=true R CMD check sitemix_0.3.1.tar.gz",
+    "as_cran": false,
+    "examples": true,
+    "vignettes": true,
+    "manual": true
+  },
+  "packaged_tests": {
+    "passed": 6802,
+    "failed": 0,
+    "warnings": 0,
+    "skipped": 0
+  },
+  "full_source_tests": {
+    "files": 53,
+    "test_blocks": 511,
+    "expectations": 6918,
+    "status": "PASS"
+  },
+  "documentation": {
+    "generated_files": 14,
+    "drift": 0,
+    "canonical_vignettes": 17,
+    "status": "PASS"
+  },
+  "data_provenance": {
+    "public_content_replays": 4,
+    "broad_fixture_rows": 18,
+    "failures": 0,
+    "numeric_baseline_regenerated": false,
+    "status": "PASS"
+  },
+  "lint": {
+    "status": "PASS",
+    "correctness_findings": 0,
+    "new_style_findings": 0,
+    "new_object_usage_findings": 0,
+    "approved_existing_style_findings": 210,
+    "approved_existing_object_usage_findings": 26
+  },
+  "reproduction": {
+    "scalar_configurations": 263,
+    "numeric_comparisons": 2371,
+    "metadata_comparisons": 1141,
+    "categorical_assertions": 118,
+    "small_n_checks": 688,
+    "manuscript_assertions": 38,
+    "status": "PASS"
+  },
+  "frechet_boundaries": {
+    "cases": 3440,
+    "status": "PASS"
+  },
+  "earlier_coverage": {
+    "percent": 91.3685,
+    "covered": 9220,
+    "measured": 10091,
+    "rerun": false,
+    "scope": "Earlier full test coverage record; all instrumented package R source bytes are unchanged."
+  },
+  "publication_status": "prepared_locally_not_published"
+}

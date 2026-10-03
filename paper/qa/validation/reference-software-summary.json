@@ -1,0 +1,12 @@
+{
+  "version": "0.3.1",
+  "survey_version": "4.5",
+  "wilson_cases": 14,
+  "wilson_max_abs_error": 2.77555756156289e-17,
+  "corrected_scalar_cases": 5,
+  "scalar_max_abs_error": 2.77555756156289e-17,
+  "B_matrix_cases": 1,
+  "matrix_max_abs_error": 5.20417042793042e-18,
+  "tolerance": 1e-12,
+  "status": "pass"
+}

@@ -1,0 +1,3 @@
+"joint_table","cov_A1_B1","var_A1_minus_B1","var_A1_plus_B1","within_A","within_B"
+"lower",-0.0012,0.0069,0.0021,0.0024,0.0021
+"upper",0.0018,9e-04,0.0081,0.0024,0.0021

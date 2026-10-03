@@ -1,0 +1,194 @@
+---
+title: "A complete analysis with simulated pre-kindergarten data"
+author: "JoonHo Lee (jlee296@ua.edu)"
+date: "2026-07-12"
+abstract: >
+  Follow a complete analysis of FRPM proportions in simulated
+  pre-kindergarten data, from selecting a year to checking and exporting
+  estimates. The example also shows how to describe the calculation and
+  keep an optional smoothing comparison separate.
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    fig_caption: true
+    df_print: tibble
+vignette: >
+  %\VignetteIndexEntry{A complete analysis with simulated pre-kindergarten data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, include = FALSE, error = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, results = "markup", comment = "#>", collapse = TRUE,
+  message = FALSE, warning = FALSE, error = FALSE,
+  fig.width = 7, fig.height = 4.5, fig.retina = 2, dpi = 144,
+  fig.align = "center", out.width = "100%"
+)
+options(warn = 2)
+set.seed(
+  1L, kind = "Mersenne-Twister", normal.kind = "Inversion",
+  sample.kind = "Rejection"
+)
+library(sitemix)
+data(prek_sim, package = "sitemix")
+```
+
+This example estimates the proportion of students receiving free and
+reduced-price meals (FRPM) at each of 50 simulated sites in 2024. We prepare
+a table of rates and sampling uncertainty and flag small denominators for
+review. A reporting threshold is a chosen rule in the example, not a finding
+about whether a real program may publish its data.
+
+The bundled `prek_sim` panel contains no real children or programs. Every
+result below is a calculation on simulated records, so it should not be
+reported as an empirical Pre-K result. See [Getting started](a1-getting-started.html)
+for the first estimation call on its own.
+
+# Select the year
+
+```{r prep}
+target_year <- 2024L
+dat <- subset(prek_sim, year == target_year)
+nrow(dat)
+length(unique(dat$site_id))
+```
+
+Restricting to 2024 leaves 50 sites in this sample.
+
+# Estimate FRPM proportions
+
+```{r estimate}
+est <- sm_estimate(
+  dat,
+  family    = "binomial",
+  indicator = "frpm"
+)
+head(est[, c("site_id", "n", "theta_raw", "theta_hat", "se",
+             "flag_small_n", "flag_below_accountability")], 5)
+```
+
+The default `vst = "arcsine"` returns an arcsine-stabilized estimate
+and its standard error; `estimate_scale` records that choice. `theta_raw`
+retains the proportion for reporting. Both small-sample and accountability
+flags are returned without removing the flagged rows.
+
+# Review the estimates
+
+```{r diagnose}
+diag <- sm_diagnose(est, verbose = FALSE)
+print(as.data.frame(diag), row.names = FALSE)
+```
+
+The summary reports `n_flag_small_n`, `n_flag_below_accountability`,
+and checks such as `scalar_uncertainty_finite`,
+`scalar_se_positive`, and `indicator_scale_consistent`.
+
+# An optional variance-smoothing comparison
+
+This analysis uses the original `se`. Small sample size alone is not a
+reason to replace it with a smoothed value. The optional GVF helper is
+experimental, and improved precision or model performance is not guaranteed.
+If a separate, prespecified sensitivity analysis calls for smoothing, create
+another object and retain the additional SE column:
+
+```{r smoothing-sensitivity, eval = FALSE}
+est_sensitivity <- sm_smooth_variance(
+  est,
+  method = "loglinear",
+  overwrite = FALSE
+)
+# Keep est_sensitivity$se_smoothed alongside the original est$se.
+```
+
+The optional chunk is marked `eval = FALSE`; the reporting example below
+uses the original estimates. See [the variance-smoothing methods](m6-variance-smoothing-theory.html)
+for the model assumptions and the scope of the package's simulation checks.
+
+# Export estimates and retain the review flags
+
+```{r uncertainty-export}
+analysis_input <- data.frame(
+  unit_id        = est$site_id,
+  year           = est$year,
+  indicator      = est$indicator,
+  estimate       = est$theta_hat,
+  std_error      = est$se,
+  estimate_scale = est$estimate_scale,
+  var_method     = est$var_method,
+  n              = est$n,
+  proportion     = est$theta_raw,
+  se_raw         = est$se_raw,
+  flag_small_n   = est$flag_small_n,
+  flag_below_accountability = est$flag_below_accountability,
+  flag_zero_cell = est$flag_zero_cell,
+  flag_suppressed = est$flag_suppressed
+)
+# If a prespecified sensitivity was run, add it under a separate name:
+# analysis_input$std_error_gvf_sensitivity <- est_sensitivity$se_smoothed
+head(analysis_input, 5)
+```
+
+The table retains all sites. For a percentage table, use `100 * proportion`
+and, when needed, `100 * se_raw`. For an arcsine-scale analysis, use
+`estimate` with `std_error`, keeping `estimate_scale` and `var_method`.
+The flags and denominator remain available to explain later row selection.
+[Using estimates in further analyses](a8-downstream-workflows.html) shows
+additional handling for suppressed rows, exact censuses, and covariance
+matrices; this example contains complete student records.
+
+# Describe what was calculated
+
+A methods description should identify the data, estimate scale, uncertainty
+calculation, and any row-selection rules. For this simulated example:
+
+> We calculated FRPM proportions for 50 simulated pre-kindergarten sites in
+> 2024 using sitemix [@lee_2026_sitemix]. We retained raw proportions for
+> percentage reporting and arcsine-transformed estimates with their
+> delta-method standard errors for further analysis. We used the package's
+> default boundary setting, which supplies a Wilson-based variance surrogate
+> if a proportion is 0 or 1 [@wilson_1927]. Sites with n < 30 were flagged
+> but retained in the exported table. The table contains the original
+> unsmoothed standard errors, their scale and calculation method, and the
+> denominator and review flags. These simulated results are not estimates
+> for real children or programs.
+
+# Check the exported table
+
+```{r audit}
+stopifnot(nrow(est) == 50L)
+stopifnot(all(est$indicator == "frpm"))
+stopifnot(diag$scalar_uncertainty_finite == TRUE)
+stopifnot(diag$scalar_se_positive == TRUE)
+stopifnot(diag$indicator_scale_consistent == TRUE)
+stopifnot(all(est$estimate_scale == "arcsine"))
+stopifnot(all(is.finite(est$theta_hat)))
+stopifnot(nrow(analysis_input) == nrow(est))
+stopifnot(identical(analysis_input$std_error, est$se))
+stopifnot(!"se_smoothed" %in% names(est))
+```
+
+# Methods and related examples
+
+-   [Sampling uncertainty in site-level proportions](m1-statistical-foundations.html)
+    for the sampling-uncertainty framing behind the case study.
+-   [Binomial standard errors and transformations](m2-scalar-se-binomial.html)
+    for the arcsine and boundary-method derivations.
+-   [Experimental models for variance smoothing](m6-variance-smoothing-theory.html)
+    for the experimental variance model and its simulation findings.
+-   [Understanding returned estimates and uncertainty](m8-output-contract.html)
+    for the returned columns and covariance-scale requirements.
+
+# Cite the software
+
+```r
+citation("sitemix")
+```
+
+The bibliography entry used in this article is `lee_2026_sitemix`.
+Use `citation("sitemix")` to obtain citation details for your installed version.
+
+# References

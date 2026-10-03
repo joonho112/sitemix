@@ -1,0 +1,31 @@
+metric,comparison,threshold,rationale
+wordlist_entries,at_least,281,Reviewed technical vocabulary must not silently collapse
+spelling_findings,at_most,0,Current package-facing English must be clean after the reviewed wordlist
+url_occurrences,at_least,80,A zero-row problem table cannot stand in for a meaningful URL scan
+url_unique,at_least,35,The URL inventory must retain broad current documentation coverage
+https_occurrences,at_least,11,External HTTPS references must actually be presented to the checker
+https_unique,at_least,7,At least seven distinct live external targets are part of the current contract
+online_https_checked,at_least,11,A passing gate must execute the live checker rather than report inventory-only success
+url_parent_files,at_least,20,URL discovery must span package metadata README Rd and canonical vignettes
+url_failures,at_most,0,Every discovered URL must pass the current urlchecker contract
+rd_files,at_least,12,All current Rd topics must be parsed and checked
+rd_syntax_diagnostics,at_most,0,Rd syntax and encoding diagnostics are blocking
+rd_content_diagnostics,at_most,0,Rd content completeness diagnostics are blocking
+rd_xrefs,at_least,100,Cross-reference validation must exercise a nontrivial current link set
+rd_xref_files,at_least,10,Cross-references must span the documented public surface
+rd_xref_failures,at_most,0,Unresolved suspect undeclared or unavailable Rd references are blocking
+required_site_pages,exact,35,Home news article index 17 articles 12 reference topics and two redirects are required
+required_site_page_failures,at_most,0,Every required pkgdown page must exist after a clean build
+site_html_files,at_least,35,The clean site must contain at least the required HTML surface
+site_local_links,at_least,300,The built-site link check must exercise a meaningful local graph
+site_link_failures,at_most,0,Broken local pages anchors or assets are blocking
+site_overlay_failures,at_most,0,Every pkgdown configuration and asset overlay must be Git-tracked and byte-exact
+pkgdown_warnings,at_most,0,Unexpected configuration or build warnings are blocking
+pkgdown_errors,at_most,0,pkgdown configuration and clean build errors are blocking
+doc_generated_drift,at_most,0,Roxygen README and namespace drift is blocking
+doc_active_coupling,at_most,0,Retired named consumer coupling is forbidden on current package surfaces
+vignette_source_failures,at_most,0,Canonical vignette source-contract failures are blocking
+vignette_render_failures,at_most,0,All 17 canonical vignettes must render in fresh processes
+vignette_link_failures,at_most,0,Canonical vignette internal links must resolve
+canonical_vignettes,exact,17,The canonical package vignette set is A1 through A9 and M1 through M8
+protected_failures,at_most,0,All five protected identities must remain exact and unchanged

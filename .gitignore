@@ -24,3 +24,11 @@ log/
 
 # Rendered vignette previews (regenerated into inst/doc and the pkgdown site)
 vignettes/*.html
+
+# Local credentials, build products and installed reproduction libraries
+.env
+.env.*
+*.pem
+*.key
+*.log
+/paper/qa/r-library/

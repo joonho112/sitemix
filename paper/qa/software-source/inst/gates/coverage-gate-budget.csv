@@ -1,0 +1,2 @@
+gate_id,ci_profile,metric,threshold_numerator,threshold_denominator,threshold_percent,blocking,gate_wired,notes
+package-line-coverage,package-quality-release,covered_executable_lines,9,10,90,TRUE,TRUE,Exact integer ratio gate; never decide from rounded percentages

@@ -1,0 +1,42 @@
+linter,track,blocking,baseline_mode,rationale
+all_equal_linter,correctness,TRUE,zero,Use identical or an explicit tolerance instead of all.equal in conditions
+any_duplicated_linter,correctness,TRUE,zero,Use anyDuplicated when only existence is required
+any_is_na_linter,correctness,TRUE,zero,Use anyNA when only existence is required
+class_equals_linter,correctness,TRUE,zero,Use inherits for class checks
+condition_call_linter,correctness,TRUE,zero,Do not attach accidental calls to package conditions
+condition_message_linter,correctness,TRUE,zero,Condition messages must be stable and explicit
+duplicate_argument_linter,correctness,TRUE,zero,Duplicate call arguments require explicit review
+empty_assignment_linter,correctness,TRUE,zero,Reject incomplete assignments
+equals_na_linter,correctness,TRUE,zero,NA comparisons must use is.na
+length_levels_linter,correctness,TRUE,zero,Avoid allocating complete level vectors to count levels
+list_comparison_linter,correctness,TRUE,zero,List equality requires explicit element semantics
+missing_argument_linter,correctness,TRUE,zero,Reject unintended missing call arguments
+package_hooks_linter,correctness,TRUE,zero,Package hooks must use the supported signatures
+routine_registration_linter,correctness,TRUE,zero,Native routines must be registered explicitly
+T_and_F_symbol_linter,correctness,TRUE,zero,Use unambiguous TRUE and FALSE constants
+terminal_close_linter,correctness,TRUE,zero,Close terminal connections explicitly
+unreachable_code_linter,correctness,TRUE,zero,Reject code that cannot execute
+vector_logic_linter,correctness,TRUE,zero,Use scalar and vector logical operators intentionally
+assignment_linter,style,TRUE,no_new,Track assignment style without bulk churn
+brace_linter,style,TRUE,no_new,Track brace consistency without bulk churn
+commas_linter,style,TRUE,no_new,Track comma placement without bulk churn
+commented_code_linter,style,TRUE,no_new,Track code-like comments without bulk churn
+function_left_parentheses_linter,style,TRUE,no_new,Track function declaration spacing
+indentation_linter,style,TRUE,no_new,Track indentation debt without bulk reformatting
+infix_spaces_linter,style,TRUE,no_new,Track infix spacing without bulk churn
+line_length_linter,style,TRUE,no_new,Use a practical 120-character package limit
+object_length_linter,style,TRUE,no_new,Use a practical 60-character object limit
+object_name_linter,style,TRUE,no_new,Allow documented statistical and S3 naming conventions
+paren_body_linter,style,TRUE,no_new,Track parenthesized body layout
+pipe_consistency_linter,style,TRUE,no_new,Track mixed pipe styles
+pipe_continuation_linter,style,TRUE,no_new,Track pipe continuation layout
+quotes_linter,style,TRUE,no_new,Track quote consistency without bulk churn
+return_linter,style,TRUE,no_new,Track redundant explicit returns
+semicolon_linter,style,TRUE,no_new,Track statement separators without bulk churn
+seq_linter,style,TRUE,no_new,Prefer robust sequence helpers
+spaces_inside_linter,style,TRUE,no_new,Track interior delimiter spacing
+spaces_left_parentheses_linter,style,TRUE,no_new,Track call spacing
+trailing_blank_lines_linter,style,TRUE,no_new,Track terminal blank lines
+trailing_whitespace_linter,style,TRUE,no_new,Track trailing whitespace
+whitespace_linter,style,TRUE,no_new,Track horizontal whitespace consistency
+object_usage_linter,object_usage,FALSE,advisory_no_new,Preserve a reviewed advisory inventory of package and testthat false positives

@@ -1,0 +1,16 @@
+{
+  "started_utc": "2026-10-03 15:53:11 UTC",
+  "finished_utc": "2026-10-03 15:53:57 UTC",
+  "elapsed_seconds": 45.7477,
+  "source": "./qa/validation/full-tests/source",
+  "version": "0.3.1",
+  "files": 53,
+  "test_blocks": 511,
+  "passed": 6918,
+  "failed": 0,
+  "errors": 0,
+  "warnings": 0,
+  "skipped": 0,
+  "NOT_CRAN": "true",
+  "exclusions": "No test file filters or explicit skips; full repository metadata retained."
+}

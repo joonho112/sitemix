@@ -1,0 +1,442 @@
+---
+title: "Pairwise Fréchet bounds and projected dependence scenarios"
+author: "JoonHo Lee (jlee296@ua.edu)"
+date: "2026-07-12"
+abstract: >
+  `sm_frechet_envelope()` explores dependence when published proportions
+  omit joint counts. This article derives the pairwise probability and
+  covariance intervals, explains when they have a formal interpretation,
+  and distinguishes them from the returned dependence stress matrices.
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    fig_caption: true
+    df_print: tibble
+vignette: >
+  %\VignetteIndexEntry{Pairwise Fréchet bounds and projected dependence scenarios}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, include = FALSE, error = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, results = "markup", comment = "#>", collapse = TRUE,
+  message = FALSE, warning = FALSE, error = FALSE,
+  fig.width = 7, fig.height = 4.5, fig.retina = 2, dpi = 144,
+  fig.align = "center", out.width = "100%"
+)
+options(warn = 2)
+set.seed(
+  1L, kind = "Mersenne-Twister", normal.kind = "Inversion",
+  sample.kind = "Rejection"
+)
+capture_expected_sitemix_warning <- function(expr, expected_class) {
+  captured <- list()
+  value <- withCallingHandlers(
+    force(expr),
+    sitemix_warning = function(condition) {
+      captured[[length(captured) + 1L]] <<- condition
+      invokeRestart("muffleWarning")
+    }
+  )
+  stopifnot(
+    length(captured) <= 1L,
+    all(vapply(captured, inherits, logical(1), expected_class))
+  )
+  observations <- getOption("sitemix.vignette.warning_observations", list())
+  observations[[length(observations) + 1L]] <- list(
+    expected_class = expected_class,
+    count = length(captured)
+  )
+  options(sitemix.vignette.warning_observations = observations)
+  value
+}
+library(sitemix)
+```
+
+# 1. What the marginals identify
+
+The D1 aggregate path accepts published marginal counts without joint
+counts; the numerators and denominators yield marginal proportions.
+For example, knowing the FRPM and SNAP rates
+among the same students does not usually tell us how many students
+belong to both groups. A joint proportion, and hence a covariance,
+can vary while those two marginal proportions remain fixed.
+
+`sm_frechet_envelope()` reports the pairwise ranges in
+`raw_pairwise_intervals`. Their interpretation depends on whether
+the indicators describe the same sampled units or subgroup-conditional
+rates. The function requires that choice explicitly. The formal
+common-unit case is called D1a; D1b is a heuristic calculation for
+subgroup-conditional rates. Section 4 gives the required inputs.
+
+The worked example below uses counts from `prek_sim`, the package's
+fully simulated 50-site pre-kindergarten panel. It does not describe
+real students, sites, or programs.
+
+# 2. The pairwise joint-probability interval
+
+Let $X$ and $Y$ be binary indicators on a common unit, with
+$p=P(X=1)$, $q=P(Y=1)$, and $r=P(X=1,Y=1)$. Their joint
+probabilities must form the following table:
+
+| | $Y=1$ | $Y=0$ | Total |
+|:--|--:|--:|--:|
+| $X=1$ | $r$ | $p-r$ | $p$ |
+| $X=0$ | $q-r$ | $1-p-q+r$ | $1-p$ |
+| Total | $q$ | $1-q$ | $1$ |
+
+All four cells must be nonnegative, giving
+
+$$
+\max(0,p+q-1) \;\le\; r \;\le\; \min(p,q).
+\tag{M7.1}
+$$
+
+Conversely, every $r$ in this interval gives a nonnegative table with
+the stated margins and total one. Thus both endpoints are attainable
+for a pair of binary variables. These are the classical
+Fréchet--Hoeffding bounds [@frechet_1951; @hoeffding_1940]. The
+general copula and joint-distribution forms appear in
+@nelsen2006introduction, Theorem 2.2.3 (p. 11) and Section 2.5,
+equation (2.5.1) (p. 30). The table above provides a direct derivation
+for the binary case used here.
+
+For example, $p=0.25$ and $q=0.50$ allow $0\le r\le0.25$.
+The endpoints have individual-level covariance $r-p\,q=-0.125$ and
+$0.125$. If either marginal is zero or one, the joint interval
+collapses and the covariance is zero; the joint remains unidentified
+only when the interval has positive width.
+
+The package substitutes the supplied `theta_raw` values for $p$ and
+$q$. The returned interval is conditional on those margins. It is
+not a confidence interval for an unknown population joint probability
+and does not account for sampling error in the supplied margins.
+
+# 3. From a joint probability to sampling covariance
+
+Suppose $(X_i,Y_i)$ are independent, identically distributed pairs
+for the same $n$ sampled units. The raw sample proportions have
+covariance
+
+$$
+\operatorname{Cov}(\bar X,\bar Y)
+=\frac{1}{n^2}\sum_{i=1}^n\operatorname{Cov}(X_i,Y_i)
+=\frac{r-p\,q}{n}.
+$$
+
+Independence across sampled units removes the cross-unit covariance
+terms. Dependence between $X_i$ and $Y_i$ within a unit is allowed.
+Substituting each endpoint from (M7.1) gives the D1a raw pairwise
+covariance interval. With $p=0.25$, $q=0.50$, and $n=20$, it is
+$[-0.00625,0.00625]$.
+
+The table `raw_pairwise_intervals` records `p_1`, `p_2`,
+`n_common`, and the joint-probability, correlation, and covariance
+endpoints. Its covariance endpoints use the raw probability scale,
+even when the input row estimates and `V` use an arcsine scale.
+For D1a, `covariance_construction` is
+`"formal_iid_pairwise_covariance_over_n"` and `interval_scope` is
+`"formal_raw_pairwise_interval"`.
+
+For interior probabilities, the corresponding correlation is
+
+$$
+\rho=\frac{r-p\,q}{\sqrt{p(1-p)q(1-q)}}.
+$$
+
+Correlation is undefined for a degenerate marginal. The implementation
+records `NA` correlation endpoints when the denominator is smaller
+than machine epsilon. The direct D1a covariance formula still applies;
+at an exact zero/one marginal its two endpoints are zero.
+
+# 4. Choosing D1a or D1b
+
+Supply `population_regime = "d1a"` or `"d1b"`; omission raises
+`sitemix_error_population_regime_required`. The input must come from
+the D1 aggregate path and contain complete, identified marginals.
+Both `vjt = FALSE` and `vjt = TRUE` results are accepted. Suppressed
+missing rows and suppression-sensitivity rows are rejected.
+
+## D1a: common units and an IID plug-in calculation
+
+Formal D1a requires the following information to have been recorded
+by the D1 estimator:
+
+- `sampling_relation = "same_units"`, with every site-year group
+  recorded as D1a with common denominators;
+- one finite, positive denominator per selected site-year and
+  `n_eff = n`, requiring `anscombe = FALSE`;
+- the IID plug-in variance calculation, without FPC or
+  `binomial_bc`. If `V` is present, its sampling and variance
+  information must agree with these conditions.
+
+Equal denominators alone do not establish common sampled units.
+The label must reflect the publisher's information. These checks
+limit the formal covariance result to the `/n` calculation above;
+they do not add sampling uncertainty to the marginal inputs.
+
+For this regime, `V_independence` has diagonal $p_k(1-p_k)/n$,
+reconstructed from the marginal values. This raw plug-in diagonal
+can differ from an input `se_raw^2` that used a boundary fallback.
+It is also distinct from a transformed-scale row `V`.
+
+## D1b: subgroup-conditional rates
+
+Consider FRPM rates among ELL students and among non-ELL students.
+These refer to different sets of students, so treating the two rates
+as marginals of one common-unit binary vector is an additional
+hypothetical construction. The D1b calculation uses that construction
+to explore dependence; its ranges are not formal joint-probability
+or sampling-covariance bounds for those subgroup rates.
+
+D1b accepts inputs recording `sampling_relation = "different_units"`
+or `"unknown"`. A same-unit D1a input cannot be relabeled as D1b
+in this call. `subgroup_conditional_action = "warn"` is the default:
+it proceeds with `sitemix_warning_frechet_d1b_heuristic`. Use
+`"allow"` to acknowledge the heuristic and proceed silently, or
+`"error"` to stop with `sitemix_error_frechet_d1b_disallowed`.
+This argument is ignored for D1a.
+
+There is no justified common denominator for the D1b construction,
+so `n_common = NA`, even if the supplied denominators happen to be
+equal. Instead, the function scales each pairwise correlation endpoint
+by the two input raw-scale SEs:
+
+$$
+V_{kk'}^{\mathrm{corner}}
+=\rho_{kk'}^{\mathrm{corner}}s_k s_{k'}.
+$$
+
+Here $s_k$ is the row's `se_raw`. The output identifies this choice
+with `covariance_construction = "heuristic_se_scaled_pairwise_correlation"`
+and `interval_scope = "heuristic_pairwise_stress_range"`. Where the
+correlation endpoint is undefined, the implementation uses zero for
+the heuristic off-diagonal. That numerical convention does not
+identify the actual covariance between subgroup estimates.
+
+# 5. From pairwise intervals to matrices
+
+The function assembles two matrices, one from all lower pairwise
+covariance endpoints and one from all upper endpoints. It stores them
+as `unprojected_negative_dependence_corner` and
+`unprojected_positive_dependence_corner`. A covariance matrix must
+be positive semidefinite (PSD): every linear combination of its
+variables must have nonnegative variance. Pairwise feasibility alone
+does not ensure this property for the assembled lower corner.
+
+For example, consider three common-unit indicators with marginal
+probabilities all equal to 0.5. Each lower joint endpoint is zero,
+so the lower covariance corner has diagonal $1/(4n)$ and every
+off-diagonal equal to $-1/(4n)$. Its smallest eigenvalue is
+$-1/(4n)$, so it is indefinite. The three pairs cannot all attain
+their lower endpoints together.
+
+The upper corner has a different property in formal D1a. Let
+$U$ be uniform on $[0,1]$ and define $X_k=1\{U\le p_k\}$.
+Then $P(X_k=1,X_l=1)=\min(p_k,p_l)$ for every pair
+simultaneously. This construction gives a valid joint distribution,
+and the covariance matrix of means from $n$ independent copies is
+PSD. Thus the common-unit all-upper corner is attainable and PSD
+in exact arithmetic. Its largest pairwise entries do not make it
+an upper variance bound for every linear contrast.
+
+## PSD is necessary but not sufficient
+
+A PSD adjustment ensures nonnegative variances for linear
+combinations, but it does not establish a joint binary distribution
+with the supplied marginals. For a simple example, three Bernoulli
+variables with probabilities 0.5 and pairwise correlations $-0.5$
+would have a PSD correlation matrix. Yet their sum would have mean
+1.5 and variance zero, which is impossible for an integer-valued
+sum. Each pair separately satisfies its probability bounds.
+
+The returned `projected_negative_dependence_stress` and
+`projected_positive_dependence_stress` therefore retain their role
+as dependence scenarios. For `K = 2` in formal D1a, their
+off-diagonals do equal the two formal covariance endpoints: the
+matrices are returned unchanged from their source corners. That
+special-case equality does not turn the general matrix fields into
+multivariate bounds.
+
+# 6. Projection methods and diagnostics
+
+For `K <= 2`, neither algorithm runs, even if a shrinkage weight is
+supplied. For larger matrices, an already-PSD corner is also kept
+unchanged unless a fixed `shrink_alpha` was requested. When an
+adjustment is needed, the two methods preserve the source diagonal:
+the raw plug-in diagonal in D1a and the input raw-SE diagonal in D1b.
+
+## Higham method
+
+Higham's alternating-projections method finds a nearest correlation
+matrix using the PSD and unit-diagonal constraints, with the correction
+selected by `doDykstra = TRUE` [@higham_2002]. The default
+`psd_method = "higham"` uses
+[`Matrix::nearPD()`](https://stat.ethz.ch/R-manual/R-devel/library/Matrix/html/nearPD.html)
+with package-specific settings. It operates on the covariance corner
+with `corr = FALSE` and `keepDiag = TRUE`, preserving its original
+diagonal rather than setting the diagonal to one.
+
+The default call uses `doDykstra = TRUE` and enables the additional
+eigenvalue adjustment through `do2eigen = TRUE`. Its eigenvalue and
+convergence tolerances equal `psd_tol`, as does the default
+`posd.tol`; the convergence norm is the infinity norm (`"I"`).
+Finite stopping tolerances and the final eigenvalue adjustment mean
+the returned matrix is a numerical covariance adjustment.
+
+After `nearPD()` returns, sitemix restores the source diagonal,
+makes the result symmetric, and checks its smallest eigenvalue. A fit
+reported as failing to converge raises
+`sitemix_error_vcov_projection_nonconvergence`. The final PSD check
+allows a small numerical tolerance. Write $t$ for `psd_tol` and $d$ for
+`.Machine$double.xmin`, the smallest positive normalized double:
+
+$$
+\lambda_{\min}(V)\ge
+-\left(t\max_i|\lambda_i(V)|+K\,d\right).
+$$
+
+The default `psd_tol` is `1e-8`, and it must satisfy
+`0 < psd_tol <= sqrt(.Machine$double.eps)`. The small absolute term
+handles the machine range; the main tolerance scales with the
+matrix eigenvalues. This is a numerical check, not permission to
+treat an appreciably indefinite matrix as a covariance matrix.
+
+Supported `...` controls are `base.matrix`, `doSym`, `doDykstra`,
+`posd.tol`, and `conv.norm.type`; the applied values are stored in
+`projection_config`. For example, `doDykstra = FALSE` turns off that
+correction and changes the iteration. Other settings such as `keepDiag`, `corr`,
+`eig.tol`, `conv.tol`, and `maxit` cannot be overridden through `...`.
+Use `psd_tol` and `psd_max_iter` for the public tolerance and iteration
+limit.
+
+## Shrinkage toward the diagonal
+
+With `psd_method = "shrink"`, let $C$ be the source corner and
+$D$ the diagonal matrix containing its diagonal entries. The method
+uses
+
+$$
+C_\alpha=\alpha C+(1-\alpha)D.
+$$
+
+Without a supplied `shrink_alpha`, a bisection search seeks the
+largest retained weight satisfying the PSD tolerance. It stops when
+the bracket width is at most `psd_tol` and returns the feasible end
+of that bracket. Failure to narrow the bracket within `psd_max_iter`
+raises `sitemix_error_vcov_projection_nonconvergence`.
+
+A fixed `shrink_alpha` in $(0,1]$ is applied exactly for `K > 2`,
+including to a corner that was already PSD. If that choice is not
+PSD within tolerance, the call errors. A supplied weight requires
+`psd_method = "shrink"` even for `K <= 2`, where the matrices
+remain unchanged. Shrinkage controls how much of the chosen corner
+to retain; it does not estimate the missing joint probabilities.
+
+## Reading the diagnostics
+
+`projection_diagnostics` has one row per site-year and scenario.
+Start with `projection_status`, `projection_attempted`,
+`converged`, and `iterations`. Status `"identity_k_le_2"` or
+`"already_psd"` means no algorithm ran, so `converged = NA` is
+expected. A fixed weight is recorded as `"fixed_alpha_applied"`;
+a completed iterative adjustment is `"projected"`.
+
+Compare `min_eigen_before` and `min_eigen_after` with their
+`absolute_tolerance_before` and `absolute_tolerance_after` values.
+Then inspect `projection_distance_absolute`, `diagonal_preserved`,
+`symmetry_preserved`, and `psd_preserved`. The remaining diagnostics
+include `sign_changes`, `raw_interval_violations`, and
+`projected_order_reversals`, which check how the adjusted entries
+relate to the original pairwise ranges. A global adjustment can
+change an individual entry's interpretation; PSD alone is not a
+reason to skip these checks. The deprecated `psd_diagnostics`
+field provides an older summary layout.
+
+# 7. A two-indicator check
+
+The bundled simulated counts provide FRPM and SNAP marginals for
+the same students. The following code computes a formal D1a result
+and checks the `/n` covariance formula and equality of source and
+returned matrices. Because this example has two indicators, it
+checks the identity case; it does not exercise an iterative solver.
+
+```{r invariants}
+counts <- readRDS(system.file("extdata", "prek_sim_counts.rds",
+                              package = "sitemix"))
+d1 <- counts[counts$year == 2024, ]
+d1_long <- rbind(
+  data.frame(site_id = d1$site_id, year = d1$year,
+             indicator = "frpm", c_jt = d1$c_jt_frpm, n_jt = d1$n_jt),
+  data.frame(site_id = d1$site_id, year = d1$year,
+             indicator = "snap", c_jt = d1$c_jt_snap, n_jt = d1$n_jt)
+)
+est_d1 <- capture_expected_sitemix_warning(
+  sm_estimate_from_aggregates(
+    d1_long, family = "multivariate",
+    indicator_col = "indicator",
+    sampling_relation = "same_units",
+    vjt = TRUE
+  ),
+  "sitemix_warning_working_independence_default"
+)
+env <- sm_frechet_envelope(est_d1, population_regime = "d1a")
+
+V_indep <- as.matrix(env$V_independence[[1L]])
+raw_intervals <- env$raw_pairwise_intervals
+V_negative <- as.matrix(env$projected_negative_dependence_stress[[1L]])
+V_positive <- as.matrix(env$projected_positive_dependence_stress[[1L]])
+
+# FR1: direct formal /n oracle
+row1 <- raw_intervals[raw_intervals$site_key == env$site_keys$site_key[[1L]], ][1L, ]
+stopifnot(all.equal(
+  row1$pairwise_covariance_lower,
+  (row1$joint_probability_lower - row1$p_1 * row1$p_2) / row1$n_common
+))
+stopifnot(all.equal(
+  row1$pairwise_covariance_upper,
+  (row1$joint_probability_upper - row1$p_1 * row1$p_2) / row1$n_common
+))
+
+# FR2: PSD after repair (relative tolerance + machine-range floor)
+eig_negative <- eigen(V_negative, symmetric = TRUE, only.values = TRUE)$values
+eig_positive <- eigen(V_positive, symmetric = TRUE, only.values = TRUE)$values
+tol_negative <- env$psd_tol * max(abs(eig_negative)) +
+  nrow(V_negative) * .Machine$double.xmin
+tol_positive <- env$psd_tol * max(abs(eig_positive)) +
+  nrow(V_positive) * .Machine$double.xmin
+stopifnot(min(eig_negative) >= -tol_negative)
+stopifnot(min(eig_positive) >= -tol_positive)
+
+# FR3: K=2 shortcuts preserve their source corners
+stopifnot(nrow(V_negative) == 2L)
+stopifnot(all.equal(
+  V_negative,
+  as.matrix(env$unprojected_negative_dependence_corner[[1L]])
+))
+stopifnot(all.equal(
+  V_positive,
+  as.matrix(env$unprojected_positive_dependence_corner[[1L]])
+))
+stopifnot(all.equal(diag(V_negative), diag(V_indep), tolerance = 1e-8))
+stopifnot(all.equal(diag(V_positive), diag(V_indep), tolerance = 1e-8))
+```
+
+The covariance endpoints in `raw_intervals` are on the raw
+probability scale, while the input estimates use an arcsine scale.
+Both returned stress matrices equal their source corners here, and
+their diagonals equal `V_independence`. The eigenvalue checks use
+the default relative tolerance `1e-8`; no iterative projection was
+needed to obtain these matrices.
+
+For the D1 working-independence calculation, see
+[Sampling uncertainty from published aggregates](m5-aggregate-engines.html). For an applied comparison, see
+[Variance smoothing and Fréchet sensitivity analysis](a7-variance-smoothing-and-frechet.html). [Understanding returned estimates and uncertainty](m8-output-contract.html)
+explains how these sensitivity outputs differ from ordinary
+covariance objects.
+
+# References

@@ -1,0 +1,2 @@
+"site_id","year","site_key","indicator_1","indicator_2","p_1","p_2","n_common","joint_probability_lower","joint_probability_upper","pairwise_correlation_lower","pairwise_correlation_upper","pairwise_covariance_lower","pairwise_covariance_upper","interval_scale","covariance_construction","interval_scope"
+"D1_two_marginals",2026,"D1_two_marginals::2026","a","b",0.4,0.3,100,0,0.3,-0.534522483824849,0.801783725737273,-0.0012,0.0018,"raw_probability","formal_iid_pairwise_covariance_over_n","formal_raw_pairwise_interval"

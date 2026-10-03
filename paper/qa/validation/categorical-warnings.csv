@@ -1,0 +1,5 @@
+"fixture","class","message"
+"D1_four_marginals","sitemix_warning_working_independence_default","Working-independence default selected for D1 aggregate input.
+✖ Expected `identified within-site covariance off-diagonals`.
+ℹ Actual: `off-diagonals structurally unidentified from marginal aggregates`.
+ℹ Fix: Use `sm_frechet_envelope()` once sensitivity diagnostics are available."

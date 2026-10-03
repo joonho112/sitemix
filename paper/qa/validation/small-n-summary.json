@@ -1,0 +1,146 @@
+{
+  "step": "Step 3.3",
+  "status": "complete",
+  "started_utc": "2026-10-03 17:30:17 UTC",
+  "completed_utc": "2026-10-03 17:30:18 UTC",
+  "calculation": "Exact finite-support binomial summation using stats::dbinom; no Monte Carlo",
+  "independence": "No sitemix code or API used to compute or validate results; jsonlite serializes metadata only",
+  "n_grid": [
+    1,
+    2,
+    5,
+    10,
+    20,
+    50,
+    100
+  ],
+  "theta_grid": [
+    0,
+    0.01,
+    0.05,
+    0.1,
+    0.5,
+    0.9,
+    0.95,
+    0.99,
+    1
+  ],
+  "methods": [
+    "arcsine",
+    "anscombe"
+  ],
+  "cells_per_method": 63,
+  "total_rows": 126,
+  "ratio_definition": "working_variance / exact_variance",
+  "undefined_ratio_rule": "NA at theta = 0 or 1 because exact variance is zero",
+  "undefined_ratio_rows": 28,
+  "exact_variance_definition": "sum_{c=0}^n Bin(n,theta)[c] * (g_n(c) - exact_mean)^2",
+  "bias_target": "asin(sqrt(theta)) for both transforms",
+  "mse_definition": "variance + bias^2 relative to asin(sqrt(theta))",
+  "checks": 688,
+  "failed_checks": 0,
+  "tolerance": 1e-12,
+  "maximum_check_error": 1.02695629777827e-15,
+  "endpoint_check_tolerance": 0,
+  "coverage_evaluated": false,
+  "uncertainty_scope": "Fixed-n IID binomial, no FPC, no bias correction, transformed working variance only; not raw boundary surrogates",
+  "extrema": [
+    {
+      "extremum": "minimum",
+      "method": "arcsine",
+      "n": 1,
+      "theta": 0.5,
+      "working_to_exact_ratio": 0.405284734569351
+    },
+    {
+      "extremum": "minimum",
+      "method": "arcsine",
+      "n": 2,
+      "theta": 0.5,
+      "working_to_exact_ratio": 0.405284734569351
+    },
+    {
+      "extremum": "maximum",
+      "method": "arcsine",
+      "n": 1,
+      "theta": 0.01,
+      "working_to_exact_ratio": 10.2344629941755
+    },
+    {
+      "extremum": "maximum",
+      "method": "arcsine",
+      "n": 1,
+      "theta": 0.99,
+      "working_to_exact_ratio": 10.2344629941755
+    },
+    {
+      "extremum": "maximum",
+      "method": "arcsine",
+      "n": 2,
+      "theta": 0.01,
+      "working_to_exact_ratio": 10.2344629941755
+    },
+    {
+      "extremum": "maximum",
+      "method": "arcsine",
+      "n": 2,
+      "theta": 0.99,
+      "working_to_exact_ratio": 10.2344629941755
+    },
+    {
+      "extremum": "minimum",
+      "method": "anscombe",
+      "n": 10,
+      "theta": 0.5,
+      "working_to_exact_ratio": 0.994152934213016
+    },
+    {
+      "extremum": "maximum",
+      "method": "anscombe",
+      "n": 1,
+      "theta": 0.01,
+      "working_to_exact_ratio": 45.5046347944972
+    },
+    {
+      "extremum": "maximum",
+      "method": "anscombe",
+      "n": 1,
+      "theta": 0.99,
+      "working_to_exact_ratio": 45.5046347944972
+    }
+  ],
+  "anscombe_closer_to_exact_by_relative_variance_error": 20,
+  "anscombe_further_from_exact_by_relative_variance_error": 29,
+  "comparison_denominator": 49,
+  "limitations": [
+    "Finite grid only; no uniform accuracy guarantee",
+    "Variance approximation quality is not interval coverage",
+    "Anscombe changes both the statistic and the target approximation; bias is reported separately",
+    "No posterior or ranking-uncertainty calibration"
+  ],
+  "contextual_software_source_manifest_sha256": "5c5843a9ae7f440441e14bd2ecef46d88fad3e5090a1fea3f22bdc945632e959",
+  "contextual_software_commit": {},
+  "contextual_identity_role": "Context only; calculation does not import this software",
+  "script_md5": "afba9c2b170912b3a67e5631a881e1f1",
+  "session_info": [
+    "R version 4.6.0 (2026-04-24)",
+    "Platform: aarch64-apple-darwin23",
+    "Running under: macOS Tahoe 26.6.2",
+    "",
+    "Matrix products: default",
+    "BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib ",
+    "LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1",
+    "",
+    "locale:",
+    "[1] C.UTF-8/C.UTF-8/C.UTF-8/C/C.UTF-8/C.UTF-8",
+    "",
+    "time zone: America/Chicago",
+    "tzcode source: internal",
+    "",
+    "attached base packages:",
+    "[1] stats     graphics  grDevices utils     datasets  methods   base     ",
+    "",
+    "loaded via a namespace (and not attached):",
+    "[1] compiler_4.6.0 tools_4.6.0    jsonlite_2.0.0"
+  ]
+}
