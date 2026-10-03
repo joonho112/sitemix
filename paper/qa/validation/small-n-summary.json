@@ -1,8 +1,8 @@
 {
   "step": "Step 3.3",
   "status": "complete",
-  "started_utc": "2026-10-03 17:30:17 UTC",
-  "completed_utc": "2026-10-03 17:30:18 UTC",
+  "started_utc": "2026-10-03 18:25:16 UTC",
+  "completed_utc": "2026-10-03 18:25:16 UTC",
   "calculation": "Exact finite-support binomial summation using stats::dbinom; no Monte Carlo",
   "independence": "No sitemix code or API used to compute or validate results; jsonlite serializes metadata only",
   "n_grid": [
@@ -118,7 +118,7 @@
     "Anscombe changes both the statistic and the target approximation; bias is reported separately",
     "No posterior or ranking-uncertainty calibration"
   ],
-  "contextual_software_source_manifest_sha256": "5c5843a9ae7f440441e14bd2ecef46d88fad3e5090a1fea3f22bdc945632e959",
+  "contextual_software_source_manifest_sha256": "4c8de0a669c774ff8d069d88c60bd591fab4177d5a1f9b7186956fb7e7d1206d",
   "contextual_software_commit": {},
   "contextual_identity_role": "Context only; calculation does not import this software",
   "script_md5": "afba9c2b170912b3a67e5631a881e1f1",

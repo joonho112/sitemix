@@ -17,7 +17,7 @@
 - Clarify proportions-only scope, boundary provenance and aggregate marker use.
 - Add public-API regression tests for zero/one margins, D1 invalid combinations,
   and observed versus hidden suppression denominators.
-- Include the SoftwareX reproducibility materials in the release preparation.
+- Include the paper reproducibility materials in the release preparation.
   Version 0.3.1 does not add continuous outcomes or joint categorical modeling.
 
 # sitemix 0.3.0 (development)

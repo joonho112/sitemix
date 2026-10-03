@@ -2,7 +2,7 @@
   "version": "0.3.1",
   "fixed_source": "qa/software-source",
   "source_file_count": 178,
-  "source_manifest_sha256": "5c5843a9ae7f440441e14bd2ecef46d88fad3e5090a1fea3f22bdc945632e959",
+  "source_manifest_sha256": "4c8de0a669c774ff8d069d88c60bd591fab4177d5a1f9b7186956fb7e7d1206d",
   "public_source": {
     "repo": "https://github.com/joonho112/sitemix",
     "commit": null,

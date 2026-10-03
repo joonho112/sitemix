@@ -26,8 +26,8 @@
   },
   {
     "path": "NEWS.md",
-    "bytes": 26939,
-    "sha256": "2d4bce75f233234b57371a6abae2e23c212f9b19e2653d0ccc951c60290a7125"
+    "bytes": 26935,
+    "sha256": "46f5542d75ca583cd72fed0e4d1977ae23b29b681a9ca89d9b77c289a7e47e1c"
   },
   {
     "path": "R/aggregate.R",
@@ -176,13 +176,13 @@
   },
   {
     "path": "README.Rmd",
-    "bytes": 7677,
-    "sha256": "0edb196252b765b6dc07701e55daa66e4ddb4d9f77b59470a1574368d983043a"
+    "bytes": 7679,
+    "sha256": "ff0014232fb4715b01ca78e774e21d4d96c9de595975dbe09c53a3892550c425"
   },
   {
     "path": "README.md",
-    "bytes": 7874,
-    "sha256": "ca1bdad537a7b555e8e90ed11474a749a956d54b79d90200b6aada79698c601b"
+    "bytes": 7876,
+    "sha256": "2305ac2f6ff27686c5a89c9d5c8d5911b2743e9ac28a3c50590d708836b12da3"
   },
   {
     "path": "data/prek_sim.rda",

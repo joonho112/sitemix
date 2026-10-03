@@ -161,7 +161,7 @@ Prepare any model-specific conversion in the project that fits the model.
 
 ## Status
 
-`sitemix` 0.3.1 contains the correctness fixes described in NEWS.md.
+`sitemix` 0.3.1 contains the correctness fixes described in `NEWS.md`.
 See the GitHub repository for public release availability.
 API names and behavior may evolve before v1.0. See the
 [release notes](https://joonho112.github.io/sitemix/news/index.html) for

@@ -168,8 +168,8 @@ model.
 
 ## Status
 
-`sitemix` 0.3.1 contains the correctness fixes described in NEWS.md. See
-the GitHub repository for public release availability. API names and
+`sitemix` 0.3.1 contains the correctness fixes described in `NEWS.md`.
+See the GitHub repository for public release availability. API names and
 behavior may evolve before v1.0. See the [release
 notes](https://joonho112.github.io/sitemix/news/index.html) for
 migration details and the complete change history.

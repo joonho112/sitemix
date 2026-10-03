@@ -62,12 +62,12 @@
   {
     "path": "qa/software-identity/source-files.json",
     "bytes": 28259,
-    "sha256": "5c5843a9ae7f440441e14bd2ecef46d88fad3e5090a1fea3f22bdc945632e959"
+    "sha256": "4c8de0a669c774ff8d069d88c60bd591fab4177d5a1f9b7186956fb7e7d1206d"
   },
   {
     "path": "qa/software-identity/source-sha256.txt",
     "bytes": 65,
-    "sha256": "436fa981a66b9ce272ebdbcdcaccbe6c13c322a3387137b4b149ca92d4634713"
+    "sha256": "6fa54a1f109a2acb0f1def0e6058b536595023210930de46078692ea167f792a"
   },
   {
     "path": "qa/software-identity/verify-source.py",
@@ -77,7 +77,7 @@
   {
     "path": "qa/software-identity.json",
     "bytes": 593,
-    "sha256": "a73bcc997384f5b416741df178a1ec493c5b8deb56dc8e6a8e0d35288ea4f087"
+    "sha256": "847fcc56b73f1896002a4ae520c0b4cef79cd5483466c669b2929491e6690be7"
   },
   {
     "path": "qa/software-source/.Rbuildignore",
@@ -106,8 +106,8 @@
   },
   {
     "path": "qa/software-source/NEWS.md",
-    "bytes": 26939,
-    "sha256": "2d4bce75f233234b57371a6abae2e23c212f9b19e2653d0ccc951c60290a7125"
+    "bytes": 26935,
+    "sha256": "46f5542d75ca583cd72fed0e4d1977ae23b29b681a9ca89d9b77c289a7e47e1c"
   },
   {
     "path": "qa/software-source/R/aggregate.R",
@@ -256,13 +256,13 @@
   },
   {
     "path": "qa/software-source/README.Rmd",
-    "bytes": 7677,
-    "sha256": "0edb196252b765b6dc07701e55daa66e4ddb4d9f77b59470a1574368d983043a"
+    "bytes": 7679,
+    "sha256": "ff0014232fb4715b01ca78e774e21d4d96c9de595975dbe09c53a3892550c425"
   },
   {
     "path": "qa/software-source/README.md",
-    "bytes": 7874,
-    "sha256": "ca1bdad537a7b555e8e90ed11474a749a956d54b79d90200b6aada79698c601b"
+    "bytes": 7876,
+    "sha256": "2305ac2f6ff27686c5a89c9d5c8d5911b2743e9ac28a3c50590d708836b12da3"
   },
   {
     "path": "qa/software-source/data/prek_sim.rda",
@@ -1012,7 +1012,7 @@
   {
     "path": "qa/validation/categorical-summary.json",
     "bytes": 1259,
-    "sha256": "8c821223d9955da4d6fbdf1e761f12a2dc5dd66640d3f8f324e73d0dd4d488c8"
+    "sha256": "d676568d90ac087f9265650dd55925e331fe53ddb358a4421c98c16cb0924408"
   },
   {
     "path": "qa/validation/categorical-warnings.csv",
@@ -1067,7 +1067,7 @@
   {
     "path": "qa/validation/scalar-fpc-summary.json",
     "bytes": 2608,
-    "sha256": "b620ad275e8bf6256f8f83864289e0524c799742427a3be8709f407ee3d54a22"
+    "sha256": "a4f9ac93e66428fad141d69a20520c4f66c18dd0fd54026bb5258a4c0f372cc9"
   },
   {
     "path": "qa/validation/scalar-fpc.csv",
@@ -1092,7 +1092,7 @@
   {
     "path": "qa/validation/small-n-summary.json",
     "bytes": 4238,
-    "sha256": "638e8f2b009f966e6fa7a5cd0079488778eeaf1de781c02fc75f319b2c5a634b"
+    "sha256": "58cf4798622edbd0ba69d3353a06800646bad6847524d71b972ac1e2388eb902"
   },
   {
     "path": "qa/validation/small-n.csv",
