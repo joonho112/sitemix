@@ -1,4 +1,4 @@
-# Estimate site-year rates and standard errors
+# Estimate site-year proportions and standard errors
 
 `sm_estimate()` estimates proportions and standard errors for each site
 and year. It accepts individual student rows, sufficient counts, or
@@ -229,7 +229,10 @@ sm_estimate(
 - suppression_flag_value:
 
   Values in the suppression flag column that indicate suppression.
-  Defaults to `""` (the empty string).
+  Defaults to `""` (the empty string). For character flags, explicitly
+  supply the publisher's marker (for example `"*"`); a blank is
+  otherwise treated as suppressed. Logical flags use `TRUE` irrespective
+  of this argument.
 
 - suppression_when:
 
@@ -254,22 +257,19 @@ sm_estimate(
 
 - suppressed_n_strategy:
 
-  A single string: `"observed_n"` (default) or `"worst_case_bound"`. For
-  suppressed upper-bound rows, the default uses the observed
-  denominator. The latter records `suppressed_n_bound` as `n` and
-  `n_eff`, even when the input denominator is observed. On
-  observed-denominator rows, that chosen value is also `sensitivity_n`
-  in the variance calculation. A hidden denominator supplies no numeric
-  sensitivity variance; a recorded bound does not identify the actual
-  sample size.
+  A single string: `"observed_n"` (default) or `"worst_case_bound"`.
+  Published denominators are always retained as `n`, `n_eff`, and the
+  sensitivity denominator. The latter strategy records
+  `suppressed_n_bound` as `n` and `n_eff` only when the denominator is
+  hidden. A hidden denominator supplies no numeric sensitivity variance;
+  a recorded bound does not identify the actual sample size.
 
 - suppressed_n_bound:
 
-  A positive whole number, or `NULL` (default). Required for active
-  suppressed upper-bound rows with
+  A positive whole number, or `NULL` (default). Required for suppressed
+  upper-bound rows with hidden denominators and
   `suppressed_n_strategy = "worst_case_bound"`; must be no larger than
-  `min_n`. It becomes the recorded row denominator and, when the input
-  denominator is observed, the sensitivity denominator.
+  `min_n`. This recorded bound never replaces a published denominator.
   Hidden-denominator rows retain missing sensitivity variances.
 
 - numerator_col:

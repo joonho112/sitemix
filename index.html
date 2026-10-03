@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>sitemix — Site-level proportions and sampling uncertainty • sitemix</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
-<link rel="icon" type="”image/svg+xml”" href="favicon.svg">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" sizes="any" href="favicon.ico">
 <link rel="manifest" href="site.webmanifest">
@@ -53,7 +53,7 @@ and sensitivity analysis.
 
     <a class="navbar-brand me-2" href="index.html">sitemix</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Unreleased version">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -116,7 +116,7 @@ and sensitivity analysis.
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>Install the development version from the package’s GitHub repository:</p>
+<p>Install from the package’s GitHub repository:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"joonho112/sitemix"</span><span class="op">)</span></span></code></pre></div>
@@ -169,7 +169,7 @@ and sensitivity analysis.
 <p>Use <code><a href="reference/sm_estimate.html">sm_estimate()</a></code> for student rows, <code><a href="reference/sm_estimate_from_counts.html">sm_estimate_from_counts()</a></code> for sufficient counts, and <code><a href="reference/sm_estimate_from_aggregates.html">sm_estimate_from_aggregates()</a></code> for published aggregates. The wrappers set the input path for you. The direct <code>from_counts</code>, <code>from_aggregates</code>, and <code>vjt</code> arguments remain supported.</p>
 <p>Choose <code>family = "binomial"</code> for one binary indicator, <code>"multivariate"</code> for overlapping binary indicators, or <code>"multinomial"</code> for mutually exclusive categories. Sufficient multivariate counts need the marginal and pairwise counts; multinomial counts need all categories. Set <code>vjt = TRUE</code> to request within-site covariance. For sufficient multivariate counts, covariance is supported for at most three indicators; student-level input also supports larger sets. Its <code>vcov_scale</code> can differ from the reported scalar scale, so inspect it before using <code>V</code>.</p>
 <p>The aggregate wrapper supports a single binary indicator (D0) or multiple binary marginals (D1). It rejects <code>family = "multinomial"</code>. Published D1 marginals do not identify cross-indicator dependence: the returned diagonal covariance uses a working-independence assumption.</p>
-<p>Across supported inputs, <code>anscombe = TRUE</code> requires <code>vst = "arcsine"</code>. The package estimates proportions and rates; it does not summarize arbitrary continuous outcomes. The <a href="https://joonho112.github.io/sitemix/reference/index.html">function reference</a> describes each input’s additional conditions.</p>
+<p>Across supported inputs, <code>anscombe = TRUE</code> requires <code>vst = "arcsine"</code>. The package estimates binary and count-based categorical proportions; it does not summarize arbitrary continuous outcomes. The <a href="https://joonho112.github.io/sitemix/reference/index.html">function reference</a> describes each input’s additional conditions.</p>
 </div>
 <div class="section level2">
 <h2 id="where-to-read-next">Where to read next<a class="anchor" aria-label="anchor" href="#where-to-read-next"></a>
@@ -256,7 +256,7 @@ and sensitivity analysis.
 <div class="section level2">
 <h2 id="status">Status<a class="anchor" aria-label="anchor" href="#status"></a>
 </h2>
-<p><code>sitemix</code> v0.3.0 is under release-candidate review and remains unreleased. API names and behavior may evolve before v1.0. See the <a href="https://joonho112.github.io/sitemix/news/index.html">release notes</a> for migration details and the complete change history.</p>
+<p><code>sitemix</code> 0.3.1 contains the correctness fixes described in NEWS.md. See the GitHub repository for public release availability. API names and behavior may evolve before v1.0. See the <a href="https://joonho112.github.io/sitemix/news/index.html">release notes</a> for migration details and the complete change history.</p>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
@@ -308,13 +308,7 @@ and sensitivity analysis.
 </ul>
 </div>
 
-<div class="dev-status">
-<h2 data-toc-skip>Dev status</h2>
-<ul class="list-unstyled">
-<li><a href="https://lifecycle.r-lib.org/articles/stages.html" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
-<li><a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></li>
-</ul>
-</div>
+
 
   </aside>
 </div>

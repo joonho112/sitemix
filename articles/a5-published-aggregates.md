@@ -251,11 +251,11 @@ fx <- sm_pivot_subgroups_to_sites(
 head(fx, 4)
 #> # A tibble: 4 × 9
 #>   site_id     year indicator  c_jt  n_jt suppression_flag framing source_site_id
-#>   <chr>      <int> <chr>     <int> <int> <lgl>            <chr>   <chr>
-#> 1 S001_ell    2024 frpm_tak…     8    12 FALSE            subgro… S001
-#> 2 S001_non_…  2024 frpm_tak…     3     7 FALSE            subgro… S001
-#> 3 S002_ell    2024 frpm_tak…     4     6 FALSE            subgro… S002
-#> 4 S002_non_…  2024 frpm_tak…    10    15 FALSE            subgro… S002
+#>   <chr>      <int> <chr>     <int> <int> <lgl>            <chr>   <chr>         
+#> 1 S001_ell    2024 frpm_tak…     8    12 FALSE            subgro… S001          
+#> 2 S001_non_…  2024 frpm_tak…     3     7 FALSE            subgro… S001          
+#> 3 S002_ell    2024 frpm_tak…     4     6 FALSE            subgro… S002          
+#> 4 S002_non_…  2024 frpm_tak…    10    15 FALSE            subgro… S002          
 #> # ℹ 1 more variable: source_subgroup <chr>
 ```
 
@@ -293,8 +293,8 @@ fy <- sm_pivot_subgroups_to_indicators(
 )
 head(fy, 4)
 #> # A tibble: 4 × 8
-#>   site_id  year indicator source_subgroup  c_jt  n_jt suppression_flag framing
-#>   <chr>   <int> <chr>     <chr>           <int> <int> <lgl>            <chr>
+#>   site_id  year indicator source_subgroup  c_jt  n_jt suppression_flag framing  
+#>   <chr>   <int> <chr>     <chr>           <int> <int> <lgl>            <chr>    
 #> 1 S001     2024 ell       ell                 8    12 FALSE            subgroup…
 #> 2 S001     2024 non_ell   non_ell             3     7 FALSE            subgroup…
 #> 3 S002     2024 ell       ell                 4     6 FALSE            subgroup…
@@ -344,7 +344,7 @@ print(as.data.frame(report), row.names = FALSE)
 #>  n_denominator_missing pct_suppressed pct_below_accountability
 #>                      0              0                     0.66
 #>  median_n_suppressed denominator_observed_on_suppressed suppression_sources
-#>                   NA                               TRUE
+#>                   NA                               TRUE                    
 #>       recommended_action sensitivity_role
 #>  no_suppression_detected             none
 #>  sensitivity_numeric_variance_available sensitivity_requires_acknowledgement

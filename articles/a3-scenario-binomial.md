@@ -167,8 +167,8 @@ strict <- sm_estimate(
   accountability_n = 50L
 )
 table(strict$flag_below_accountability)
-#>
-#> FALSE  TRUE
+#> 
+#> FALSE  TRUE 
 #>     7    43
 ```
 
@@ -226,7 +226,7 @@ c(
   max_estimate_difference = max(abs(snap_rows$theta_hat - snap_cnts$theta_hat)),
   max_se_difference = max(abs(snap_rows$se - snap_cnts$se))
 )
-#> max_estimate_difference       max_se_difference
+#> max_estimate_difference       max_se_difference 
 #>                       0                       0
 ```
 

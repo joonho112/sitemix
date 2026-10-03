@@ -126,7 +126,7 @@ Check the counts before selecting rows:
 ``` r
 
 table(scalar_input$iv_eligible, scalar_input$exclusion_reason)
-#>
+#>       
 #>        eligible
 #>   TRUE       50
 ```

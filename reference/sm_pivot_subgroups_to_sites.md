@@ -1,4 +1,4 @@
-# Prepare published counts for subgroup rates or compositions
+# Prepare published counts for subgroup proportions or compositions
 
 `sm_pivot_subgroups_to_sites()` reshapes published subgroup counts for
 estimation. By default, each site-subgroup pair receives a combined
@@ -12,8 +12,8 @@ common denominator for
 [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
 with `family = "multinomial"` (Scenario C). These counts describe each
 subgroup's share of a site total, rather than its within-subgroup rate.
-The function reshapes counts; it does not estimate rates or standard
-errors.
+The function reshapes counts; it does not estimate proportions or
+standard errors.
 
 ## Usage
 
@@ -164,8 +164,8 @@ with `family = "multinomial"`.
 
 ## Details
 
-**Rates and compositions.** Choose `partition_target` according to the
-quantity you want to estimate:
+**Proportions and compositions.** Choose `partition_target` according to
+the quantity you want to estimate:
 
 - `"none"` (default):
 
@@ -268,12 +268,12 @@ pivoted <- sm_pivot_subgroups_to_sites(
 head(pivoted)
 #> # A tibble: 6 × 9
 #>   site_id     year indicator  c_jt  n_jt suppression_flag framing source_site_id
-#>   <chr>      <int> <chr>     <int> <int> <lgl>            <chr>   <chr>
-#> 1 S001_frpm…  2024 frpm_tak…     3     7 FALSE            subgro… S001
-#> 2 S001_frpm…  2024 frpm_tak…     8    12 FALSE            subgro… S001
-#> 3 S002_frpm…  2024 frpm_tak…    10    15 FALSE            subgro… S002
-#> 4 S002_frpm…  2024 frpm_tak…     4     6 FALSE            subgro… S002
-#> 5 S003_frpm…  2024 frpm_tak…     6    10 FALSE            subgro… S003
-#> 6 S003_frpm…  2024 frpm_tak…     7    11 FALSE            subgro… S003
+#>   <chr>      <int> <chr>     <int> <int> <lgl>            <chr>   <chr>         
+#> 1 S001_frpm…  2024 frpm_tak…     3     7 FALSE            subgro… S001          
+#> 2 S001_frpm…  2024 frpm_tak…     8    12 FALSE            subgro… S001          
+#> 3 S002_frpm…  2024 frpm_tak…    10    15 FALSE            subgro… S002          
+#> 4 S002_frpm…  2024 frpm_tak…     4     6 FALSE            subgro… S002          
+#> 5 S003_frpm…  2024 frpm_tak…     6    10 FALSE            subgro… S003          
+#> 6 S003_frpm…  2024 frpm_tak…     7    11 FALSE            subgro… S003          
 #> # ℹ 1 more variable: source_subgroup <chr>
 ```

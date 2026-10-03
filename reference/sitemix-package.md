@@ -1,4 +1,4 @@
-# sitemix: Site- and group-level proportions, rates, and sampling uncertainty
+# sitemix: Site- and group-level proportions, proportions, and sampling uncertainty
 
 `sitemix` estimates site- and group-level proportions and their sampling
 uncertainty. Use
@@ -50,9 +50,9 @@ for supported options and input requirements.
 
 - **Scenario D1 — aggregate marginal**:
 
-  Multiple published marginal rates per site-year. Marginals alone do
-  not identify cross-indicator covariance; the optional matrix assumes
-  working independence. See
+  Multiple published marginal proportions per site-year. Marginals alone
+  do not identify cross-indicator covariance; the optional matrix
+  assumes working independence. See
   [`sm_frechet_envelope()`](https://joonho112.github.io/sitemix/reference/sm_frechet_envelope.md)
   for pairwise intervals and projected dependence scenarios.
 

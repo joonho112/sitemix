@@ -8,7 +8,7 @@ optional covariance matrices.
 
 ## Installation
 
-Install the development version from the package’s GitHub repository:
+Install from the package’s GitHub repository:
 
 ``` r
 
@@ -113,8 +113,8 @@ Published D1 marginals do not identify cross-indicator dependence: the
 returned diagonal covariance uses a working-independence assumption.
 
 Across supported inputs, `anscombe = TRUE` requires `vst = "arcsine"`.
-The package estimates proportions and rates; it does not summarize
-arbitrary continuous outcomes. The [function
+The package estimates binary and count-based categorical proportions; it
+does not summarize arbitrary continuous outcomes. The [function
 reference](https://joonho112.github.io/sitemix/reference/index.html)
 describes each input’s additional conditions.
 
@@ -168,9 +168,10 @@ model.
 
 ## Status
 
-`sitemix` v0.3.0 is under release-candidate review and remains
-unreleased. API names and behavior may evolve before v1.0. See the
-[release notes](https://joonho112.github.io/sitemix/news/index.html) for
+`sitemix` 0.3.1 contains the correctness fixes described in NEWS.md. See
+the GitHub repository for public release availability. API names and
+behavior may evolve before v1.0. See the [release
+notes](https://joonho112.github.io/sitemix/news/index.html) for
 migration details and the complete change history.
 
 ## License

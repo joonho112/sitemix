@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Sampling uncertainty from published aggregates • sitemix</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
-<link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
@@ -38,7 +38,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sitemix</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Unreleased version">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,7 +63,7 @@
     <li><a class="dropdown-item" href="../articles/a9-case-study-end-to-end.html">A complete simulated example</a></li>
   </ul>
 </li>
-<li class="nav-item dropdown">
+<li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-methods" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Methods</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-methods">
 <li><a class="dropdown-item" href="../articles/m1-statistical-foundations.html">Sampling uncertainty</a></li>
@@ -97,14 +97,14 @@
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Sampling uncertainty from published aggregates</h1>
                         <h4 data-toc-skip class="author">JoonHo Lee (<a href="mailto:jlee296@ua.edu" class="email">jlee296@ua.edu</a>)</h4>
-
+            
             <h4 data-toc-skip class="date">2026-07-12</h4>
-
+      
       <small class="dont-index">Source: <a href="https://github.com/joonho112/sitemix/blob/HEAD/vignettes/m5-aggregate-engines.Rmd" class="external-link"><code>vignettes/m5-aggregate-engines.Rmd</code></a></small>
       <div class="d-none name"><code>m5-aggregate-engines.Rmd</code></div>
     </div>
 
-
+    
         <div class="abstract">
       <p class="abstract">Abstract</p>
       <p>Explain what published numerator and denominator counts
@@ -113,7 +113,7 @@
       their covariance. Suppressed values and unknown joint counts have
       different consequences.</p>
     </div>
-
+    
 <p>A published table can preserve enough information to estimate
 individual proportions while omitting the joint observations needed for
 their covariance. The D0 and D1 aggregate calculations address these two
@@ -370,14 +370,15 @@ denominator is known. It requires default arcsine output with
 <code>anscombe = FALSE</code>; it does not replace the missing estimate.
 With the default <code>suppressed_n_strategy = "observed_n"</code>, the
 sensitivity denominator is the observed count. Selecting
-<code>"worst_case_bound"</code> instead uses
-<code>suppressed_n_bound</code> as the recorded <code>n</code> and, for
-an observed-denominator row, as <code>sensitivity_n</code> in that
-calculation. Inspect <code>sensitivity_n</code> and the original input
-together. A hidden denominator supplies no numeric sensitivity variance,
-even when a denominator upper bound is recorded. Suppressed rows cannot
-enter ordinary <code>V</code> or formal Fréchet calculations, and
-aggregate FPC currently requires completely observed counts.</p>
+<code>"worst_case_bound"</code> records <code>suppressed_n_bound</code>
+as <code>n</code> only when the denominator is hidden. Published
+denominators remain unchanged, including <code>sensitivity_n</code>,
+under either strategy in version 0.3.1. Inspect
+<code>sensitivity_n</code> and the original input together. A hidden
+denominator supplies no numeric sensitivity variance, even when a
+denominator upper bound is recorded. Suppressed rows cannot enter
+ordinary <code>V</code> or formal Fréchet calculations, and aggregate
+FPC currently requires completely observed counts.</p>
 <p>The formulas above apply to identified rows under their stated
 assumptions. See <a href="a6-diagnostics-and-suppression.html">the
 applied suppression example</a> for input detection and the returned

@@ -10,14 +10,14 @@
 Source:
 [`inst/CITATION`](https://github.com/joonho112/sitemix/blob/HEAD/inst/CITATION)
 
-Lee J (2026). *sitemix: Site- and Group-Level Proportions, Rates, and
-Sampling Uncertainty*. R package version 0.3.0,
+Lee J (2026). *sitemix: Proportions and Sampling Uncertainty for Sites
+and Groups*. R package version 0.3.1,
 <https://joonho112.github.io/sitemix/>.
 
     @Manual{lee_2026_sitemix,
-      title = {sitemix: Site- and Group-Level Proportions, Rates, and Sampling Uncertainty},
+      title = {sitemix: Proportions and Sampling Uncertainty for Sites and Groups},
       author = {JoonHo Lee},
       year = {2026},
-      note = {R package version 0.3.0},
+      note = {R package version 0.3.1},
       url = {https://joonho112.github.io/sitemix/},
     }

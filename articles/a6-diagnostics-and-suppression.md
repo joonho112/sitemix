@@ -38,7 +38,7 @@ denominator thresholds:
 
 diag_s <- sm_diagnose(est, verbose = FALSE)
 class(diag_s)
-#> [1] "sitemix_diagnostics_summary" "tbl_df"
+#> [1] "sitemix_diagnostics_summary" "tbl_df"                     
 #> [3] "tbl"                         "data.frame"
 print(as.data.frame(diag_s)[, c(
   "n_cells", "n_flag_small_n", "n_flag_below_accountability",
@@ -73,7 +73,7 @@ adding diagnostic columns:
 
 diag_r <- sm_diagnose(est, level = "row", verbose = FALSE)
 class(diag_r)
-#> [1] "sitemix_diagnostics_row" "tbl_df"
+#> [1] "sitemix_diagnostics_row" "tbl_df"                 
 #> [3] "tbl"                     "data.frame"
 head(as.data.frame(diag_r)[, c(
   "site_id", "n", "flag_small_n", "flag_below_accountability",
@@ -137,7 +137,7 @@ est_b <- sm_estimate(
 )
 diag_v <- sm_diagnose(est_b, level = "vcov", verbose = FALSE)
 class(diag_v)
-#> [1] "sitemix_diagnostics_vcov" "tbl_df"
+#> [1] "sitemix_diagnostics_vcov" "tbl_df"                  
 #> [3] "tbl"                      "data.frame"
 head(as.data.frame(diag_v)[, c(
   "site_id", "K", "min_eigenvalue", "psd_tol", "v_valid",

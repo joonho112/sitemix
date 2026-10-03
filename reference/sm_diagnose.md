@@ -142,8 +142,8 @@ est <- sm_estimate(
 # Start with a summary of all estimates:
 diag_s <- sm_diagnose(est, verbose = FALSE)
 class(diag_s)
-#> [1] "sitemix_diagnostics_summary" "tbl_df"
-#> [3] "tbl"                         "data.frame"
+#> [1] "sitemix_diagnostics_summary" "tbl_df"                     
+#> [3] "tbl"                         "data.frame"                 
 
 # Inspect the diagnostics for individual estimates:
 diag_r <- sm_diagnose(est, level = "row", verbose = FALSE)

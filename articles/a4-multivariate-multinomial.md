@@ -195,7 +195,7 @@ covariance row sums are zero up to numerical rounding:
 ``` r
 
 rowSums(V_lang_S001)
-#> english   other spanish
+#> english   other spanish 
 #>       0       0       0
 ```
 

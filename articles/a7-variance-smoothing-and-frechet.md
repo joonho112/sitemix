@@ -293,7 +293,7 @@ those changes in `projection_diagnostics`, also returned by
 colSums(projection_check[, c(
   "sign_changes", "projected_order_reversals", "raw_interval_violations"
 )])
-#>              sign_changes projected_order_reversals   raw_interval_violations
+#>              sign_changes projected_order_reversals   raw_interval_violations 
 #>                         0                         0                         0
 ```
 

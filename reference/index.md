@@ -4,8 +4,8 @@
 
 - [`sitemix`](https://joonho112.github.io/sitemix/reference/sitemix-package.md)
   [`sitemix-package`](https://joonho112.github.io/sitemix/reference/sitemix-package.md)
-  : sitemix: Site- and group-level proportions, rates, and sampling
-  uncertainty
+  : sitemix: Site- and group-level proportions, proportions, and
+  sampling uncertainty
 
 ## Estimate proportions
 
@@ -14,11 +14,11 @@ published aggregates. The count and aggregate wrappers select the
 corresponding input path.
 
 - [`sm_estimate()`](https://joonho112.github.io/sitemix/reference/sm_estimate.md)
-  : Estimate site-year rates and standard errors
+  : Estimate site-year proportions and standard errors
 - [`sm_estimate_from_counts()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_counts.md)
   : Estimate site-year proportions from sufficient counts
 - [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
-  : Estimate site-year rates from published aggregate rows
+  : Estimate site-year proportions from published aggregate rows
 
 ## Check estimates and suppression
 
@@ -55,9 +55,9 @@ Prepare subgroup tables for estimation. Treat subgroups as separate
 sites or as indicators within a site, according to the analysis.
 
 - [`sm_pivot_subgroups_to_sites()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_sites.md)
-  : Prepare published counts for subgroup rates or compositions
+  : Prepare published counts for subgroup proportions or compositions
 - [`sm_pivot_subgroups_to_indicators()`](https://joonho112.github.io/sitemix/reference/sm_pivot_subgroups_to_indicators.md)
-  : Prepare subgroup rates as indicators within each site
+  : Prepare subgroup proportions as indicators within each site
 
 ## Simulated example data
 

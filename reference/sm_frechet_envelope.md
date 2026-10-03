@@ -309,7 +309,7 @@ est <- sm_estimate_from_aggregates(
 #> ℹ Fix: Use `sm_frechet_envelope()` once sensitivity diagnostics are available.
 env <- sm_frechet_envelope(est, population_regime = "d1a")
 class(env)
-#> [1] "sm_frechet_envelope" "list"
+#> [1] "sm_frechet_envelope" "list"               
 env$psd_method
 #> [1] "higham"
 head(env$raw_pairwise_intervals)
@@ -330,13 +330,13 @@ head(env$raw_pairwise_intervals)
 head(env$projection_diagnostics)
 #> # A tibble: 6 × 38
 #>   site_id  year site_key       K scenario              estimate_scale vcov_scale
-#>   <chr>   <int> <chr>      <int> <chr>                 <chr>          <chr>
-#> 1 S001     2024 S001::2024     2 negative_dependence_… raw_probabili… raw
-#> 2 S001     2024 S001::2024     2 positive_dependence_… raw_probabili… raw
-#> 3 S002     2024 S002::2024     2 negative_dependence_… raw_probabili… raw
-#> 4 S002     2024 S002::2024     2 positive_dependence_… raw_probabili… raw
-#> 5 S003     2024 S003::2024     2 negative_dependence_… raw_probabili… raw
-#> 6 S003     2024 S003::2024     2 positive_dependence_… raw_probabili… raw
+#>   <chr>   <int> <chr>      <int> <chr>                 <chr>          <chr>     
+#> 1 S001     2024 S001::2024     2 negative_dependence_… raw_probabili… raw       
+#> 2 S001     2024 S001::2024     2 positive_dependence_… raw_probabili… raw       
+#> 3 S002     2024 S002::2024     2 negative_dependence_… raw_probabili… raw       
+#> 4 S002     2024 S002::2024     2 positive_dependence_… raw_probabili… raw       
+#> 5 S003     2024 S003::2024     2 negative_dependence_… raw_probabili… raw       
+#> 6 S003     2024 S003::2024     2 positive_dependence_… raw_probabili… raw       
 #> # ℹ 31 more variables: projection_method <chr>, projection_status <chr>,
 #> #   relative_tolerance <dbl>, absolute_tolerance_before <dbl>,
 #> #   absolute_tolerance_after <dbl>, eigen_scale_before <dbl>,

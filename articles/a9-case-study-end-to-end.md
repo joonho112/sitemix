@@ -47,11 +47,11 @@ head(est[, c("site_id", "n", "theta_raw", "theta_hat", "se",
              "flag_small_n", "flag_below_accountability")], 5)
 #> # A tibble: 5 × 7
 #>   site_id     n theta_raw theta_hat    se flag_small_n flag_below_accountability
-#>   <chr>   <int>     <dbl>     <dbl> <dbl> <lgl>        <lgl>
-#> 1 S001        9     0.111     0.340 0.167 TRUE         TRUE
-#> 2 S002       10     0.8       1.11  0.158 FALSE        TRUE
-#> 3 S003        8     0.5       0.785 0.177 TRUE         TRUE
-#> 4 S004       14     0.429     0.714 0.134 FALSE        TRUE
+#>   <chr>   <int>     <dbl>     <dbl> <dbl> <lgl>        <lgl>                    
+#> 1 S001        9     0.111     0.340 0.167 TRUE         TRUE                     
+#> 2 S002       10     0.8       1.11  0.158 FALSE        TRUE                     
+#> 3 S003        8     0.5       0.785 0.177 TRUE         TRUE                     
+#> 4 S004       14     0.429     0.714 0.134 FALSE        TRUE                     
 #> 5 S005        8     0.875     1.21  0.177 TRUE         TRUE
 ```
 

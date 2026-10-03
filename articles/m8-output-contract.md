@@ -266,7 +266,7 @@ stopifnot(sum(table(scalar$iv_eligible)) == nrow(est))
 
 table(iv_eligible = scalar$iv_eligible)
 #> iv_eligible
-#> TRUE
+#> TRUE 
 #>   50
 ```
 

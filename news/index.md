@@ -1,5 +1,32 @@
 # Changelog
 
+## sitemix 0.3.1 (2026-10-03)
+
+### Correctness fixes
+
+- Stabilize Frechet joint-probability lower endpoints at degenerate
+  margins. A margin of one now gives an exactly collapsed interval, so
+  valid objects can be printed and summarized without a rounding-induced
+  ordering error.
+- Apply the existing Anscombe/correction exclusions to D1 aggregate
+  input, including all-boundary data; reject Agresti-Coull boundary
+  adjustment with D1 covariance output consistently with the other
+  estimation paths.
+- Preserve published denominators in suppressed-row sensitivity
+  calculations. `worst_case_bound` now records a bound only when the
+  denominator is hidden; it no longer replaces an observed denominator
+  with a potentially larger n.
+
+### Documentation and verification
+
+- Clarify proportions-only scope, boundary provenance and aggregate
+  marker use.
+- Add public-API regression tests for zero/one margins, D1 invalid
+  combinations, and observed versus hidden suppression denominators.
+- Include the SoftwareX reproducibility materials in the release
+  preparation. Version 0.3.1 does not add continuous outcomes or joint
+  categorical modeling.
+
 ## sitemix 0.3.0 (development)
 
 ### Documentation

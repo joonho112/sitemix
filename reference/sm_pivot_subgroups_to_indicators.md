@@ -1,16 +1,16 @@
-# Prepare subgroup rates as indicators within each site
+# Prepare subgroup proportions as indicators within each site
 
 `sm_pivot_subgroups_to_indicators()` prepares published subgroup counts
-for comparing subgroup rates within each site. It keeps the original
-`site_id` and uses each subgroup label as an `indicator`, preserving
-that subgroup's numerator and denominator. The documentation calls this
-**Framing Y**.
+for comparing subgroup proportions within each site. It keeps the
+original `site_id` and uses each subgroup label as an `indicator`,
+preserving that subgroup's numerator and denominator. The documentation
+calls this **Framing Y**.
 
 Pass the result to
 [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
 with `family = "multivariate"` for marginal aggregate estimates (D1).
-This helper reshapes the counts; it does not estimate rates, standard
-errors, or dependence between subgroups.
+This helper reshapes the counts; it does not estimate proportions,
+standard errors, or dependence between subgroups.
 
 ## Usage
 
@@ -136,14 +136,14 @@ indicators are retained per group.
 ## Details
 
 **Analysis unit and denominator.** Each returned site-year has several
-subgroup indicators. Their rates are conditional on membership in each
-subgroup, using that subgroup's own denominator. Equal counts or
+subgroup indicators. Their proportions are conditional on membership in
+each subgroup, using that subgroup's own denominator. Equal counts or
 denominators do not show that the same observational units contributed
 to different indicators. For example, two disjoint subgroups can have
 the same number of students. Subgroups can also overlap; labels and
 marginal counts alone do not identify the joint counts.
 
-When estimating D1 rates, set `sampling_relation` in
+When estimating D1 proportions, set `sampling_relation` in
 [`sm_estimate_from_aggregates()`](https://joonho112.github.io/sitemix/reference/sm_estimate_from_aggregates.md)
 from the source information: `"same_units"` only when the marginals
 describe the same observed units, `"different_units"` when they differ,
@@ -227,8 +227,8 @@ pivoted_y <- sm_pivot_subgroups_to_indicators(
 )
 head(pivoted_y)
 #> # A tibble: 6 × 8
-#>   site_id  year indicator source_subgroup  c_jt  n_jt suppression_flag framing
-#>   <chr>   <int> <chr>     <chr>           <int> <int> <lgl>            <chr>
+#>   site_id  year indicator source_subgroup  c_jt  n_jt suppression_flag framing  
+#>   <chr>   <int> <chr>     <chr>           <int> <int> <lgl>            <chr>    
 #> 1 S001     2024 frpm_yes  frpm_yes            8    12 FALSE            subgroup…
 #> 2 S001     2024 frpm_no   frpm_no             3     7 FALSE            subgroup…
 #> 3 S002     2024 frpm_yes  frpm_yes            4     6 FALSE            subgroup…

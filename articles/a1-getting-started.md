@@ -82,14 +82,14 @@ their standard errors, and information about how they were calculated:
 ``` r
 
 names(frpm_2024)
-#>  [1] "site_id"                   "year"
-#>  [3] "indicator"                 "theta_raw"
-#>  [5] "theta_hat"                 "se_raw"
-#>  [7] "se"                        "n"
-#>  [9] "n_eff"                     "estimate_scale"
-#> [11] "transform"                 "var_method"
-#> [13] "flag_small_n"              "flag_zero_cell"
-#> [15] "input_mode"                "flag_suppressed"
+#>  [1] "site_id"                   "year"                     
+#>  [3] "indicator"                 "theta_raw"                
+#>  [5] "theta_hat"                 "se_raw"                   
+#>  [7] "se"                        "n"                        
+#>  [9] "n_eff"                     "estimate_scale"           
+#> [11] "transform"                 "var_method"               
+#> [13] "flag_small_n"              "flag_zero_cell"           
+#> [15] "input_mode"                "flag_suppressed"          
 #> [17] "framing"                   "flag_below_accountability"
 ```
 
@@ -124,7 +124,7 @@ Before passing the tibble to another analysis, run the diagnostics:
 
 diag <- sm_diagnose(frpm_2024, verbose = FALSE)
 class(diag)
-#> [1] "sitemix_diagnostics_summary" "tbl_df"
+#> [1] "sitemix_diagnostics_summary" "tbl_df"                     
 #> [3] "tbl"                         "data.frame"
 print(as.data.frame(diag), row.names = FALSE)
 #>    family        sitemix_role n_cells n_groups n_sites n_years n_indicators

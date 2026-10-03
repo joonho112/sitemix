@@ -167,14 +167,15 @@ Bernoulli variance-sensitivity value at p=.5 when the denominator is
 known. It requires default arcsine output with `anscombe = FALSE`; it
 does not replace the missing estimate. With the default
 `suppressed_n_strategy = "observed_n"`, the sensitivity denominator is
-the observed count. Selecting `"worst_case_bound"` instead uses
-`suppressed_n_bound` as the recorded `n` and, for an
-observed-denominator row, as `sensitivity_n` in that calculation.
-Inspect `sensitivity_n` and the original input together. A hidden
-denominator supplies no numeric sensitivity variance, even when a
-denominator upper bound is recorded. Suppressed rows cannot enter
-ordinary `V` or formal Fréchet calculations, and aggregate FPC currently
-requires completely observed counts.
+the observed count. Selecting `"worst_case_bound"` records
+`suppressed_n_bound` as `n` only when the denominator is hidden.
+Published denominators remain unchanged, including `sensitivity_n`,
+under either strategy in version 0.3.1. Inspect `sensitivity_n` and the
+original input together. A hidden denominator supplies no numeric
+sensitivity variance, even when a denominator upper bound is recorded.
+Suppressed rows cannot enter ordinary `V` or formal Fréchet
+calculations, and aggregate FPC currently requires completely observed
+counts.
 
 The formulas above apply to identified rows under their stated
 assumptions. See [the applied suppression
