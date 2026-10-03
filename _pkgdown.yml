@@ -1,7 +1,7 @@
 url: https://joonho112.github.io/sitemix/
 
 development:
-  mode: unreleased
+  mode: release
 
 template:
   bootstrap: 5
